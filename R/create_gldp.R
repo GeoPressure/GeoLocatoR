@@ -73,7 +73,7 @@
 #' @param bibliographicCitation (optional) A string providing a citation for the package. See the
 #' [Geolocator DP](https://raphaelnussbaumer.com/GeoLocator-DP/datapackage/#citation) and the
 #' [Data Package specification](https://datapackage.org/standard/data-package/#citation).
-#' @param schema (optional) A URL to the JSON Table Schema that describes the data package. Defaults
+#' @param schema (optional) A URL to the `$schema` that describes the data package. Defaults
 #' to the GeoLocator Data Package profile. See the [Data Package specification
 #' ](https://datapackage.org/standard/data-package/#dollar-schema).
 #'
