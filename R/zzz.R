@@ -232,7 +232,7 @@ cast_table <- function(data, schema) {
       } else if (type == "date") {
         data[[field]] <- as.Date(data[[field]])
       } else if (type == "datetime") {
-        data[[field]] <- as.POSIXct(data[[field]])
+        data[[field]] <- as.POSIXct(data[[field]], tz = "UTC")
       } else if (type == "time") {
         # For time fields, convert to character if not already
         if (!is.character(data[[field]])) {

@@ -143,9 +143,14 @@ test_that("pressurepaths getter and setter work correctly", {
   # Get pressurepaths
   pp_data <- pressurepaths(pkg)
   expect_true(is.data.frame(pp_data))
+  expect_s3_class(pp_data$datetime, "POSIXct")
 
   # Set pressurepaths (should not error)
   expect_no_error({
     pressurepaths(pkg) <- pp_data
   })
+
+  pp_data_roundtrip <- pressurepaths(pkg)
+  expect_s3_class(pp_data_roundtrip$datetime, "POSIXct")
+  expect_equal(attr(pp_data_roundtrip$datetime, "tzone"), "UTC")
 })

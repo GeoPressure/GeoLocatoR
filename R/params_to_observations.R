@@ -18,7 +18,7 @@ params_to_observations <- function(params) {
       o0 <- tibble::tibble(
         ring_number = NA_character_,
         tag_id = param$id,
-        datetime = as.Date(NA),
+        datetime = as.POSIXct(NA, tz = "UTC"),
         location_name = NA_character_,
         longitude = NA_real_,
         latitude = NA_real_,

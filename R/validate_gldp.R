@@ -722,7 +722,7 @@ get_type_map <- function() {
     array = function(v) is.vector(v) || is.list(v),
     null = function(v) is.null(v),
     datetime = function(v) {
-      if (inherits(v, c("Date", "POSIXct", "POSIXlt"))) {
+      if (inherits(v, c("POSIXct", "POSIXlt"))) {
         return(TRUE)
       }
       if (is.character(v)) {
