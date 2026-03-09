@@ -16,7 +16,7 @@ Imports:
     cli,
     desc,
     dplyr,
-    frictionless,
+    frictionless (<= 1.2.1),
     GeoPressureR,
     glue,
     ggplot2,
