@@ -119,7 +119,7 @@ tags_to_measurements <- function(tags) {
           dplyr::bind_rows(tag_measurements)
         },
         error = function(e) {
-          value_types <- sapply(tag_measurements, function(x) class(x$value)[1]) # nolint
+          value_types <- sapply(tag_measurements, function(x) class(x$value)[1])
           cli::cli_abort(
             c(
               "x" = paste0(
@@ -141,7 +141,7 @@ tags_to_measurements <- function(tags) {
       dplyr::bind_rows(all_measurements)
     },
     error = function(e) {
-      value_types <- sapply(all_measurements, function(x) class(x$value)[1]) # nolint
+      value_types <- sapply(all_measurements, function(x) class(x$value)[1])
       cli::cli_abort(
         c(
           "Type mismatch when combining tags in {.fun tags_to_measurements}:",

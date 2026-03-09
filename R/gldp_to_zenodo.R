@@ -42,7 +42,53 @@ gldp_to_zenodo <- function(
   # Set Contributor/Creators
   z$metadata$creators <- NULL
   warn_role <- FALSE
+  scalar_or_null <- function(x) {
+    if (is.null(x) || length(x) == 0) {
+      return(NULL)
+    }
+    x <- x[1]
+    if (is.na(x) || !nzchar(x)) {
+      return(NULL)
+    }
+    x
+  }
+
   purrr::map(pkg$contributors, \(c) {
+    title <- scalar_or_null(c$title)
+    given_name <- scalar_or_null(c$givenName)
+    family_name <- scalar_or_null(c$familyName)
+    org_name <- scalar_or_null(c$organization)
+
+    org_matches_title <- !is.null(title) &&
+      !is.null(org_name) &&
+      tolower(trimws(title)) == tolower(trimws(org_name))
+
+    if (is.null(given_name) || is.null(family_name)) {
+      if (!org_matches_title && !is.null(title)) {
+        if (grepl(",", title, fixed = TRUE)) {
+          parts <- strsplit(title, ",", fixed = TRUE)[[1]]
+          family_guess <- trimws(parts[1])
+          given_guess <- trimws(paste(parts[-1], collapse = ","))
+        } else {
+          parts <- strsplit(title, "\\s+")[[1]]
+          if (length(parts) >= 2) {
+            family_guess <- trimws(parts[length(parts)])
+            given_guess <- trimws(paste(parts[-length(parts)], collapse = " "))
+          } else {
+            family_guess <- NULL
+            given_guess <- NULL
+          }
+        }
+
+        if (is.null(family_name) && !is.null(family_guess) && nzchar(family_guess)) {
+          family_name <- family_guess
+        }
+        if (is.null(given_name) && !is.null(given_guess) && nzchar(given_guess)) {
+          given_name <- given_guess
+        }
+      }
+    }
+
     orgs <- if ("organization" %in% names(c) && !is.null(c$organization[1])) {
       purrr::keep(
         strsplit(c$organization[1], ", ")[[1]],
@@ -87,15 +133,17 @@ gldp_to_zenodo <- function(
     roles <- tolower(c$roles[[1]])
     roles <- ifelse(roles %in% allowed_roles, roles, "other")
 
-    if (!is.null(c$title)) {
-      name <- c$title
+    if (!is.null(family_name) && !is.null(given_name)) {
+      name <- paste(family_name, given_name, sep = ", ")
+    } else if (!is.null(title)) {
+      name <- title
     } else {
-      name <- paste(c$familyName, c$givenName, sep = ", ")
+      name <- paste(family_name, given_name, sep = ", ")
     }
 
     z$addCreator(
-      firstname = c$givenName,
-      lastname = c$familyName,
+      firstname = given_name,
+      lastname = family_name,
       name = name,
       orcid = gsub("https://orcid.org/", "", c$path),
       role = roles,

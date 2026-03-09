@@ -42,8 +42,8 @@ data is organized, accessible, and ready to share.
 - **Supports Swiss Ornithological Institute Data**: Special functions
   have been designed to deal with internal SOI data. [See this
   vignette](https://rpubs.com/rafnuss/geolocator_create_from_soi).
-- **Built on frictionless-r**: This package is built using the
-  [`frictionless-r`](https://docs.ropensci.org/frictionless/) package,
+- **Built on frictionless**: This package is built using the
+  [`frictionless`](https://docs.ropensci.org/frictionless/) package,
   adhering to the Frictionless Data standards for open data.
 
 ## 📦 What is a Data Package?
@@ -76,7 +76,7 @@ Learn how to use GeoLocatoR with the dedicated part of the
 
 ## Functions mapping
 
-| [frictionless-r](https://docs.ropensci.org/frictionless/) | Basic GeolocatoR | GeoPressureTemplate |
+| [frictionless](https://docs.ropensci.org/frictionless/) | Basic GeolocatoR | GeoPressureTemplate |
 |----|----|----|
 | [`create_package()`](https://docs.ropensci.org/frictionless/reference/create_package.html) | [`create_gldp()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/create_gldp.html) | [`create_gldp_geopressuretemplate()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/create_gldp_geopressuretemplate.html) |
 | [`add_resource()`](https://docs.ropensci.org/frictionless/reference/add_resource.html) | [`add_gldp_resource()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/add_gldp_resource.html) | [`add_gldp_geopressuretemplate()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/add_gldp_geopressuretemplate.html) |

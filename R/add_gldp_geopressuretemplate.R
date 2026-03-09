@@ -393,7 +393,7 @@ add_gldp_geopressuretemplate <- function(
 
     # Check that all tag_id are in tf
     if (!all(t$tag_id %in% tf$tag_id)) {
-      missing_tag_ids <- setdiff(t$tag_id, tf$tag_id) # nolint
+      missing_tag_ids <- setdiff(t$tag_id, tf$tag_id)
       cli_warn(c(
         "!" = "The following tag_id from interim/raw data are missing in {.file {file}}: \\
         {missing_tag_ids}",

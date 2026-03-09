@@ -103,6 +103,14 @@ zenodo_to_gldp <- function(zenodo_record, pkg = NULL) {
     purrr::map_chr(z$metadata$subjects, "subject")
   }
 
+  # Extract created tiime
+  created_time <- as.POSIXct(
+    z$metadata$publication_date,
+    tz = "UTC",
+    tryFormats = c("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%d")
+  )
+  created_time <- format(created_time, "%Y-%m-%dT%H:%M:%SZ")
+
   if (!is.null(pkg)) {
     check_gldp(pkg)
   } else {
@@ -121,7 +129,7 @@ zenodo_to_gldp <- function(zenodo_record, pkg = NULL) {
   pkg$relatedIdentifiers <- relatedIdentifiers
   pkg$grants <- grants
   pkg$keywords <- keywords
-  pkg$created <- z$metadata$publication_date
+  pkg$created <- created_time
   # pkg$bibliographicCitation = format(bib)
   # pkg$schema = NULL
 

@@ -7,7 +7,6 @@
 #' @return A list of person objects
 #' @noRd
 contributors2persons <- function(contributors) {
-  # nolint start
   role_mapping <- c(
     "contactperson" = "ctr", # Contractor (assumed due to lack of clear match)
     "contributor" = "ctb", # Contributor
@@ -31,7 +30,6 @@ contributors2persons <- function(contributors) {
     "supervisor" = "ths", # Thesis advisor
     "workpackageleader" = "cre" # Creator (assumed leader role)
   )
-  # nolint end
 
   persons <- contributors %>%
     purrr::map(
@@ -234,7 +232,7 @@ cast_table <- function(data, schema) {
       } else if (type == "date") {
         data[[field]] <- as.Date(data[[field]])
       } else if (type == "datetime") {
-        data[[field]] <- as.POSIXct(data[[field]])
+        data[[field]] <- as.POSIXct(data[[field]], tz = "UTC")
       } else if (type == "time") {
         # For time fields, convert to character if not already
         if (!is.character(data[[field]])) {

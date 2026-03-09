@@ -36,7 +36,7 @@ GeoLocatoR is designed to help you create and work with the [GeoLocator Data Pac
 - **Creates a GeoLocator Data Package**: Create a geolocator datapackage object, add resources (data), and write the data package to your preferred directory. Or, read an existing data package from a directory or from Zenodo.
 - **Works Seamlessly with GeoPressureTemplate**: GeoLocatoR is compatible with [GeoPressureTemplate](https://github.com/Rafnuss/GeoPressureTemplate) — a template repository for analyzing geolocator data using GeoPressureR. Use both together to streamline your analysis and maintain a standardized project structure.
 - **Supports Swiss Ornithological Institute Data**: Special functions have been designed to deal with internal SOI data. [See this vignette](https://rpubs.com/rafnuss/geolocator_create_from_soi).
-- **Built on frictionless-r**: This package is built using the [`frictionless-r`](https://docs.ropensci.org/frictionless/) package, adhering to the Frictionless Data standards for open data.
+- **Built on frictionless**: This package is built using the [`frictionless`](https://docs.ropensci.org/frictionless/) package, adhering to the Frictionless Data standards for open data.
 
 ## 📦 What is a Data Package?
 
@@ -60,7 +60,7 @@ Learn how to use GeoLocatoR with the dedicated part of the [GeoPressureManual](h
 
 ## Functions mapping
 
-| [frictionless-r](https://docs.ropensci.org/frictionless/)                                  | Basic GeolocatoR                                                                                   | GeoPressureTemplate                                                                                                            |
+| [frictionless](https://docs.ropensci.org/frictionless/)                                  | Basic GeolocatoR                                                                                   | GeoPressureTemplate                                                                                                            |
 | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | [`create_package()`](https://docs.ropensci.org/frictionless/reference/create_package.html) | [`create_gldp()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/create_gldp.html)             | [`create_gldp_geopressuretemplate()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/create_gldp_geopressuretemplate.html) |
 | [`add_resource()`](https://docs.ropensci.org/frictionless/reference/add_resource.html)     | [`add_gldp_resource()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/add_gldp_resource.html) | [`add_gldp_geopressuretemplate()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/add_gldp_geopressuretemplate.html)       |

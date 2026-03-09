@@ -43,7 +43,7 @@ print.geolocatordp <- function(x, ...) {
     cli_bullets(c(" " = ctr))
   }
 
-  embargo_date <- as.POSIXct(x$embargo, format = "%Y-%m-%d", tz = "UTC") # nolint
+  embargo_date <- as.POSIXct(x$embargo, format = "%Y-%m-%d", tz = "UTC")
   cli_bullets(c("*" = "{.field embargo}: {.val {embargo_date}}"))
 
   licenses <- sapply(x$licenses, \(x) {
@@ -100,13 +100,11 @@ print.geolocatordp <- function(x, ...) {
     cli_bullets(c("*" = "{.field keywords}: {.val {x$keywords}}"))
   }
 
-  # nolint start
   created_datetime <- as.POSIXct(
     x$created,
     format = "%Y-%m-%dT%H:%M:%SZ",
     tz = "UTC"
   )
-  # nolint end
   cli_bullets(c("*" = "{.field created}: {.val {created_datetime}}"))
 
   if (!is.null(x$bibliographicCitation)) {

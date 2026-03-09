@@ -538,7 +538,7 @@ validate_gldp_item <- function(item, prop, field) {
     }
 
     if (!all(in_enum)) {
-      invalid_values <- item[!in_enum] # nolint
+      invalid_values <- item[!in_enum]
       cli_alert_danger(
         "{.field {field}} has {sum(!in_enum)} item{?s} that are not in the allowed values:
       {.val {paste(prop$enum, collapse = ', ')}}. Invalid value{?s}:
@@ -614,13 +614,13 @@ validate_gldp_fields_match <- function(
     }
   } else if (fields_match == "subset") {
     if (!all(schema_fields %in% data_fields)) {
-      missing_fields <- schema_fields[!schema_fields %in% data_fields] # nolint
+      missing_fields <- schema_fields[!schema_fields %in% data_fields]
       cli_alert_danger("Subset match failed. Missing fields: {missing_fields}")
       valid <- FALSE
     }
   } else if (fields_match == "superset") {
     if (!all(data_fields %in% schema_fields)) {
-      extra_fields <- data_fields[!data_fields %in% schema_fields] # nolint
+      extra_fields <- data_fields[!data_fields %in% schema_fields]
       cli_alert_danger("Superset match failed. Extra fields: {extra_fields}")
       valid <- FALSE
     }
@@ -722,7 +722,7 @@ get_type_map <- function() {
     array = function(v) is.vector(v) || is.list(v),
     null = function(v) is.null(v),
     datetime = function(v) {
-      if (inherits(v, c("Date", "POSIXct", "POSIXlt"))) {
+      if (inherits(v, c("POSIXct", "POSIXlt"))) {
         return(TRUE)
       }
       if (is.character(v)) {
@@ -1049,7 +1049,7 @@ validate_gldp_observations <- function(o) {
     )
 
   if (nrow(missing_tag_id) > 0) {
-    error_tag <- unique(missing_tag_id$tag_id) # nolint
+    error_tag <- unique(missing_tag_id$tag_id)
     cli_alert_danger(
       "{length(error_tag)} equipment or retrieval observation{?s} {?is/are} \\
                           missing a tag_id. Check: {.field {error_tag}}"
@@ -1066,7 +1066,7 @@ validate_gldp_observations <- function(o) {
     )
 
   if (nrow(obs_equi_retrieval_without_present) > 0) {
-    error_tag <- unique(obs_equi_retrieval_without_present$tag_id) # nolint
+    error_tag <- unique(obs_equi_retrieval_without_present$tag_id)
     cli_alert_danger(
       "{length(error_tag)} equipment or retrieval observation{?s} don't have a  \\
                     device status 'present'. Check: {.field {error_tag}}"
@@ -1083,7 +1083,7 @@ validate_gldp_observations <- function(o) {
     )
 
   if (nrow(missing_tag_id) > 0) {
-    error_ring_number <- unique(missing_tag_id$ring_number) # nolint
+    error_ring_number <- unique(missing_tag_id$ring_number)
     cli_alert_danger(
       "{length(error_ring_number)} {.var ring_number} with a device status {.val missing} or \\
       {.val present} {?is/are} missing a {.var tag_id}. Check: {.field {error_ring_number}}"
@@ -1105,9 +1105,9 @@ validate_gldp_observations <- function(o) {
     )
 
   if (nrow(multiple_tags_without_retrieval) > 0) {
-    error_ring_number <- unique(multiple_tags_without_retrieval$ring_number) # nolint
+    error_ring_number <- unique(multiple_tags_without_retrieval$ring_number)
     cli_alert_danger(
-      "{length(error_tag)} ring{?s} where a second tag is attached without a prior \\
+      "{length(error_ring_number)} ring{?s} where a second tag is attached without a prior \\
     retrieval or capture-missing. Check: {.field {error_ring_number}}"
     )
     valid <- FALSE
@@ -1120,7 +1120,7 @@ validate_gldp_observations <- function(o) {
     filter(!any(.data$observation_type == "equipment"))
 
   if (nrow(tag_without_equipment) > 0) {
-    error_tag <- unique(tag_without_equipment$tag_id) # nolint
+    error_tag <- unique(tag_without_equipment$tag_id)
     cli_alert_danger(
       "{length(error_tag)} tag{?s} {?was/were} recorded without a preceding equipment event. \\
       Check: {.field {error_tag}}"
@@ -1134,7 +1134,7 @@ validate_gldp_observations <- function(o) {
     filter(n() > 1)
 
   if (nrow(duplicate_observations) > 0) {
-    error_tag <- unique(duplicate_observations$tag_id) # nolint
+    error_tag <- unique(duplicate_observations$tag_id)
     cli_alert_danger(
       "{length(error_tag)} duplicate observations found. Check: {.field {error_tag}}"
     )

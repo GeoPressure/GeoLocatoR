@@ -1,6 +1,6 @@
 Package: GeoLocatoR
 Title: R package for GeoLocator Data Package
-Version: 0.5.0
+Version: 0.5.1
 Authors@R: 
     person("Raphaël", "Nussbaumer", , "rafnuss@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-8185-1020"))
@@ -16,7 +16,7 @@ Imports:
     cli,
     desc,
     dplyr,
-    frictionless,
+    frictionless (<= 1.2.1),
     GeoPressureR,
     glue,
     ggplot2,

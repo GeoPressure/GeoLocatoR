@@ -72,9 +72,7 @@ add_gldp_soi <- function(
     filter(!is.na(.data$directory)) %>%
     select("GDL_ID", "directory") %>%
     purrr::pmap(
-      # nolint start
       \(GDL_ID, directory) {
-        # nolint end
         tryCatch(
           {
             if (grepl("\\.glf$", directory)) {
@@ -264,7 +262,6 @@ add_gldp_soi <- function(
   o_gdl <- bind_rows(
     gdl_to %>%
       transmute(
-        # nolint
         ring_number = if ("RingNumber" %in% names(gdl_to)) {
           .data$RingNumber
         } else {
@@ -301,7 +298,6 @@ add_gldp_soi <- function(
       ),
     gdl_to %>%
       transmute(
-        # nolint
         ring_number = if ("RingNumber" %in% names(gdl_to)) {
           .data$RingNumber
         } else {

@@ -52,8 +52,8 @@ test_that("check_type function validates basic types correctly", {
 test_that("check_type function validates datetime types correctly", {
   suppressMessages({
     # Valid datetime objects
-    expect_true(check_type(Sys.Date(), "datetime", "test_field"))
     expect_true(check_type(Sys.time(), "datetime", "test_field"))
+    expect_false(check_type(Sys.Date(), "datetime", "test_field"))
 
     # Valid datetime strings with Z suffix
     expect_true(check_type("2023-12-25T10:30:45Z", "datetime", "test_field"))
