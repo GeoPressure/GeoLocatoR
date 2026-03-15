@@ -3,35 +3,91 @@ library(GeoLocatoR)
 
 # pkg_shared is loaded from setup.R
 
-test_that("read_gldp correctly reads a GeoLocator Data Package", {
-  expect_true("title" %in% names(pkg_shared))
-  expect_true("resources" %in% names(pkg_shared))
-  expect_true("contributors" %in% names(pkg_shared))
-})
+test_that("read_gldp reads a local datapackage.json", {
+  tmp <- withr::local_tempdir()
+  json_path <- file.path(tmp, "datapackage.json")
 
-test_that("read_gldp correctly reads a GeoLocator Data Package from all input types", {
-  skip("Skipping test to avoid network download")
-  # Local file
-  pkg_local <- read_gldp("datapackage.json")
-  expect_s3_class(pkg_local, "datapackage")
-  # Zenodo DOI
-  pkg_doi <- read_gldp("10.5281/zenodo.17257521")
-  expect_s3_class(pkg_doi, "datapackage")
-  # Zenodo DOI URL
-  pkg_doi_url <- read_gldp("https://doi.org/10.5281/zenodo.17257521")
-  expect_s3_class(pkg_doi_url, "datapackage")
-  # Zenodo record link
-  pkg_link <- read_gldp("https://zenodo.org/records/17257521")
-  expect_s3_class(pkg_link, "datapackage")
-  # Zenodo record number
-  pkg_num <- read_gldp("17257521")
-  expect_s3_class(pkg_num, "datapackage")
+  jsonlite::write_json(
+    list(
+      `$schema` = "https://raw.githubusercontent.com/Rafnuss/GeoLocator-DP/v1.0/geolocator-dp-profile.json",
+      id = "unit-test",
+      resources = list()
+    ),
+    path = json_path,
+    auto_unbox = TRUE
+  )
+
+  pkg <- suppressWarnings(read_gldp(json_path))
+
+  expect_s3_class(pkg, "geolocatordp")
+  expect_true("resources" %in% names(pkg))
+  expect_equal(gldp_version(pkg), "v1.0")
 })
 
 test_that("read_gldp handles invalid input", {
   # Test with non-existent file
   expect_error(read_gldp("nonexistent.json"))
 
-  # Test with invalid URL
-  expect_error(read_gldp("https://invalid.url/nonexistent.json"))
+  # Test with non-json content
+  tmp <- withr::local_tempdir()
+  txt_path <- file.path(tmp, "not-json.txt")
+  writeLines("not json", txt_path)
+  expect_error(read_gldp(txt_path))
+})
+
+test_that("read_gldp schema version extraction supports short and explicit refs", {
+  pkg <- function(schema) {
+    p <- create_gldp()
+    p$`$schema` <- schema
+    p
+  }
+
+  expect_equal(
+    gldp_version(pkg(
+      "https://raw.githubusercontent.com/Rafnuss/GeoLocator-DP/v0.4/geolocator-dp-profile.json"
+    )),
+    "v0.4"
+  )
+
+  expect_error(gldp_version(pkg("https://example.com/schema.json")))
+})
+
+test_that("write_gldp writes a datapackage readable by read_gldp", {
+  pkg <- pkg_shared
+
+  out_dir <- withr::local_tempdir()
+  expect_no_error(write_gldp(pkg, directory = out_dir))
+  expect_true(file.exists(file.path(out_dir, "datapackage.json")))
+
+  pkg_back <- suppressWarnings(read_gldp(file.path(out_dir, "datapackage.json")))
+  expect_s3_class(pkg_back, "geolocatordp")
+  expect_equal(pkg_back$id, pkg$id)
+})
+
+test_that("write_gldp/read_gldp roundtrip keeps pkg$params via params.json", {
+  tmp <- withr::local_tempdir()
+  json_path <- file.path(tmp, "datapackage.json")
+
+  jsonlite::write_json(
+    list(
+      `$schema` = "https://raw.githubusercontent.com/Rafnuss/GeoLocator-DP/v1.0/geolocator-dp-profile.json",
+      id = "params-roundtrip",
+      resources = list()
+    ),
+    path = json_path,
+    auto_unbox = TRUE
+  )
+
+  pkg <- suppressWarnings(read_gldp(json_path, force_read = FALSE))
+  param <- GeoPressureR::param_create("TEST-PARAM", default = TRUE)
+
+  pkg$params <- list(param)
+
+  out_dir <- withr::local_tempdir()
+  expect_no_error(write_gldp(pkg, directory = out_dir))
+  expect_true(file.exists(file.path(out_dir, "params.json")))
+
+  pkg_back <- suppressWarnings(read_gldp(file.path(out_dir, "datapackage.json"), force_read = TRUE))
+  expect_true(is.list(pkg_back$params))
+  expect_equal(pkg_back$params[[1]]$id, "TEST-PARAM")
 })

@@ -1,7 +1,5 @@
 library(testthat)
-# Setup: Access internal functions
-check_type <- GeoLocatoR:::check_type
-check_format <- GeoLocatoR:::check_format
+library(GeoLocatoR)
 
 test_that("check_type function validates basic types correctly", {
   # String types

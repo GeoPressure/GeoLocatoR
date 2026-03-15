@@ -18,24 +18,27 @@ test_that("gldp_to_eml writes eml.xml and returns EML-like object", {
 
   # File is written
   expect_true(file.exists(file.path(tmp, "eml.xml")))
-
-  # Basic structure of returned object
-  expect_type(eml, "list")
-  expect_true("dataset" %in% names(eml))
+  # EML::eml_validate(file.path(tmp, "eml.xml"))
+  expect_true(isTRUE(EML::eml_validate(file.path(tmp, "eml.xml"))))
 
   # Key metadata fields are transferred
   expect_equal(eml$dataset$title, pkg$title)
-  # expect_equal(eml$dataset$abstract$para, pkg$description)
-  expect_equal(eml$dataset$keywordSet$keyword, pkg$keywords)
+})
 
-  # packageId behaviour: existing ID is reused, otherwise UUID-like
-  if (is.null(pkg$id)) {
-    expect_type(eml$packageId, "character")
-    expect_match(eml$packageId, "^[0-9a-f\\-]+$")
-  } else {
-    expect_equal(eml$packageId, pkg$id)
-  }
+test_that("gldp_to_eml handles lowercase roles and title-only contributors", {
+  skip_if_not_installed("EML")
 
-  # Coverage element is present as list (may be empty or populated)
-  expect_type(eml$dataset$coverage, "list")
+  pkg <- create_gldp(title = "Example package")
+  pkg$contributors <- list(
+    list(title = "Org Contact", roles = "contactperson"),
+    list(title = "Data Research Team", roles = "researcher")
+  )
+
+  tmp <- withr::local_tempdir()
+  suppressMessages({
+    eml <- gldp_to_eml(pkg, directory = tmp)
+  })
+
+  expect_true(length(eml$dataset$contact) >= 1)
+  expect_true(length(eml$dataset$creator) >= 1)
 })

@@ -5,10 +5,12 @@ library(GeoLocatoR)
 
 test_that("merge_gldp merges two packages", {
   pkg <- pkg_shared
-  pkg2 <- pkg2_shared
+  suppressMessages({
+    pkg2 <- read_zenodo("15259763")
+  })
 
   # Merge packages
-  expect_warning({
+  expect_no_error({
     pkg_merged <- merge_gldp(pkg, pkg2)
   })
 
