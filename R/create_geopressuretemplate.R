@@ -42,14 +42,27 @@ create_geopressuretemplate <- function(path, pkg = NULL, open = interactive()) {
     }
   }
 
-  system(sprintf(
-    "git clone --depth 1 https://github.com/Rafnuss/GeoPressureTemplate %s",
-    shQuote(path)
-  ))
-  cli_bullets(c(
-    "v" = "Cloning repo from {.url https://github.com/Rafnuss/GeoPressureTemplate/} \\
-    into {.path {path}}."
-  ))
+  clone_status <- system2(
+    command = "git",
+    args = c(
+      "clone",
+      "--quiet",
+      "--depth",
+      "1",
+      "https://github.com/Rafnuss/GeoPressureTemplate",
+      path
+    ),
+    stdout = FALSE,
+    stderr = FALSE
+  )
+  if (!identical(clone_status, 0L)) {
+    cli_abort(
+      "Failed to clone {.url https://github.com/Rafnuss/GeoPressureTemplate/} into {.path {path}}."
+    )
+  }
+  cli_alert_success(
+    "Cloning repo from {.url https://github.com/Rafnuss/GeoPressureTemplate/} into {.path {path}}."
+  )
   project_name <- basename(path)
 
   file.rename(
