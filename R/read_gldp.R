@@ -43,5 +43,10 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE) {
 
   }
 
+  # Conversion
+  pkg <- upgrade_gldp(pkg)
+
+  pkg <- update_gldp(pkg)
+
   pkg
 }
