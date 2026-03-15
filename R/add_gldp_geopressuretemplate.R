@@ -296,10 +296,10 @@ add_gldp_geopressuretemplate <- function(
       list_id <- list_id[!(list_id %in% t$tag_id)]
 
       if (length(list_id) > 0) {
-        # Read raw tag data with rawtagid_to_tag function
+        # Read raw tag data with raw_tag_id_to_tag function
         dtags <- list_id %>%
           purrr::map(
-            purrr::possibly(rawtagid_to_tag, NULL),
+            purrr::possibly(raw_tag_id_to_tag, NULL),
             .progress = list(
               type = "custom",
               format = "{cli::pb_spin} Reading {cli::pb_current}/{cli::pb_total} raw tag{?s}.",
@@ -493,7 +493,7 @@ add_gldp_geopressuretemplate <- function(
 #' @param display_config_error Logical indicating whether to display configuration errors
 #' @return A tag object with parameter and data information
 #' @noRd
-rawtagid_to_tag <- function(id, display_config_error = TRUE) {
+raw_tag_id_to_tag <- function(id, display_config_error = TRUE) {
   config <- tryCatch(
     {
       GeoPressureR::geopressuretemplate_config(
