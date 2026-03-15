@@ -1,5 +1,7 @@
 # Default GeoLocator-DP schema version used when creating/upgrading packages.
 .gldp_supported_versions <- c("main", "v0.1", "v0.2", "v0.3", "v0.4", "v0.5", "v0.6", "v1.0")
+.gldp_default_version <- utils::tail(.gldp_supported_versions, 1)
+
 #' Get GeoLocator DP version
 #'
 #' @description
@@ -38,4 +40,26 @@ gldp_version <- function(x) {
   }
 
   version
+}
+
+#' @noRd
+gldp_schema_url <- function(version = NULL) {
+  supported_versions <- .gldp_supported_versions
+
+  if (is.null(version) || is.na(version)) {
+    version <- .gldp_default_version
+  }
+
+  if (!version %in% supported_versions) {
+    cli_abort(c(
+      "!" = "Unsupported GeoLocator-DP version {.val {version}}.",
+      "i" = "Allowed versions are {.val {supported_versions}}."
+    ))
+  }
+
+  schema_url <- glue::glue(
+    "https://raw.githubusercontent.com/Rafnuss/GeoLocator-DP/{version}/geolocator-dp-profile.json"
+  )
+
+  schema_url
 }
