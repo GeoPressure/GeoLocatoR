@@ -6,7 +6,7 @@
 #' @param contributors A list of contributor objects from a GeoLocator Data Package
 #' @return A list of person objects
 #' @noRd
-contributors2persons <- function(contributors) {
+contributors_to_persons <- function(contributors) {
   role_mapping <- c(
     "contactperson" = "ctr", # Contractor (assumed due to lack of clear match)
     "contributor" = "ctb", # Contributor

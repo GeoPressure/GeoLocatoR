@@ -136,7 +136,7 @@ create_geopressuretemplate_desc <- function(pkg) {
     paste(purrr::map_chr(pkg$license, ~ .x$name), collapse = ", "),
     check = FALSE
   )
-  d$set_authors(contributors2persons(pkg$contributors))
+  d$set_authors(contributors_to_persons(pkg$contributors))
 
   # Optional fields
   if ("description" %in% names(pkg)) {
