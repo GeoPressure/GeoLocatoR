@@ -33,13 +33,13 @@
 #' @examples
 #' \dontrun{
 #' # Read config from default location
-#' cfg <- config2tibble()
+#' cfg <- config_to_tibble()
 #'
 #' # Read from specific file
-#' cfg <- config2tibble("path/to/config.yml")
+#' cfg <- config_to_tibble("path/to/config.yml")
 #'
 #' # Include all columns even if they don't vary
-#' cfg_full <- config2tibble(filter_return = FALSE)
+#' cfg_full <- config_to_tibble(filter_return = FALSE)
 #'
 #' # View which parameters differ across tags
 #' View(cfg)
@@ -51,7 +51,7 @@
 #'   template structure
 #'
 #' @export
-config2tibble <- function(
+config_to_tibble <- function(
   file = Sys.getenv("R_CONFIG_FILE", "config.yml"),
   filter_return = TRUE
 ) {
@@ -179,7 +179,7 @@ config2tibble <- function(
     idx <- lengths(c) > 1
 
     if (any(idx)) {
-      cli::cli_warn(
+      cli_warn(
         "The following fields had length > 1 and were truncated: {paste(names(c)[idx], collapse = ', ')}"
       )
 
@@ -191,8 +191,8 @@ config2tibble <- function(
   })
 
   if (filter_return) {
-    # filter for column that dont contain the same value
-    cfg <- cfg %>%
+    # Keep only columns that do not contain the same value in every row.
+    cfg <- cfg |>
       select(where(~ n_distinct(.) > 1))
   }
   cfg
