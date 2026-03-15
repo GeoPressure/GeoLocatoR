@@ -4,30 +4,30 @@
 #' The metadata properties from both packages are merged according to specific rules,
 #' and resource data is combined based on their presence in either package.
 #'
-#' **Metadata merging rules:**
-#' - **title**: Combined from both packages, separated by a "/".
-#' - **contributors**: Combined from both packages, with duplicates removed.
-#' - **embargo**: Set to the latest date from both packages.
-#' - **licenses**: Combined from both packages, with duplicates removed.
-#' - **id**: Replaced with a new UUID for the merged package.
-#' - **source_ids**: Added (custom property) storing the original package IDs.
-#' - **description**: Combined as two separate paragraphs, with a newline separator.
-#' - **version**: Use the latest version (same as `create_gldp()`)
-#' - **relatedIdentifiers**: Combined, with duplicates removed.
-#' - **grants**: Combined from both packages, with duplicates removed.
-#' - **keywords**: Combined from both packages, with duplicates removed.
-#' - **created**: Set to the current timestamp at the time of merging.
-#' - **bibliographicCitation**: Removed from the merged package.
-#' - Custom properties from `x` are retained in the merged package.
-#'
 #' @details
-#' Merging requires the [`uuid`](https://cran.r-project.org/package=uuid) package to generate
-#' a globally unique identifier for the merged package.
-#'
 #' **Resource merging logic:**
 #' - Each resource is checked for its presence in both `x` and `y`.
 #' - Data from both sources is combined if the resource exists in either `x` or `y`.
 #' - Resources are only included if they exist in at least one of the packages.
+#'
+#' **Check for unique tag_id:**
+#' - The merge aborts if any `tag_id` is present in both packages.
+#' - This prevents ambiguous joins across resources after merge.
+#'
+#' **datapackage_id in tags:**
+#' - For the `tags` resource, each row must have a `datapackage_id`.
+#' - Missing `datapackage_id` values are filled with the package `id`.
+#' - The merge aborts if `tags$datapackage_id` overlaps between the two inputs.
+#'
+#' **Metadata merging rules:**
+#' - **version**: Using the package default one
+#' - **title**: Combined from both packages, separated by a "/".
+#' - **contributors**: Combined from both packages, with duplicates removed.
+#' - **licenses**: Combined, with duplicates removed.
+#' - **relatedIdentifiers**: Combined, with duplicates removed, and each source
+#'   package `id` is added as `IsCompiledBy`.
+#' - **created**: Set to the current timestamp at the time of merging.
+#' - All others are dropped
 #'
 #' @param x A GeoLocator Data Package object.
 #' @param y A GeoLocator Data Package object.
@@ -38,6 +38,8 @@ merge_gldp <- function(x, y) {
   # Validate input packages
   check_gldp(x)
   check_gldp(y)
+  x <- update_gldp(x)
+  y <- update_gldp(y)
 
   # Check if the versions are the same
   vx <- gldp_version(x)
@@ -59,42 +61,37 @@ merge_gldp <- function(x, y) {
     ))
   }
 
-  # Merge related identifiers (DOIs, if available, will be added)
+  # Merge related identifiers and add source datapackage ids.
   relatedIdentifiers <- unique(c(x$relatedIdentifiers, y$relatedIdentifiers))
   add_related_id <- function(id, related_ids) {
-    if (grepl("doi", id %||% "", fixed = TRUE)) {
-      new_related_id <- list(
-        relationType = "IsCompiledBy",
-        relatedIdentifier = id,
-        resourceTypeGeneral = "Dataset",
-        relatedIdentifierType = "DOI"
-      )
-      related_ids <- c(related_ids, list(new_related_id))
+    if (is.null(id) || length(id) != 1 || is.na(id) || !nzchar(id)) {
+      return(related_ids)
     }
+
+    id_lower <- tolower(id)
+    related_identifier_type <- if (
+      grepl("^10\\.", id) || grepl("doi.org/", id_lower, fixed = TRUE)
+    ) {
+      "DOI"
+    } else {
+      "URL"
+    }
+
+    new_related_id <- list(
+      relationType = "IsCompiledBy",
+      relatedIdentifier = id,
+      resourceTypeGeneral = "Dataset",
+      relatedIdentifierType = related_identifier_type
+    )
+    related_ids <- c(related_ids, list(new_related_id))
     related_ids
   }
   relatedIdentifiers <- add_related_id(x$id, relatedIdentifiers)
   relatedIdentifiers <- add_related_id(y$id, relatedIdentifiers)
-
-  if (!requireNamespace("uuid", quietly = TRUE)) {
-    cli_abort("The {.pkg uuid} package is required for merging.")
-  }
+  relatedIdentifiers <- unique(relatedIdentifiers)
 
   # Combine metadata fields
-  xy <- create_gldp(
-    title = paste(x$title, y$title, sep = " / "), # Combine titles
-    contributors = unique(c(x$contributors, y$contributors)), # Remove duplicates
-    licenses = unique(c(x$licenses, y$licenses)), # Remove duplicates
-    embargo = format(max(as.Date(x$embargo), as.Date(y$embargo)), "%Y-%m-%d"), # Latest embargo date
-    id = uuid::UUIDgenerate(), # New globally unique id for the merged package
-    description = paste(x$description, y$description, sep = "\n"), # Combine descriptions
-    version = NULL, # Remove version
-    relatedIdentifiers = relatedIdentifiers, # Merge related identifiers
-    grants = unique(c(x$grants, y$grants)), # Remove duplicates
-    keywords = unique(c(x$keywords, y$keywords)), # Remove duplicates
-    created = format(as.POSIXct(Sys.time(), tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ"), # Current timestamp
-    bibliographicCitation = NULL # Remove bibliographic citation
-  )
+  xy <- create_gldp()
 
   # Merge resources from both packages
   res_x <- frictionless::resources(x)
@@ -164,7 +161,7 @@ merge_gldp <- function(x, y) {
       if (!is.null(data_x) || !is.null(data_y)) {
         combined_data <- dplyr::bind_rows(data_x, data_y) # Combine data from x and y
         xy <- add_gldp_resource(
-          package = xy,
+          pkg = xy,
           resource_name = r,
           data = combined_data,
           cast_type = TRUE # Ensure data types are correctly cast
@@ -175,6 +172,21 @@ merge_gldp <- function(x, y) {
     },
     .init = xy
   )
+
+  merged_licenses <- unique(c(x$licenses, y$licenses))
+
+  # Keep only merged metadata fields using current top-level names.
+  title_parts <- c(x$title %||% NA_character_, y$title %||% NA_character_)
+  title_parts <- title_parts[!is.na(title_parts) & nzchar(title_parts)]
+  xy$title <- if (length(title_parts) > 0) {
+    paste(title_parts, collapse = " / ")
+  } else {
+    NULL
+  }
+  xy$contributors <- unique(c(x$contributors, y$contributors))
+  xy$licenses <- merged_licenses
+  xy$relatedIdentifiers <- relatedIdentifiers
+  xy$created <- format(as.POSIXct(Sys.time(), tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ")
 
   # Final update for any remaining metadata or properties
   xy <- update_gldp(xy)
