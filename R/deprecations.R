@@ -71,67 +71,6 @@ config2tibble <- function(
   config_to_tibble(file = file, filter_return = filter_return)
 }
 
-#' Deprecated: `compute_gldp()`
-#'
-#' @description
-#' `compute_gldp()` was renamed back to [update_gldp()].
-#'
-#' @param pkg A GeoLocator Data Package object.
-#' @return Updated package.
-#' @export
-compute_gldp <- function(pkg) {
-  lifecycle::deprecate_warn(
-    when = "1.0.0",
-    what = "compute_gldp()",
-    with = "update_gldp()"
-  )
-  update_gldp(pkg)
-}
-
-#' @rdname compute_gldp
-#' @export
-compute_gldp_temporal <- function(pkg) {
-  lifecycle::deprecate_warn(
-    when = "1.0.0",
-    what = "compute_gldp_temporal()",
-    with = "update_gldp_temporal()"
-  )
-  update_gldp_temporal(pkg)
-}
-
-#' @rdname compute_gldp
-#' @export
-compute_gldp_taxonomic <- function(pkg) {
-  lifecycle::deprecate_warn(
-    when = "1.0.0",
-    what = "compute_gldp_taxonomic()",
-    with = "update_gldp_taxonomic()"
-  )
-  update_gldp_taxonomic(pkg)
-}
-
-#' @rdname compute_gldp
-#' @export
-compute_gldp_number_tags <- function(pkg) {
-  lifecycle::deprecate_warn(
-    when = "1.0.0",
-    what = "compute_gldp_number_tags()",
-    with = "update_gldp_number_tags()"
-  )
-  update_gldp_number_tags(pkg)
-}
-
-#' @rdname compute_gldp
-#' @export
-compute_gldp_bibliographic_citation <- function(pkg, ...) {
-  lifecycle::deprecate_warn(
-    when = "1.0.0",
-    what = "compute_gldp_bibliographic_citation()",
-    with = "update_gldp_bibliographic_citation()"
-  )
-  update_gldp_bibliographic_citation(pkg, ...)
-}
-
 #' @rdname update_gldp
 #' @export
 update_gldp_metadata <- function(pkg) {
