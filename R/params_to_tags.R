@@ -36,7 +36,7 @@ params_to_tags <- function(params) {
         )
       },
       error = function(e) {
-        cli::cli_abort(
+        cli_abort(
           c(
             glue::glue(
               "Error in {{.code params_to_tags}} for param {{.val {i}}}:"
@@ -68,7 +68,7 @@ params_to_tags <- function(params) {
           dplyr::mutate(t, model = s$`HW Version`, firmware = s$`FW Version`)
         },
         error = function(e) {
-          cli::cli_abort(
+          cli_abort(
             c(
               glue::glue(
                 "Error in {{.code params_to_tags}} for param {{.val {i}}} (soi_settings):"
@@ -87,7 +87,7 @@ params_to_tags <- function(params) {
           dplyr::mutate(t, model = param$migratec_model)
         },
         error = function(e) {
-          cli::cli_abort(
+          cli_abort(
             c(
               glue::glue(
                 "Error in {{.code params_to_tags}} for param {{.val {i}}} (migratec_model):"
@@ -111,7 +111,7 @@ params_to_tags <- function(params) {
       col_types <- sapply(tag_list, function(x) {
         paste(sapply(x, class), collapse = ", ")
       })
-      cli::cli_abort(
+      cli_abort(
         c(
           "Type mismatch when combining tags in {.code params_to_tags}:",
           "i" = glue::glue(

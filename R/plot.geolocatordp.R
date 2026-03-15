@@ -45,7 +45,7 @@ plot.geolocatordp <- function(x, type = NULL, ...) {
 #' @return A ggplot2 object showing the coverage plot
 #' @noRd
 plot_pkg_coverage <- function(x) {
-  m <- measurements(x) %>%
+  m <- measurements(x) |>
     mutate(
       sensor = case_when(
         sensor %in%
@@ -61,14 +61,14 @@ plot_pkg_coverage <- function(x) {
           "magnetic",
         TRUE ~ sensor # Keep other sensor names unchanged
       )
-    ) %>%
-    mutate(date = as.Date(.data$datetime)) %>%
-    group_by(.data$tag_id, .data$sensor, .data$date) %>% # Group by tag_id, sensor, and date
-    summarize(has_data = sum(!is.na(.data$value)) > 0) %>% # Check if there is data (non-NA)
+    ) |>
+    mutate(date = as.Date(.data$datetime)) |>
+    group_by(.data$tag_id, .data$sensor, .data$date) |> # Group by tag_id, sensor, and date
+    summarize(has_data = sum(!is.na(.data$value)) > 0) |> # Check if there is data (non-NA)
     ungroup()
 
-  o <- observations(x) %>%
-    filter(!is.na(.data$datetime)) %>%
+  o <- observations(x) |>
+    filter(!is.na(.data$datetime)) |>
     filter(.data$tag_id %in% unique(m$tag_id))
 
   ggplot2::ggplot(
@@ -79,7 +79,7 @@ plot_pkg_coverage <- function(x) {
     ggplot2::facet_grid(.data$tag_id ~ ., scales = "free_y") +
     ggplot2::scale_fill_manual(values = c("black", "grey")) +
     ggplot2::geom_vline(
-      data = o %>%
+      data = o |>
         filter(.data$observation_type %in% c("equipment", "retrieval")),
       ggplot2::aes(
         xintercept = as.Date(.data$datetime),
@@ -89,7 +89,7 @@ plot_pkg_coverage <- function(x) {
       linewidth = 1.2
     ) +
     ggplot2::geom_vline(
-      data = o %>%
+      data = o |>
         filter(.data$observation_type %in% c("capture", "sighting", "other")),
       ggplot2::aes(
         xintercept = as.Date(.data$datetime),
@@ -130,19 +130,19 @@ plot_pkg_coverage <- function(x) {
 #' @return A ggplot2 object showing the coverage plot
 #' @noRd
 plot_pkg_ring <- function(x) {
-  o <- observations(x) %>%
+  o <- observations(x) |>
     filter(!is.na(.data$datetime))
 
-  m <- measurements(x) %>%
+  m <- measurements(x) |>
     left_join(
-      tags(x) %>% select("ring_number", "tag_id"),
+      tags(x) |> select("ring_number", "tag_id"),
       by = "tag_id"
-    ) %>%
-    group_by(.data$ring_number) %>%
+    ) |>
+    group_by(.data$ring_number) |>
     summarize(
       start = min(.data$datetime, na.rm = TRUE),
       end = max(.data$datetime, na.rm = TRUE)
-    ) %>%
+    ) |>
     ungroup()
 
   ggplot2::ggplot() +
@@ -221,12 +221,12 @@ plot_pkg_map <- function(x) {
     domain = tag_ids
   )
 
-  leaflet_map <- leaflet::leaflet(height = 600) %>% leaflet::addTiles()
+  leaflet_map <- leaflet::leaflet(height = 600) |> leaflet::addTiles()
 
   # Add polylines and markers for each tag_id
   for (tag in tag_ids) {
-    pid <- p %>% filter(.data$tag_id == tag) |> filter(!is.na(.data$lat) & !is.na(.data$lon))
-    leaflet_map <- leaflet_map %>%
+    pid <- p |> filter(.data$tag_id == tag) |> filter(!is.na(.data$lat) & !is.na(.data$lon))
+    leaflet_map <- leaflet_map |>
       leaflet::addPolylines(
         lng = ~lon,
         lat = ~lat,
@@ -234,7 +234,7 @@ plot_pkg_map <- function(x) {
         color = color_palette(tag),
         weight = 2,
         popup = ~ paste0("Tag ID: ", tag_id, "<br>stap #", stap_id)
-      ) %>%
+      ) |>
       leaflet::addCircleMarkers(
         lng = ~lon,
         lat = ~lat,
@@ -255,7 +255,7 @@ plot_pkg_map <- function(x) {
   }
 
   # Add a legend
-  leaflet_map <- leaflet_map %>%
+  leaflet_map <- leaflet_map |>
     leaflet::addLegend(
       position = "topright",
       pal = color_palette,

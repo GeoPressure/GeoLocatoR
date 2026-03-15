@@ -13,7 +13,7 @@
 #'
 #' @export
 params_to_observations <- function(params) {
-  params %>%
+  params |>
     purrr::map(\(param) {
       o0 <- tibble::tibble(
         ring_number = NA_character_,
@@ -28,26 +28,26 @@ params_to_observations <- function(params) {
       )
 
       if (!is.null(param$tag_create$crop_start)) {
-        oe <- o0 %>%
+        oe <- o0 |>
           mutate(
             datetime = as.POSIXct(param$tag_create$crop_start, tz = "UTC"),
             observation_type = "equipment"
           )
       } else {
-        oe <- o0 %>%
+        oe <- o0 |>
           mutate(
             observation_type = "equipment"
           )
       }
 
       if (!is.null(param$tag_create$crop_end)) {
-        or <- o0 %>%
+        or <- o0 |>
           mutate(
             datetime = as.POSIXct(param$tag_create$crop_end, tz = "UTC"),
             observation_type = "retrieval"
           )
       } else {
-        or <- o0 %>%
+        or <- o0 |>
           mutate(
             observation_type = "retrieval"
           )
@@ -58,7 +58,7 @@ params_to_observations <- function(params) {
 
         id <- known$stap_id == 1
         if (any(id)) {
-          oe <- oe %>%
+          oe <- oe |>
             mutate(
               longitude = known$known_lon[id],
               latitude = known$known_lat[id],
@@ -71,7 +71,7 @@ params_to_observations <- function(params) {
 
         id <- known$stap_id == -1
         if (any(id)) {
-          or <- or %>%
+          or <- or |>
             mutate(
               longitude = known$known_lon[id],
               latitude = known$known_lat[id],
@@ -86,6 +86,6 @@ params_to_observations <- function(params) {
       o <- bind_rows(oe, or)
 
       o
-    }) %>%
+    }) |>
     purrr::list_rbind()
 }

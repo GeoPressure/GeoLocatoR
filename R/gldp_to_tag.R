@@ -1,8 +1,8 @@
 #' Convert GeoLocator Data Package to GeoPressureR tag object(s)
 #'
 #' @description
-#' This function converts a GeoLocator Data Package (gldp) object to one or more GeoPressureR
-#' `tag` objects. The gldp structure contains data for potentially multiple tags, while each
+#' This function converts a GeoLocator Data Package (GLDP) object to one or more GeoPressureR
+#' `tag` objects. A GLDP can contain data for multiple tags, while each
 #' GeoPressureR `tag` object represents a single tag's sensor data.
 #'
 #' @param pkg A GeoLocator Data Package object (class `"geolocatordp"`), typically created with
@@ -33,7 +33,7 @@
 #'   (if twilight data available)
 #'
 #' @details
-#' The function extracts sensor data from the gldp's `measurements` resource and converts it
+#' The function extracts sensor data from the GLDP `measurements` resource and converts it
 #' to the format expected by GeoPressureR. The conversion includes:
 #' - Filtering measurements by `tag_id`
 #' - Reshaping data from long format (measurements) to wide format (sensor-specific data.frames)
@@ -41,7 +41,7 @@
 #'   `magnetic_x/y/z` into `magnetic`)
 #' - Adding stationary period (`stap`) data if available in the package
 #' - Adding twilight data if available in the package
-#' - Setting appropriate parameter values from the gldp metadata
+#' - Setting appropriate parameter values from GLDP metadata
 #'
 #' **Sensor mapping from GLDP to GeoPressureR:**
 #' - `pressure` → `pressure` (date, value)
@@ -60,7 +60,7 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Read a gldp from a file
+#' # Read a GLDP from a file
 #' pkg <- read_gldp("path/to/datapackage.json")
 #'
 #' # Convert all tags
@@ -80,7 +80,7 @@
 #'
 #' @export
 gldp_to_tag <- function(pkg, tag_id = NULL) {
-  # Check that pkg is a gldp
+  # Check that pkg is a GLDP
   check_gldp(pkg)
 
   # Get all available tag_ids
@@ -94,7 +94,7 @@ gldp_to_tag <- function(pkg, tag_id = NULL) {
   # Validate tag_id
   if (!all(tag_id %in% all_tag_ids)) {
     missing_ids <- setdiff(tag_id, all_tag_ids)
-    cli::cli_abort(c(
+    cli_abort(c(
       "x" = "Tag ID(s) not found in package: {.val {missing_ids}}",
       "i" = "Available tag IDs: {.val {all_tag_ids}}"
     ))
@@ -117,7 +117,7 @@ gldp_to_tag <- function(pkg, tag_id = NULL) {
 }
 
 
-#' Internal function to convert a single tag from gldp to tag object
+#' Internal function to convert a single tag from GLDP to a GeoPressureR tag object
 #' @noRd
 gldp_to_tag_single <- function(pkg, tid) {
   # Get measurements for this tag
@@ -125,7 +125,7 @@ gldp_to_tag_single <- function(pkg, tid) {
     meas <- measurements(pkg) |>
       dplyr::filter(.data$tag_id == tid)
   } else {
-    cli::cli_abort(c(
+    cli_abort(c(
       "x" = "No {.field measurements} resource found in the package.",
       "i" = "The package must contain a measurements table to convert to tag objects."
     ))
@@ -136,7 +136,7 @@ gldp_to_tag_single <- function(pkg, tid) {
     dplyr::filter(.data$tag_id == tid)
 
   if (nrow(tag_meta) == 0) {
-    cli::cli_abort("Tag ID {.val {tid}} not found in tags table.")
+    cli_abort("Tag ID {.val {tid}} not found in tags table.")
   }
 
   # Initialize tag structure using GeoPressureR's param_create
@@ -316,7 +316,7 @@ gldp_to_tag_single <- function(pkg, tid) {
         names(tag)
     )
   ) {
-    cli::cli_warn(c(
+    cli_warn(c(
       "!" = "No sensor data found for tag {.val {tid}}",
       "i" = "The tag object will be empty."
     ))

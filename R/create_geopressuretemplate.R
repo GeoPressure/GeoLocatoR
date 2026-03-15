@@ -337,7 +337,7 @@ create_geopressuretemplate_licenses <- function(pkg) {
   }
   # 5. Abort if no usable license identifier is available
   if (is.null(license_name) || is.na(license_name) || !nzchar(license_name)) {
-    cli::cli_warn(c(
+    cli_warn(c(
       "!" = "No license name or path provided.",
       ">" = "License file not created."
     ))
@@ -367,7 +367,7 @@ create_geopressuretemplate_licenses <- function(pkg) {
   if (any(hit)) {
     rules[[which(hit)[1]]][[2]]()
   } else {
-    cli::cli_warn(c(
+    cli_warn(c(
       "!" = "No matching license found in {.pkg usethis}.",
       ">" = "License file not created."
     ))
@@ -399,8 +399,8 @@ create_geopressuretemplate_data <- function(pkg) {
   )
 
   # Create variable type from sensor and re-group sensors by type
-  m <- measurements(pkg) %>%
-    mutate(variable_type = .data$sensor) %>%
+  m <- measurements(pkg) |>
+    mutate(variable_type = .data$sensor) |>
     mutate(
       sensor = recode(.data$variable_type, !!!sensor_map, .default = "other")
     )
@@ -415,7 +415,7 @@ create_geopressuretemplate_data <- function(pkg) {
     dir.create(path_twl, recursive = TRUE)
   }
 
-  split(m, m$tag_id) %>%
+  split(m, m$tag_id) |>
     purrr::iwalk(
       \(dft, tag_id) {
         # Create the raw-tag directory if it doesn't exist
@@ -426,15 +426,15 @@ create_geopressuretemplate_data <- function(pkg) {
 
         # Split the data by sensor
         # Write the data to CSV
-        split(dft, dft$sensor) %>%
+        split(dft, dft$sensor) |>
           purrr::iwalk(\(dfts, sensor) {
             # remove unsed columns
-            tmp <- dfts %>% select(-c("tag_id", "sensor", "label"))
+            tmp <- dfts |> select(-c("tag_id", "sensor", "label"))
 
             # Check for duplicates and merge with median if necessary
-            duplicates_exist <- tmp %>%
-              group_by(.data$datetime, .data$variable_type) %>%
-              filter(n() > 1) %>%
+            duplicates_exist <- tmp |>
+              group_by(.data$datetime, .data$variable_type) |>
+              filter(n() > 1) |>
               ungroup()
 
             if (nrow(duplicates_exist) > 0) {
@@ -445,21 +445,21 @@ create_geopressuretemplate_data <- function(pkg) {
               ))
 
               # grouping and median
-              tmp <- tmp %>%
-                group_by(.data$datetime, .data$variable_type) %>%
+              tmp <- tmp |>
+                group_by(.data$datetime, .data$variable_type) |>
                 summarize(
                   value = stats::median(.data$value),
                   .groups = "drop"
-                ) %>%
+                ) |>
                 ungroup()
             }
 
             # Write raw-tag
-            tmp %>%
+            tmp |>
               tidyr::pivot_wider(
                 names_from = "variable_type",
                 values_from = "value"
-              ) %>%
+              ) |>
               rename(
                 value = any_of(c(
                   "pressure",
@@ -470,22 +470,22 @@ create_geopressuretemplate_data <- function(pkg) {
                   "magnetic",
                   "activity"
                 ))
-              ) %>%
+              ) |>
               readr::write_csv(
                 file = glue::glue("{dir_path}/{sensor}.csv")
               )
           })
 
         # Write tag label
-        dft %>%
-          filter(.data$sensor %in% c("pressure", "acceleration")) %>%
+        dft |>
+          filter(.data$sensor %in% c("pressure", "acceleration")) |>
           transmute(
             date = .data$datetime,
             .data$value,
             label = ifelse(is.na(.data$label), "", .data$label),
             series = .data$sensor
-          ) %>%
-          GeoPressureR:::trainset_write(
+          ) |>
+          trainset_write(
             file = glue::glue("{path_label}/{tag_id}-labeled.csv"),
             quiet = TRUE
           )
@@ -496,10 +496,10 @@ create_geopressuretemplate_data <- function(pkg) {
   # Write twilight label
   twl <- twilights(pkg)
 
-  split(twl, twl$tag_id) %>%
+  split(twl, twl$tag_id) |>
     purrr::iwalk(
       \(dft, tag_id) {
-        dft %>%
+        dft |>
           transmute(
             date = .data$twilight,
             value = as.numeric(format(.data$twilight, "%H")) *
@@ -507,8 +507,8 @@ create_geopressuretemplate_data <- function(pkg) {
               as.numeric(format(.data$twilight, "%M")),
             label = ifelse(is.na(.data$label), "", .data$label),
             series = ifelse(.data$rise, "Rise", "Set")
-          ) %>%
-          GeoPressureR:::trainset_write(
+          ) |>
+          trainset_write(
             file = glue::glue("{path_twl}/{tag_id}-labeled.csv"),
             quiet = TRUE
           )
@@ -524,7 +524,7 @@ create_geopressuretemplate_config <- function(pkg) {
   t <- tags(pkg)
   o <- observations(pkg)
 
-  t_config <- t %>%
+  t_config <- t |>
     purrr::pmap(\(tag_id, ring_number, scientific_name, ...) {
       # Create the basic config from tag tibble
       co <- list(
@@ -535,9 +535,9 @@ create_geopressuretemplate_config <- function(pkg) {
       )
 
       # Construct the known data.frame from observation
-      k <- o %>%
-        filter(.data$tag_id == !!tag_id) %>%
-        arrange(.data$datetime) %>%
+      k <- o |>
+        filter(.data$tag_id == !!tag_id) |>
+        arrange(.data$datetime) |>
         transmute(
           stap_id = ifelse(
             .data$observation_type == "equipment",
@@ -592,29 +592,29 @@ create_geopressuretemplate_config <- function(pkg) {
       if (all(is.na(k$observation_comments) | k$observation_comments == "")) {
         rm_col <- c(rm_col, "observation_comments")
       }
-      k <- k %>% select(any_of(names(k)[!names(k) %in% rm_col]))
+      k <- k |> select(any_of(names(k)[!names(k) %in% rm_col]))
 
       # Add crop date from equipement and retrieval
       co$tag_create <- list(
-        crop_start = k %>%
-          filter(.data$stap_id == 1) %>%
+        crop_start = k |>
+          filter(.data$stap_id == 1) |>
           mutate(
             dt = format(
               .data$datetime + as.difftime(1, units = "days"),
               "%Y-%m-%d"
             )
-          ) %>%
+          ) |>
           pull(.data$dt),
         # we start one day after equipment (at 00:00)
-        crop_end = k %>%
-          filter(.data$stap_id == -1) %>%
-          mutate(dt = format(.data$datetime, "%Y-%m-%d")) %>%
+        crop_end = k |>
+          filter(.data$stap_id == -1) |>
+          mutate(dt = format(.data$datetime, "%Y-%m-%d")) |>
           pull(.data$dt)
       )
 
       # Add known
       co$tag_set_map <- list(
-        known = k %>%
+        known = k |>
           mutate(
             datetime = format(.data$datetime, "%Y-%m-%d")
           )

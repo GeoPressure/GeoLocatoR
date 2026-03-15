@@ -98,7 +98,7 @@ tags_to_measurements <- function(tags) {
           )
         },
         error = function(e) {
-          cli::cli_abort(
+          cli_abort(
             c(
               "x" = paste0(
                 "Error in {.fun tags_to_measurements} for tag {.val {tag_id}}, ",
@@ -120,7 +120,7 @@ tags_to_measurements <- function(tags) {
         },
         error = function(e) {
           value_types <- sapply(tag_measurements, function(x) class(x$value)[1])
-          cli::cli_abort(
+          cli_abort(
             c(
               "x" = paste0(
                 "Type mismatch in {.fun tags_to_measurements} for tag {.val {tag_id}}, ",
@@ -142,7 +142,7 @@ tags_to_measurements <- function(tags) {
     },
     error = function(e) {
       value_types <- sapply(all_measurements, function(x) class(x$value)[1])
-      cli::cli_abort(
+      cli_abort(
         c(
           "Type mismatch when combining tags in {.fun tags_to_measurements}:",
           "i" = "value column types: {.val {value_types}}",
