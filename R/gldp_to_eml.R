@@ -64,27 +64,43 @@ gldp_to_eml <- function(package, directory) {
     cli::cli_abort("The {.pkg uuid} package is required for this function.")
   }
 
-  # Helper to make sure text is valid XML (e.g. replace HTML nbsp)
-  sanitize_xml_text <- function(x) {
+  # Convert HTML-like strings to plain text with rvest.
+  to_plain_text <- function(x) {
     if (is.null(x)) {
       return(NULL)
     }
-    gsub("&nbsp;", " ", x, fixed = TRUE)
+    x <- as.character(x)
+    x <- stats::na.omit(x)
+    if (length(x) == 0) {
+      return(NULL)
+    }
+    is_html_like <- grepl("<[^>]+>|&[A-Za-z#0-9]+;", x, perl = TRUE)
+    x[is_html_like] <- vapply(
+      x[is_html_like],
+      \(value) rvest::read_html(value) |> rvest::html_text2(),
+      character(1),
+      USE.NAMES = FALSE
+    )
+    x
   }
 
   # Title
-  title <- sanitize_xml_text(package$title)
+  title <- to_plain_text(pkg$title %||% "GeoLocator Data Package")[1]
 
   # Creators and Contacts
   creators <- list()
   contacts <- list()
   associated_parties <- list()
 
-  for (contributor in package$contributors) {
+  for (contributor in (pkg$contributors %||% list())) {
     # Normalise possibly missing fields
     given_name <- contributor$givenName
     family_name <- contributor$familyName
     organization_name <- contributor$organization
+    contributor_title <- contributor$title %||% contributor$name %||% NULL
+    if (is.null(organization_name)) {
+      organization_name <- contributor_title
+    }
     email <- contributor$email
 
     # If absolutely no identifying info is available, skip this contributor
@@ -109,44 +125,75 @@ gldp_to_eml <- function(package, directory) {
     if (is.null(roles)) {
       roles <- character(0)
     }
+    roles <- as.character(roles)
+    roles_lower <- tolower(roles)
 
-    if ("ContactPerson" %in% roles) {
+    if ("contactperson" %in% roles_lower) {
       contacts <- c(contacts, list(party))
     }
 
-    if (any(c("ProjectLeader", "Researcher", "DataCurator") %in% roles)) {
+    if (
+      length(roles) == 0 ||
+        any(c("projectleader", "researcher", "datacurator") %in% roles_lower)
+    ) {
       creators <- c(creators, list(party))
-    } else if (!("ContactPerson" %in% roles) && length(roles) > 0) {
+    } else if (!("contactperson" %in% roles_lower) && length(roles) > 0) {
       # If not a creator or contact, add as associated party with first role (when available)
       party$role <- roles[1]
       associated_parties <- c(associated_parties, list(party))
     }
 
-    if ("RightsHolder" %in% roles) {
+    if ("rightsholder" %in% roles_lower) {
       party$role <- "rightsHolder"
       associated_parties <- c(associated_parties, list(party))
     }
+  }
+
+  # EML requires a contact. If none is explicitly provided, fallback to first creator.
+  if (length(contacts) == 0 && length(creators) > 0) {
+    contacts <- creators[1]
   }
 
   # Deduplicate creators if needed (simple check)
   # EML::set_responsibleParty returns a list, so we have a list of lists.
 
   # Abstract
-  abstract <- list(para = sanitize_xml_text(package$description))
+  abstract_text <- to_plain_text(pkg$description)
+  abstract <- if (
+    !is.null(abstract_text) && length(abstract_text) > 0 && nzchar(abstract_text[1])
+  ) {
+    list(para = abstract_text[1])
+  } else {
+    NULL
+  }
 
   # Keywords
-  keyword_set <- list(
-    keyword = sanitize_xml_text(package$keywords)
-  )
+  keyword_values <- to_plain_text(pkg$keywords)
+  keyword_set <- if (!is.null(keyword_values) && length(keyword_values) > 0) {
+    list(keyword = keyword_values)
+  } else {
+    NULL
+  }
 
   # Intellectual Rights
-  intellectual_rights <- list(
-    para = sanitize_xml_text(paste(
-      "This work is licensed under a",
-      purrr::map_chr(package$licenses, "name") |> paste(collapse = ", "),
-      "license."
-    ))
-  )
+  license_names <- character(0)
+  if (is.list(pkg$licenses) && length(pkg$licenses) > 0) {
+    license_names <- purrr::map_chr(pkg$licenses, \(lic) {
+      lic$name %||% lic$title %||% lic$id %||% ""
+    })
+    license_names <- license_names[nzchar(license_names)]
+  }
+  intellectual_rights <- if (length(license_names) > 0) {
+    list(
+      para = to_plain_text(paste(
+        "This work is licensed under a",
+        paste(license_names, collapse = ", "),
+        "license."
+      ))[1]
+    )
+  } else {
+    NULL
+  }
 
   # Coverage
   coverage <- list()
@@ -192,22 +239,21 @@ gldp_to_eml <- function(package, directory) {
     )
   }
 
-  # Methods (optional, maybe generic text)
-  methods <- list(
-    methodStep = list(
-      description = list(
-        para = "Data were processed using the GeoLocator Data Package standard."
-      )
-    )
-  )
-
   # Dataset
+  pub_year <- NA_character_
+  if (is_non_empty_string(as.character(pkg$created %||% NA_character_)[1])) {
+    pub_year <- format(as.Date(substr(as.character(pkg$created[1]), 1, 10)), "%Y")
+  }
+  if (is.na(pub_year)) {
+    pub_year <- NULL
+  }
+
   dataset <- list(
     title = title,
     creator = creators,
     contact = contacts,
     associatedParty = associated_parties,
-    pubDate = format(as.Date(package$created), "%Y"),
+    pubDate = pub_year,
     abstract = abstract,
     keywordSet = keyword_set,
     intellectualRights = intellectual_rights,
