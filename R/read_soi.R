@@ -1,15 +1,15 @@
-#' Add GLDP SOI Data to a Package
+#' Read SOI data into a GeoLocator Data Package
 #'
 #' @description
-#' This function adds data from the Swiss Ornithological Institute (SOI) to a package. It includes
+#' This function reads data from the Swiss Ornithological Institute (SOI) into
+#' a new package created with [create_gldp()]. It includes
 #' tags, measurements, and observations based on the provided data frame and directory of data. The
 #' function also handles missing directories and updates the package accordingly.
 #'
 #' See an example of use [with this tutorial](https://rpubs.com/rafnuss/geolocator_create_from_soi).
 #'
-#' @param pkg The package object to which the data will be added.
 #' @param gdl A data frame containing the SOI data. Must include columns like `OrderName`,
-#' `GDL_ID`, and other relevant fields for tags, measurements, and observations. See [`read_gdl`]
+#' `GDL_ID`, and other relevant fields for tags, measurements, and observations. See `read_soi_gld()`
 #' for more information.
 #' @param directory_data A character string specifying the path to the directory where data files
 #' are located. This directory is used to locate and match GDL_IDs to their corresponding
@@ -26,28 +26,32 @@
 #'   \item Compute tags.csv and observations.csv from `gdl` and add them as resources too.
 #' }
 #'
-#' @return The updated package object with the added resources.
+#' @return A `geolocatordp` object.
 #'
 #' @export
-add_gldp_soi <- function(
-  pkg,
+# nocov start
+read_soi <- function(
   gdl,
   directory_data,
   generate_observations = TRUE
 ) {
-  check_gldp(pkg)
-  assertthat::assert_that(is.data.frame(gdl))
+  pkg <- create_gldp()
+  if (!is.data.frame(gdl)) {
+    cli_abort(c(
+      "x" = "{.arg gdl} must be a data frame."
+    ))
+  }
 
   # Retrieve directory of all data and display warning message if absent
   if (!("directory" %in% names(gdl))) {
     cli_progress_step("Retrieving data directories for SOI tags")
-    gdl <- add_gldp_soi_directory(gdl, directory_data)
+    gdl <- read_soi_directory(gdl, directory_data)
   }
 
   # Do not add any data if same id already presents in measurements
   if ("measurements" %in% frictionless::resources(pkg)) {
     m <- measurements(pkg)
-    gdl <- gdl %>% filter(!(.data$GDL_ID %in% unique(m$tag_id)))
+    gdl <- gdl |> filter(!(.data$GDL_ID %in% unique(m$tag_id)))
   } else {
     m <- NULL
   }
@@ -68,9 +72,9 @@ add_gldp_soi <- function(
       "Loading tag data for {n_tags_with_data} tags with available data"
     )
   )
-  dtags <- gdl %>%
-    filter(!is.na(.data$directory)) %>%
-    select("GDL_ID", "directory") %>%
+  dtags <- gdl |>
+    filter(!is.na(.data$directory)) |>
+    select("GDL_ID", "directory") |>
     purrr::pmap(
       \(GDL_ID, directory) {
         tryCatch(
@@ -119,7 +123,7 @@ add_gldp_soi <- function(
   # Only add tags and observations data to the tag_id not yet present in tag
   if ("tags" %in% frictionless::resources(pkg)) {
     t <- tags(pkg)
-    gdl_to <- gdl %>% filter(!(.data$GDL_ID %in% t$tag_id))
+    gdl_to <- gdl |> filter(!(.data$GDL_ID %in% t$tag_id))
   } else {
     t <- NULL
     gdl_to <- gdl
@@ -139,8 +143,8 @@ add_gldp_soi <- function(
       tag_comments = character()
     )
   } else {
-    t_gdl <- gdl_to %>%
-      rowwise() %>%
+    t_gdl <- gdl_to |>
+      rowwise() |>
       mutate(
         attachment_type = {
           vars <- pick(everything())
@@ -195,10 +199,10 @@ add_gldp_soi <- function(
             collapse = "|"
           )
         }
-      ) %>%
+      ) |>
       ungroup()
 
-    t_gdl <- t_gdl %>%
+    t_gdl <- t_gdl |>
       transmute(
         tag_id = .data$GDL_ID,
         manufacturer = "Swiss Ornithological Institute",
@@ -260,7 +264,7 @@ add_gldp_soi <- function(
 
   # Adding sensor resource
   o_gdl <- bind_rows(
-    gdl_to %>%
+    gdl_to |>
       transmute(
         ring_number = if ("RingNumber" %in% names(gdl_to)) {
           .data$RingNumber
@@ -296,7 +300,7 @@ add_gldp_soi <- function(
         age_class = "0",
         sex = "U"
       ),
-    gdl_to %>%
+    gdl_to |>
       transmute(
         ring_number = if ("RingNumber" %in% names(gdl_to)) {
           .data$RingNumber
@@ -330,7 +334,7 @@ add_gldp_soi <- function(
   )
 
   if (!generate_observations) {
-    o_gdl <- o_gdl %>% filter(!is.na(.data$datetime))
+    o_gdl <- o_gdl |> filter(!is.na(.data$datetime))
   }
 
   o <- bind_rows(o, o_gdl)
@@ -346,10 +350,9 @@ add_gldp_soi <- function(
   }
 
   # Update metadata
-  pkg <- pkg %>%
-    update_gldp_taxonomic() %>%
-    update_gldp_number_tags() %>%
-    update_gldp_spatial() %>%
+  pkg <- pkg |>
+    update_gldp_taxonomic() |>
+    update_gldp_number_tags() |>
     update_gldp_temporal()
 
   cli_progress_done()
@@ -367,23 +370,28 @@ add_gldp_soi <- function(
 #' @param directory_data A data frame containing directory information
 #' @return Updated GDL object with directory information
 #' @noRd
-add_gldp_soi_directory <- function(gdl, directory_data) {
+read_soi_directory <- function(gdl, directory_data) {
   # Check if the required columns are present
-  assertthat::assert_that(
-    all(c("OrderName", "GDL_ID") %in% colnames(gdl)),
-    msg = "The input tibble must contain {.field OrderName} and {.field GDL_ID} columns."
-  )
-  assertthat::assert_that(
-    !any(is.na(gdl$OrderName) | gdl$OrderName == ""),
-    msg = "The 'OrderName' column contains empty values."
-  )
-  assertthat::assert_that(
-    !any(is.na(gdl$GDL_ID) | gdl$GDL_ID == ""),
-    msg = "The 'GDL_ID' column contains empty values."
-  )
-  assertthat::assert_that(
-    file.exists(directory_data) && file.info(directory_data)$isdir
-  )
+  if (!all(c("OrderName", "GDL_ID") %in% colnames(gdl))) {
+    cli_abort(c(
+      "x" = "{.arg gdl} must contain {.field OrderName} and {.field GDL_ID} columns."
+    ))
+  }
+  if (any(is.na(gdl$OrderName) | gdl$OrderName == "")) {
+    cli_abort(c(
+      "x" = "The {.field OrderName} column contains empty values."
+    ))
+  }
+  if (any(is.na(gdl$GDL_ID) | gdl$GDL_ID == "")) {
+    cli_abort(c(
+      "x" = "The {.field GDL_ID} column contains empty values."
+    ))
+  }
+  if (!dir.exists(directory_data)) {
+    cli_abort(c(
+      "x" = "{.arg directory_data} must be an existing directory."
+    ))
+  }
 
   # Function to get the highest alphabetical directory path matching the GDL_ID pattern
   check_folder_exists <- function(order_name, gdl_id, base_dir) {
@@ -437,23 +445,23 @@ add_gldp_soi_directory <- function(gdl, directory_data) {
   }
 
   # Apply the check_folder_exists function to each row and add directory and folder_exists columns
-  gdl <- gdl %>%
-    rowwise() %>%
+  gdl <- gdl |>
+    rowwise() |>
     mutate(
       directory = check_folder_exists(
         .data$OrderName,
         .data$GDL_ID,
         directory_data
       )
-    ) %>%
+    ) |>
     ungroup()
 
   # Display warning for any missing directories
-  gdl_id_na_dir <- gdl %>%
-    filter(is.na(.data$directory)) %>%
+  gdl_id_na_dir <- gdl |>
+    filter(is.na(.data$directory)) |>
     pull(.data$GDL_ID)
 
-  if (length(gdl_id_na_dir) > 0 && FALSE) {
+  if (length(gdl_id_na_dir) > 0) {
     cli_warn(c(
       "!" = "Could not find data directory for {length(gdl_id_na_dir)} tags (out of {nrow(gdl)}).",
       ">" = "GDL_IDs: {.field {gdl_id_na_dir}}. These will not be imported."
@@ -461,3 +469,4 @@ add_gldp_soi_directory <- function(gdl, directory_data) {
   }
   gdl
 }
+# nocov end
