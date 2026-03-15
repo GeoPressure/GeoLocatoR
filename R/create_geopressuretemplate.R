@@ -94,30 +94,27 @@ create_geopressuretemplate <- function(path, pkg = NULL, open = interactive()) {
 
     if (!is.null(pkg)) {
       check_gldp(pkg)
+      pkg <- update_gldp(pkg)
 
-      # Update the description file
-      try({
-        create_geopressuretemplate_desc(pkg)
-      })
+      steps <- list(
+        "DESCRIPTION file" = \(p) create_geopressuretemplate_desc(p),
+        "README file" = \(p) create_geopressuretemplate_readme(p),
+        "LICENSE file" = \(p) create_geopressuretemplate_licenses(p),
+        "data files" = \(p) create_geopressuretemplate_data(p),
+        "config file" = \(p) create_geopressuretemplate_config(p)
+      )
 
-      # Update the README file
-      try({
-        create_geopressuretemplate_readme(pkg)
-      })
-
-      # Update the LICENSE file
-      try({
-        create_geopressuretemplate_licences(pkg$licenses)
-      })
-
-      # Add data
-      try({
-        create_geopressuretemplate_data(pkg)
-      })
-
-      # Set config file
-      try({
-        create_geopressuretemplate_config(pkg)
+      purrr::iwalk(steps, \(step_fun, step_name) {
+        tryCatch(
+          step_fun(pkg),
+          error = function(e) {
+            cli_warn(c(
+              "!" = "Failed to generate {.val {step_name}}.",
+              ">" = conditionMessage(e)
+            ))
+            invisible(NULL)
+          }
+        )
       })
     }
   })
@@ -129,7 +126,7 @@ create_geopressuretemplate <- function(path, pkg = NULL, open = interactive()) {
     rstudioapi::openProject(path, newSession = TRUE)
   }
 
-  return(path)
+  path
 }
 
 #' Create DESCRIPTION file for GeoPressure template
@@ -141,27 +138,64 @@ create_geopressuretemplate <- function(path, pkg = NULL, open = interactive()) {
 #' @return Nothing (side effect: writes DESCRIPTION file)
 #' @noRd
 create_geopressuretemplate_desc <- function(pkg) {
-  d <- desc::description$new()
+  meta <- pkg$meta
+  contributors <- meta$contributors %||% meta$creators %||% list()
+  licenses <- meta$license %||% list()
 
-  d$set("Title", pkg$title, check = FALSE)
-  d$set(
-    "License",
-    paste(purrr::map_chr(pkg$license, ~ .x$name), collapse = ", "),
-    check = FALSE
-  )
-  d$set_authors(contributors_to_persons(pkg$contributors))
-
-  # Optional fields
-  if ("description" %in% names(pkg)) {
-    d$set(
-      "Description",
-      rvest::html_text(rvest::read_html(pkg$description)),
-      check = FALSE
-    )
+  if (!is.list(licenses)) {
+    licenses <- list(licenses)
+  }
+  if (length(licenses) > 0 && !is.list(licenses[[1]])) {
+    licenses <- list(licenses)
   }
 
-  if ("version" %in% names(pkg)) {
-    d$set_version(gsub("^v", "", pkg$version))
+  if (is.list(contributors) && length(contributors) > 0) {
+    contributors <- purrr::map(contributors, \(c) {
+      if (!is.list(c)) {
+        return(list(title = as.character(c)[1]))
+      }
+      c$title <- c$title %||% c$name
+      c$organization <- c$organization %||% c$affiliation
+      c$path <- c$path %||% c$orcid
+      c$roles <- c$roles %||% c$role
+      c
+    })
+  }
+
+  d <- desc::description$new()
+
+  d$set("Title", meta$title %||% "GeoPressureTemplate project", check = FALSE)
+
+  if (length(licenses) > 0) {
+    license_text <- purrr::map_chr(licenses, \(lic) {
+      if (is.list(lic)) {
+        lic$name %||% lic$id %||% lic$title %||% ""
+      } else {
+        as.character(lic)[1]
+      }
+    })
+    license_text <- license_text[nzchar(license_text)]
+    if (length(license_text) > 0) {
+      d$set("License", paste(license_text, collapse = ", "), check = FALSE)
+    }
+  }
+
+  if (length(contributors) > 0) {
+    d$set_authors(contributors_to_persons(contributors))
+  }
+
+  # Optional fields
+  if (!is.null(meta$description)) {
+    description_text <- as.character(meta$description)[1] |>
+      rvest::read_html() |>
+      rvest::html_text2()
+    if (nzchar(description_text)) {
+      d$set("Description", description_text, check = FALSE)
+    }
+  }
+
+  if (!is.null(meta$version)) {
+    d$set_version(gsub("^v", "", as.character(meta$version)[1]))
   }
 
   d$normalize()
@@ -177,56 +211,76 @@ create_geopressuretemplate_desc <- function(pkg) {
 #' @return Nothing (side effect: writes README.md file)
 #' @noRd
 create_geopressuretemplate_readme <- function(pkg) {
-  check_gldp(pkg)
+  meta <- pkg$meta
+
+  temporal <- pkg$temporal %||% list()
+  temporal_start <- temporal$start %||% NA_character_
+  temporal_end <- temporal$end %||% NA_character_
+  taxonomic <- paste(pkg$taxonomic %||% character(0), collapse = ", ")
+  number_tags <- pkg$numberTags
+  number_tags_md <- ""
+  if (is.list(number_tags) && length(number_tags) > 0) {
+    number_tags_md <- paste0(
+      "- ",
+      names(number_tags),
+      ": ",
+      unlist(number_tags),
+      collapse = "\n"
+    )
+  }
+  title <- meta$title %||% "GeoPressureTemplate project"
+  description <- meta$description
+  if (!is.null(description)) {
+    description <- as.character(description)[1] |> rvest::read_html() |> rvest::html_text2()
+  } else {
+    description <- ""
+  }
+
+  recid <- meta$recid %||% as.character(meta$id %||% "")[1]
+  doi <- meta$doi %||% ""
+  is_sandbox <- grepl("handle\\.test\\.datacite\\.org", meta$doi_url %||% "")
+  zenodo_base <- if (is_sandbox) "https://sandbox.zenodo.org" else "https://zenodo.org"
+  zenodo_url <- if (nzchar(recid)) paste0(zenodo_base, "/records/", recid) else ""
+  badge <- ""
+  if (nzchar(recid)) {
+    if (nzchar(doi)) {
+      badge <- paste0(
+        "[![DOI](",
+        zenodo_base,
+        "/badge/DOI/",
+        doi,
+        ".svg)](",
+        zenodo_url,
+        ")"
+      )
+    } else {
+      badge <- paste0(
+        "[![Zenodo record](https://img.shields.io/badge/Zenodo-record%20",
+        recid,
+        "-1682D4)](",
+        zenodo_url,
+        ")"
+      )
+    }
+  }
 
   content <- paste(
     "# ",
-    pkg$title,
+    title,
     "\n\n",
-    if (!is.null(pkg$description)) paste(pkg$description, "\n") else "",
-    if (!is.null(pkg$keywords)) {
-      paste("**Keywords:** ", paste(pkg$keywords, collapse = ", "), "\n")
-    },
-    "\n",
-    "## Contributors\n\n",
-    paste(
-      sapply(pkg$contributors, function(c) {
-        paste0(
-          "- **",
-          c$title,
-          "** - ",
-          paste(c$roles, collapse = ", "),
-          " ([Email](mailto:",
-          c$email,
-          "))\n"
-        )
-      }),
-      collapse = ""
-    ),
-    "\n",
+    if (nzchar(badge)) paste0(badge, "\n\n") else "",
+    if (nzchar(description)) paste(description, "\n") else "",
     "## Overview\n\n",
-    "**Version:** ",
-    pkg$version,
-    "\n",
-    "**Created:** ",
-    pkg$created,
-    "\n",
     "**Temporal coverage:** ",
-    pkg$temporal$start,
+    temporal_start,
     " - ",
-    pkg$temporal$end,
+    temporal_end,
     "\n",
     "**Taxonomic coverage:** ",
-    paste(pkg$taxonomic, collapse = ", "),
+    taxonomic,
     "\n",
     "**Number of tags:** \n",
-    paste0(
-      "- ",
-      names(pkg$numberTags),
-      ": ",
-      unlist(pkg$numberTags),
-      collapse = "\n"
-    ),
+    number_tags_md,
     "\n",
     sep = ""
   )
@@ -239,10 +293,25 @@ create_geopressuretemplate_readme <- function(pkg) {
 #' Internal helper function to generate appropriate LICENSE files based on
 #' the license specifications in a GeoLocator Data Package.
 #'
-#' @param licenses List of license objects from a GeoLocator Data Package
+#' @param pkg A GeoLocator Data Package object
 #' @return Nothing (side effect: creates LICENSE files)
 #' @noRd
-create_geopressuretemplate_licences <- function(licenses) {
+create_geopressuretemplate_licenses <- function(pkg) {
+  meta <- pkg$meta
+  licenses <- meta$license %||% list()
+
+  if (!is.list(licenses)) {
+    licenses <- list(licenses)
+  }
+  if (length(licenses) > 0 && !is.list(licenses[[1]])) {
+    licenses <- list(licenses)
+  }
+
+  if (length(licenses) == 0) {
+    cli_inform("No license information provided; skipping LICENSE file setup.")
+    return(invisible(NULL))
+  }
+
   # 1. If more than one license is provided, warn and keep the first
   if (length(licenses) > 1) {
     cli_warn(c(
@@ -261,9 +330,10 @@ create_geopressuretemplate_licences <- function(licenses) {
   usethis::proj_set(getwd(), force = TRUE)
 
   # 4. Fallback to license path if name is missing or empty
-  license_name <- tolower(lic$name)
-  if (is.null(license_name) || is.na(license_name) || !nzchar(license_name)) {
-    license_name <- lic$path
+  license_name <- if (is.list(lic)) {
+    lic$name %||% lic$id %||% lic$path
+  } else {
+    as.character(lic)[1]
   }
   # 5. Abort if no usable license identifier is available
   if (is.null(license_name) || is.na(license_name) || !nzchar(license_name)) {
@@ -273,6 +343,7 @@ create_geopressuretemplate_licences <- function(licenses) {
     ))
     return(invisible(NULL))
   }
+  license_name <- tolower(license_name)
 
   rules <- list(
     agpl = list("agpl", usethis::use_agpl_license),
