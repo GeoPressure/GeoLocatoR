@@ -54,11 +54,13 @@ add_gldp_resource <- function(
   }
 
   # Retrieve the resource schema
+
+  version <- gldp_version(pkg)
+  schema_url <- glue::glue(
+    "https://raw.githubusercontent.com/Rafnuss/GeoLocator-DP/{version}/{resource_name}-table-schema.json"
+  )
   schema <- jsonlite::fromJSON(
-    glue::glue(
-      "https://raw.githubusercontent.com/Rafnuss/GeoLocator-DP/{version(package)}/{resource_name}",
-      "-table-schema.json"
-    ),
+    schema_url,
     simplifyDataFrame = FALSE,
     simplifyVector = TRUE
   )

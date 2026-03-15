@@ -15,7 +15,6 @@ print.geolocatordp <- function(x, ...) {
 
   check_gldp(x)
 
-  cli_h3("A GeoLocator Data Package ({version(x)})")
 
   cli_bullets(c("*" = "{.field title}: {.val {x$title}}"))
 
@@ -45,6 +44,7 @@ print.geolocatordp <- function(x, ...) {
 
   embargo_date <- as.POSIXct(x$embargo, format = "%Y-%m-%d", tz = "UTC")
   cli_bullets(c("*" = "{.field embargo}: {.val {embargo_date}}"))
+  cli_h3("A GeoLocator Data Package ({gldp_version(x)})")
 
   licenses <- sapply(x$licenses, \(x) {
     if (!is.null(x$title)) {

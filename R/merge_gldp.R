@@ -40,9 +40,11 @@ merge_gldp <- function(x, y) {
   check_gldp(y)
 
   # Check if the versions are the same
-  if (version(x) != version(y)) {
+  vx <- gldp_version(x)
+  vy <- gldp_version(y)
+  if (!is.na(vx) && !is.na(vy) && vx != vy) {
     cli_warn(c(
-      "!" = "The versions of {.pkg x} ({version(x)}) and {.pkg y} ({version(y)}) differ.",
+      "!" = "The spec versions of {.pkg x} ({vx}) and {.pkg y} ({vy}) differ.",
       ">" = "This might cause merging to fail."
     ))
   }
