@@ -5,75 +5,157 @@
 #' package metadata, profile, and resources. The validation includes verifying that the package
 #' conforms to the GeoLocator Data Package profile and that each resource adheres to its schema.
 #'
-#' If `quiet` is `TRUE`, the function suppresses the output of the `cli` package's messages.
-#'
 #' @param pkg A GeoLocator Data Package object to be validated.
-#' @param quiet A logical indicating whether to suppress messages from the `cli` package. Defaults
-#' to `FALSE`.
 #'
 #' @return A logical value indicating whether the package validation was successful (`TRUE`) or
 #' failed (`FALSE`).
 #'
 #' @export
-validate_gldp <- function(pkg, quiet = FALSE) {
+validate_gldp <- function(pkg) {
   check_gldp(pkg)
 
-  if (quiet) {
-    options(cli.default_handler = function(...) {})
-  }
-
   valid <- validate_gldp_profile(pkg)
-  valid <- valid & validate_gldp_id(pkg)
-  valid <- valid & validate_gldp_resources(pkg)
+
   valid <- valid & validate_gldp_coherence(pkg)
-  valid <- valid & validate_gldp_observations(observations(pkg))
 
-  cli_h2("Overall Package Validation")
+  validate_gldp_meta(pkg)
+
   if (valid) {
-    cli_alert_success("Package is valid.")
+    cli_alert_success("Package validation succeeded.")
   } else {
-    cli_alert_danger("Package validation failed.")
-  }
-
-  if (quiet) {
-    options(cli.default_handler = NULL)
+    cli_alert_danger("Package validation failed. Review messages above.")
   }
 
   invisible(valid)
 }
 
-#' Validate GeoLocator Data Package id
+#' Validate GeoLocator Data Package metadata recommendations
 #'
-#' Internal helper function to validate that the package id is a Zenodo concept DOI URL.
+#' Internal helper function to report soft metadata recommendations for a GeoLocator
+#' Data Package. These checks are advisory but included in global validation.
 #'
 #' @param pkg A GeoLocator Data Package object
-#' @return Logical indicating whether the id validation passed
+#' @return Always returns `TRUE` and reports metadata recommendations as messages.
 #' @noRd
-validate_gldp_id <- function(pkg) {
-  cli_h2("Check GeoLocator DataPackage id")
+validate_gldp_meta <- function(pkg) {
+  cli_h3("Check Metadata")
 
-  if (is.null(pkg$id) || length(pkg$id) != 1 || is.na(pkg$id) || !nzchar(pkg$id)) {
-    cli_alert_danger("Package {.field id} is missing.")
-    return(invisible(FALSE))
+  # Summary of metadata recommendations checked below:
+  # - title prefix convention
+  # - contributor role completeness
+  # - related identifiers presence
+  # - GeoPressureTemplate repository URL
+  # - embargo metadata quality (date, duration, justification text)
+  has_warnings <- FALSE
+
+  # 1) Title should follow the shared "GeoLocator Data Package: " prefix.
+  title <- pkg$title %||% NA_character_
+  if (!is.character(title) || length(title) != 1) {
+    title <- as.character(title[1] %||% NA_character_)
   }
-
-  is_zenodo_concept_doi <- grepl(
-    "^https?://doi\\.org/10\\.5281/zenodo\\.[0-9]+$",
-    pkg$id
-  )
-
-  if (!is_zenodo_concept_doi) {
-    cli_alert_danger("Package {.field id} is not a Zenodo concept DOI URL.")
-    cli_alert_info(
-      "Expected format: {.url https://doi.org/10.5281/zenodo.<concept_id>}"
+  if (is.na(title) || !startsWith(title, "GeoLocator Data Package: ")) {
+    cli_alert_warning(
+      "Missing expected prefix {.val GeoLocator Data Package: } in {.field pkg$title}."
     )
-    return(invisible(FALSE))
+    has_warnings <- TRUE
   }
 
-  cli_alert_success("Package {.field id} is a valid Zenodo concept DOI URL.")
+  # 2) Contributors should include roles when possible.
+  contributors <- pkg$contributors %||% list()
+  if (!is.list(contributors)) {
+    contributors <- list()
+  }
+  contributors_with_role <- sum(vapply(
+    contributors,
+    \(c) {
+      roles <- c$roles %||% c$role %||% character(0)
+      length(roles) > 0 && any(!is.na(roles) & nzchar(as.character(roles)))
+    },
+    logical(1)
+  ))
+  if (contributors_with_role == 0) {
+    cli_alert_warning(
+      "Missing {.field role} in {.field pkg$contributors}."
+    )
+    has_warnings <- TRUE
+  }
+
+  # 3) Data-related publications/resources should be linked in related identifiers.
+  related <- pkg$relatedIdentifiers %||% list()
+  if (length(related) == 0) {
+    cli_alert_warning(
+      "Missing {.field relatedIdentifiers} in {.field pkg}."
+    )
+    has_warnings <- TRUE
+  }
+
+  # 4) Software/repository URL should point to GeoPressureTemplate.
+  code_repo <- pkg$codeRepository %||% NULL
+  expected_repo <- "https://github.com/Rafnuss/GeoPressureTemplate"
+  if (
+    is.null(code_repo) ||
+      length(code_repo) != 1 ||
+      !is.character(code_repo) ||
+      is.na(code_repo) ||
+      !nzchar(code_repo) ||
+      !identical(sub("/$", "", code_repo), expected_repo)
+  ) {
+    cli_alert_warning(
+      "Missing or invalid {.field pkg$codeRepository}."
+    )
+    has_warnings <- TRUE
+  }
+
+  # 5) For embargoed records, require a valid embargo date and basic justification.
+  embargo <- pkg$embargo %||% NA_character_
+  embargo <- as.character(embargo[1] %||% NA_character_)
+  embargo_is_active <- !is.na(embargo) && nzchar(embargo) && embargo != "1970-01-01"
+  if (embargo_is_active) {
+    if (is.na(embargo) || !nzchar(embargo)) {
+      cli_alert_warning(
+        "Missing {.field pkg$embargo}."
+      )
+      has_warnings <- TRUE
+    } else {
+      embargo_date <- as.Date(embargo)
+      if (is.na(embargo_date)) {
+        cli_alert_warning(
+          "Invalid {.field pkg$embargo}; use {.val YYYY-MM-DD}."
+        )
+        has_warnings <- TRUE
+      } else {
+        days <- as.integer(embargo_date - Sys.Date())
+        if (days > 730) {
+          cli_alert_warning(
+            "Invalid {.field pkg$embargo}: duration ({days} days) seems too long."
+          )
+          has_warnings <- TRUE
+        } else {
+          cli_alert_info(
+            "Embargo duration is {days} days. Ensure justification is documented."
+          )
+        }
+
+        description <- pkg$description %||% ""
+        description <- tolower(paste(as.character(description), collapse = " "))
+        if (!grepl("embargo|justif", description)) {
+          cli_alert_warning(
+            "Missing embargo justification in {.field pkg$description}."
+          )
+          has_warnings <- TRUE
+        }
+      }
+    }
+  }
+
+  if (!has_warnings) {
+    cli_alert_success("Metadata recommendations are satisfied.")
+  } else {
+    cli_alert_warning("Metadata recommendations have warnings.")
+  }
+
   invisible(TRUE)
 }
-
 
 #' Validate GeoLocator Data Package profile
 #'
@@ -84,30 +166,29 @@ validate_gldp_id <- function(pkg) {
 #' @return Logical indicating whether the profile validation passed
 #' @noRd
 validate_gldp_profile <- function(pkg) {
+  cli_h3("Check Profile")
+
   schema <- jsonlite::fromJSON(pkg$`$schema`, simplifyVector = FALSE)
 
   required <- unlist(schema$allOf[[2]]$required)
   properties <- schema$allOf[[2]]$properties
-  defs <- schema$`$defs`
 
   # Skip resource validation at the profile level (handled separately)
   required <- setdiff(required, "resources")
   properties$resources <- NULL
 
-  cli_h2("Check GeoLocator DataPackage profile")
+  # Ignore all additional field not present in the schema
+  ignore_fields <- setdiff(names(pkg), names(properties))
+
   valid <- validate_gldp_object(
     pkg,
     required,
     properties,
-    defs = defs,
-    ignore_fields = c("directory", "resources")
+    defs = schema$`$defs`,
+    ignore_fields = ignore_fields
   )
 
-  if (valid) {
-    cli_alert_success("Package is consistent with the profile.")
-  } else {
-    cli_alert_danger("Package is not consistent with the profile.")
-  }
+  valid <- valid & validate_gldp_resources(pkg)
 
   invisible(valid)
 }
@@ -121,39 +202,29 @@ validate_gldp_profile <- function(pkg) {
 #' @return Logical indicating whether all resource validations passed
 #' @noRd
 validate_gldp_resources <- function(pkg) {
-  cli_h3("Check GeoLocator DataPackage Resources")
-
   valid <- TRUE
+
+  is_tabular_resource <- function(resource) {
+    identical(resource$profile, "tabular-data-resource") &&
+      is.list(resource$schema) &&
+      !is.null(resource$schema$fields)
+  }
+
+  if (length(pkg$resources) == 0) {
+    cli_alert_danger("Package must contain at least one resource.")
+    valid <- FALSE
+  }
 
   for (i in seq_along(pkg$resources)) {
     resource <- pkg$resources[[i]]
 
-    if (
-      resource$profile == "tabular-data-resource" &&
-        (resource$name %in%
-          c(
-            "tags",
-            "observations",
-            "measurements",
-            "staps",
-            "twilights",
-            "paths",
-            "edges",
-            "pressurepaths"
-          ))
-    ) {
+    if (is_tabular_resource(resource)) {
       valid <- valid & validate_gldp_table(resource$data, resource$schema)
     } else {
-      cli_h2("Check GeoLocator DataPackage Resources {.field {resource$name}}")
+      cli_h3("Check Resources {.field {resource$name}}")
       cli_alert_warning("Could not check {.field {resource$name}}")
       valid <- FALSE
     }
-  }
-
-  if (valid) {
-    cli_alert_success("Package's resources are valid.")
-  } else {
-    cli_alert_danger("Package's resources validation failed.")
   }
 
   invisible(valid)
@@ -161,7 +232,7 @@ validate_gldp_resources <- function(pkg) {
 
 #' @noRd
 validate_gldp_table <- function(data, schema) {
-  cli_h2("Check GeoLocator DataPackage Resources {.field {schema$name}}")
+  cli_h3("Check Resources {.field {schema$name}}")
 
   if (is.null(data)) {
     cli_alert_danger("data is not available.")
@@ -198,10 +269,6 @@ validate_gldp_table <- function(data, schema) {
     cli_alert_success(
       "Table {.field {schema$name}} is consistent with the schema."
     )
-  } else {
-    cli_alert_danger(
-      "Table {.field {schema$name}} is not consistent with the schema."
-    )
   }
 
   invisible(valid)
@@ -229,7 +296,8 @@ validate_gldp_object <- function(
   name <- glue::glue("{name}{ifelse(name=='','','$')}")
 
   valid <- TRUE
-  for (field in names(obj)) {
+  fields <- setdiff(names(obj), ignore_fields)
+  for (field in fields) {
     if (field %in% names(properties)) {
       field_name <- glue::glue("{name}{field}")
       prop <- resolve_prop(obj[[field]], properties[[field]], defs, field_name)
@@ -307,9 +375,7 @@ validate_gldp_object <- function(
         }
       }
     } else {
-      if (!(field %in% ignore_fields)) {
-        cli_alert_warning("{.field {field}} does not exist in schema.")
-      }
+      cli_alert_warning("{.field {field}} does not exist in schema.")
     }
   }
 
@@ -574,10 +640,6 @@ validate_gldp_item <- function(item, prop, field) {
         valid <- FALSE
       }
     }
-  }
-
-  if (valid) {
-    cli_alert_success("{.field {field}} is valid.")
   }
 
   valid
@@ -889,7 +951,23 @@ check_type <- function(value, type, field) {
 
 #' @noRd
 validate_gldp_coherence <- function(pkg) {
-  cli_h2("Check GeoLocator DataPackage Coherence")
+  cli_h3("Check Coherence")
+
+  valid_pkg <- validate_gldp_pkg_coherence(pkg)
+  valid_obs <- validate_gldp_observations(observations(pkg))
+  valid <- valid_pkg & valid_obs
+
+  if (valid) {
+    cli_alert_success("Coherence checks passed.")
+  } else {
+    cli_alert_danger("Coherence checks failed.")
+  }
+
+  invisible(valid)
+}
+
+#' @noRd
+validate_gldp_pkg_coherence <- function(pkg) {
   valid <- TRUE
 
   min_res_required <- c("tags", "observations", "measurements")
@@ -911,18 +989,22 @@ validate_gldp_coherence <- function(pkg) {
 
   # Check for conflicting species assignments:
   # A single ring_number should be linked to only one scientific_name.
-  t %>%
-    filter(!is.na(.data$ring_number)) %>%
-    group_by(.data$ring_number) %>%
-    filter(n_distinct(.data$scientific_name) > 1) %>%
-    distinct(.data$ring_number) %>%
-    pull(.data$ring_number) %>%
-    purrr::walk(
-      ~ cli_alert_danger(
-        "Multiple scientific names used for ring_number {.strong {}}",
-        .
+  conflicting_ring_numbers <- t |>
+    filter(!is.na(.data$ring_number)) |>
+    group_by(.data$ring_number) |>
+    filter(n_distinct(.data$scientific_name) > 1) |>
+    distinct(.data$ring_number) |>
+    pull(.data$ring_number)
+  if (length(conflicting_ring_numbers) > 0) {
+    valid <- FALSE
+    conflicting_ring_numbers |>
+      purrr::walk(
+        ~ cli_alert_danger(
+          "Multiple scientific names used for ring_number {.strong {}}",
+          .
+        )
       )
-    )
+  }
 
   # Check for measurements with tag_id not present in the tags table.
   # All tag_id entries in measurements must be declared in tags.
@@ -952,8 +1034,8 @@ validate_gldp_coherence <- function(pkg) {
 
   # Check for mismatched tag_id and ring_number combinations between tags and observations.
   # If a combination exists in observations, it must also exist in tags.
-  invalid_combinations <- o %>%
-    filter(!is.na(.data$tag_id)) %>%
+  invalid_combinations <- o |>
+    filter(!is.na(.data$tag_id)) |>
     anti_join(t, by = c("tag_id", "ring_number"))
   if (nrow(invalid_combinations) > 0) {
     cli_alert_danger(
@@ -1000,22 +1082,15 @@ validate_gldp_coherence <- function(pkg) {
     valid <- FALSE
   }
 
-  if (valid) {
-    cli_alert_success("Package is internally coherent.")
-  } else {
-    cli_alert_danger("Package is not coherent.")
-  }
-
   invisible(valid)
 }
 
 
 #' @noRd
 validate_gldp_observations <- function(o) {
-  cli_h2("Check Observations Coherence")
   valid <- TRUE
 
-  o <- o %>%
+  o <- o |>
     arrange(
       .data$ring_number,
       .data$datetime,
@@ -1026,10 +1101,10 @@ validate_gldp_observations <- function(o) {
     )
 
   # Check 1: tag_id is only associated with a single ring_number
-  inconsistent_tag_ids <- o %>%
-    filter(!is.na(.data$tag_id)) %>%
-    group_by(.data$tag_id) %>%
-    summarize(unique_ring_numbers = n_distinct(.data$ring_number)) %>%
+  inconsistent_tag_ids <- o |>
+    filter(!is.na(.data$tag_id)) |>
+    group_by(.data$tag_id) |>
+    summarize(unique_ring_numbers = n_distinct(.data$ring_number)) |>
     filter(.data$unique_ring_numbers > 1)
 
   if (nrow(inconsistent_tag_ids) > 0) {
@@ -1041,7 +1116,7 @@ validate_gldp_observations <- function(o) {
   }
 
   # Check 2: equipment or retrieval must have a tag_id
-  missing_tag_id <- o %>%
+  missing_tag_id <- o |>
     filter(
       .data$observation_type %in%
         c("equipment", "retrieval") &
@@ -1058,7 +1133,7 @@ validate_gldp_observations <- function(o) {
   }
 
   # Check 3: equipment and retrieval can only have a device status present.
-  obs_equi_retrieval_without_present <- o %>%
+  obs_equi_retrieval_without_present <- o |>
     filter(
       .data$observation_type %in%
         c("equipment", "retrieval") &
@@ -1075,7 +1150,7 @@ validate_gldp_observations <- function(o) {
   }
 
   # Check 4: capture-missing and capture-present must have a tag_id
-  missing_tag_id <- o %>%
+  missing_tag_id <- o |>
     filter(
       .data$observation_type == "capture" &
         (.data$device_status %in% c("missing", "present")) &
@@ -1092,12 +1167,12 @@ validate_gldp_observations <- function(o) {
   }
 
   # Check 5: No second tag_id attached without a prior retrieval (or capture with missing.)
-  multiple_tags_without_retrieval <- o %>%
-    group_by(.data$ring_number) %>%
+  multiple_tags_without_retrieval <- o |>
+    group_by(.data$ring_number) |>
     filter(
       (.data$observation_type %in% c("retrieval", "equipment")) |
         (.data$observation_type == "capture" & .data$device_status == "missing")
-    ) %>%
+    ) |>
     filter(
       (lag(.data$tag_id) != .data$tag_id) &
         !(lag(.data$observation_type) == "retrieval" |
@@ -1114,9 +1189,9 @@ validate_gldp_observations <- function(o) {
   }
 
   # Check 6: A tag_id must follow an equipment event
-  tag_without_equipment <- o %>%
-    group_by(.data$ring_number, .data$tag_id) %>%
-    filter(!is.na(.data$tag_id)) %>%
+  tag_without_equipment <- o |>
+    group_by(.data$ring_number, .data$tag_id) |>
+    filter(!is.na(.data$tag_id)) |>
     filter(!any(.data$observation_type == "equipment"))
 
   if (nrow(tag_without_equipment) > 0) {
@@ -1129,8 +1204,8 @@ validate_gldp_observations <- function(o) {
   }
 
   # Check 8: duplicate
-  duplicate_observations <- o %>%
-    group_by(.data$ring_number, .data$datetime, .data$observation_type) %>%
+  duplicate_observations <- o |>
+    group_by(.data$ring_number, .data$datetime, .data$observation_type) |>
     filter(n() > 1)
 
   if (nrow(duplicate_observations) > 0) {
@@ -1142,13 +1217,13 @@ validate_gldp_observations <- function(o) {
   }
 
   # Check 9: Invalid transition
-  invalid_transitions <- o %>%
-    group_by(.data$ring_number) %>%
-    filter(.data$device_status != "unknown") %>%
+  invalid_transitions <- o |>
+    group_by(.data$ring_number) |>
+    filter(.data$device_status != "unknown") |>
     mutate(
       previous_status = lag(.data$device_status),
       previous_type = lag(.data$observation_type)
-    ) %>%
+    ) |>
     filter(
       (.data$device_status == "missing" & is.na(.data$previous_status)) |
         (.data$device_status == "missing" & .data$previous_status == "none") |
@@ -1169,67 +1244,5 @@ validate_gldp_observations <- function(o) {
     valid <- FALSE
   }
 
-  if (valid) {
-    cli_alert_success("{.field observations} table is coherent.")
-  } else {
-    cli_alert_danger("{.field observations} is not coherent.")
-  }
-
   invisible(valid)
-}
-
-#' Validate a GeoLocator Data Package
-#'
-#' This function validates a GeoLocator Data Package using the `frictionless` command-line tool. It
-#' writes the package metadata to a JSON file and performs validation to ensure that the package
-#' conforms to the required standards. The function supports two modes: validating only the package
-#' metadata or validating the entire package including its resources.
-#'
-#' The function performs the following steps:
-#'
-#' 1. If `only_package` is `TRUE` or the package contains no resources, it writes only the metadata
-#'    to a JSON file and validates it.
-#' 2. If `only_package` is `FALSE` and resources are present, it writes the entire package,
-#'    including resources, to a directory and validates it.
-#' 3. Executes the `frictionless` validation command using the specified path to the `frictionless`
-#'  executable.
-#'
-#' @param pkg An object of class `"geolocatordp"` representing the GeoLocator Data Package to be
-#' validated.
-#' @param path A string specifying the path to the directory containing the `frictionless`
-#' executable. Defaults to `"/Users/rafnuss/anaconda3/bin/"`.
-#' @param only_package A logical indicating whether to validate only the package metadata (TRUE) or
-#' the entire package including resources (FALSE). Defaults to `NULL`, in which case it is
-#' determined based on the presence of resources in the package.
-#' @param pkg_dir A string specifying the directory where the package files will be written for
-#' validation. Defaults to a temporary directory created with `tempdir()`.
-#'
-#' @return NULL. The function performs validation as a side effect and does not return a value.
-#'
-#' @export
-validate_gldp_py <- function(
-  pkg,
-  path = "/Users/rafnuss/anaconda3/bin/",
-  only_package = NULL,
-  pkg_dir = tempdir()
-) {
-  if (is.null(only_package)) {
-    only_package <- length(pkg$resources) == 0
-  }
-
-  if (only_package) {
-    package_json <- jsonlite::toJSON(
-      pkg,
-      pretty = TRUE,
-      null = "null",
-      na = "null",
-      auto_unbox = TRUE
-    )
-    pkg_file <- file.path(pkg_dir, "datapackage.json")
-    write(package_json, pkg_file)
-  } else {
-    frictionless::write_package(pkg, pkg_dir)
-  }
-
-  system(glue::glue("{path}frictionless validate {pkg_dir}"))
 }
