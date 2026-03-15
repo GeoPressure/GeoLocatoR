@@ -1,14 +1,16 @@
 #' Read Geolocator Data and Orders
 #'
-#' This set of functions facilitates the reading and combining of Geolocator Data (GDL) and
-#' associated order information from various sources.
-#' The main function, `read_gdl()`, allows for reading data from an Access file or directly from
-#' separate CSV files containing GDL data and order information.
-#' It returns a data frame that integrates GDL data with summarized order details.
+#' Read and combine Swiss Ornithological Institute GDL exports.
+#'
+#' `read_soi_gld()` is the high-level entry point. It can read from:
+#' - a single Access (`.accdb`) file, or
+#' - separate data/order CSV files.
+#'
+#' The result is a joined table combining tag data with summarized order metadata.
 #'
 #' @param access_file A string specifying the path to an Access file containing both the GDL data
-#' and order information.
-#' If provided, it takes precedence over `data_file` and `order_file`. Defaults to `NA`.  §
+#' and order information. If provided, it takes precedence over `data_file` and
+#' `order_file`. Defaults to `NA`.
 #' @param data_file A string specifying the path to the GDL data file. Required if `access_file`
 #' is not provided. Defaults to `NA`.
 #' @param order_file A string specifying the path to the GDL order file. Required if `access_file`
@@ -18,28 +20,20 @@
 #' If `FALSE`, all columns are included. Alternatively, a character vector can be passed to specify
 #' which columns to select. Defaults to `TRUE`.
 #'
-#' @return A data frame combining GDL data and summarized order information. The data frame
-#' includes columns such as `OrderName`, `Client`, `NumberDelivered`, `GDL_ID`, `Species`, and more,
-#'  depending on the value of `filter_col`.
+#' @return A data frame combining GDL tag rows and order-level information.
 #'
 #' @details
-#' The `read_gdl()` function is the primary interface for reading and combining GDL data with
-#' orders. It can read from an Access file or from separate data and order files.
-#' If an Access file is provided, the `read_gdl_access()` function is used to extract the GDL data
-#' and order information. Otherwise, the `read_gdl_data()` and `read_gdl_orders()`
-#' functions are employed to read the data from specified CSV files.
+#' Helper functions:
 #'
-#' - **`read_gdl()`**: Reads GDL and order data, either from an Access file or separate CSV files,
+#' - **`read_soi_gld()`**: Reads GDL and order data, either from an Access file or separate CSV files,
 #' and returns a combined data frame.
-#' - **`read_gdl_orders()`**: Reads GDL order information from a CSV file, including columns like
-#' `OrderID`, `OrderName`, `Species`, `Client`, and `NumberDelivered`.
-#' - **`read_gdl_data()`**: Reads GDL data from a CSV file, including columns like `DataID`,
-#' `OrderName`, `GDL_ID`, `Species`, and spatial and temporal information.
-#' - **`read_gdl_access()`**: Extracts GDL data and order information from an Access database file
+#' - **`read_soi_gld_orders()`**: Reads order metadata from a CSV export.
+#' - **`read_soi_gld_data()`**: Reads GDL tag-level data from a CSV export.
+#' - **`read_soi_gld_access()`**: Extracts GDL data and order information from an Access database file
 #' and exports them to temporary CSV files.
 #'
-#' @export
-read_gdl <- function(
+#' @noRd
+read_soi_gld <- function(
   access_file = NA,
   data_file = NA,
   order_file = NA,
@@ -52,7 +46,7 @@ read_gdl <- function(
         ">" = "We'll use {.arg access_file}."
       ))
     }
-    data_order_file <- read_gdl_access(access_file)
+    data_order_file <- read_soi_gld_access(access_file)
     data_file <- data_order_file[[1]]
     order_file <- data_order_file[[2]]
   } else {
@@ -66,17 +60,17 @@ read_gdl <- function(
   if (is.data.frame(data_file)) {
     d <- data_file
   } else {
-    d <- read_gdl_data(data_file)
+    d <- read_soi_gld_data(data_file)
   }
 
   if (is.data.frame(order_file)) {
     o <- order_file
   } else {
-    o <- read_gdl_orders(order_file)
+    o <- read_soi_gld_orders(order_file)
   }
 
-  o <- o %>%
-    group_by(.data$OrderName) %>%
+  o <- o |>
+    group_by(.data$OrderName) |>
     summarize(
       NumberOrdered = sum(.data$NumberOrdered),
       NumberDelivered = sum(.data$NumberDelivered),
@@ -84,7 +78,7 @@ read_gdl <- function(
         where(~ !is.numeric(.)),
         ~ paste(unique(.), collapse = ", ") # Concatenate unique values for non-numeric columns
       )
-    ) %>%
+    ) |>
     select(-c("GDL_Type", "Species"))
 
   gdl <- left_join(d, o, by = c("OrderName"), suffix = c("_data", "_order"))
@@ -133,9 +127,8 @@ read_gdl <- function(
   return(gdl)
 }
 
-#' @rdname read_gdl
-#' @export
-read_gdl_orders <- function(order_file) {
+#' @noRd
+read_soi_gld_orders <- function(order_file) {
   o <- readr::read_csv(
     order_file,
     col_types = readr::cols(
@@ -208,15 +201,14 @@ read_gdl_orders <- function(order_file) {
       PrioritySensor = readr::col_logical(),
       PriorityMemory = readr::col_double()
     )
-  ) %>%
+  ) |>
     arrange(.data$OrderName)
   o
 }
 
 
-#' @rdname read_gdl
-#' @export
-read_gdl_data <- function(data_file) {
+#' @noRd
+read_soi_gld_data <- function(data_file) {
   d <- readr::read_csv(
     data_file,
     col_types = readr::cols(
@@ -303,9 +295,8 @@ read_gdl_data <- function(data_file) {
   d
 }
 
-#' @rdname read_gdl
-#' @export
-read_gdl_access <- function(
+#' @noRd
+read_soi_gld_access <- function(
   access_file,
   data_file = tempfile("GDL_Data", fileext = ".csv"),
   order_file = tempfile("GDL_Orders", fileext = ".csv")
