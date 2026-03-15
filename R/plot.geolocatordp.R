@@ -188,8 +188,15 @@ plot_pkg_ring <- function(x) {
 #' @return A ggplot2 object showing the coverage plot
 #' @noRd
 plot_pkg_map <- function(x) {
-  p <- paths(x) %>%
-    filter(.data$type == "most_likely") %>%
+  if (!requireNamespace("leaflet", quietly = TRUE)) {
+    cli_abort(c(
+      "x" = "{.pkg leaflet} is required for {.val type = 'map'}.",
+      "i" = "Install it with {.code install.packages('leaflet')}."
+    ))
+  }
+
+  p <- paths(x) |>
+    filter(.data$type == "most_likely") |>
     left_join(staps(x), by = c("stap_id", "tag_id"))
 
   p$duration <- GeoPressureR::stap2duration(p)
