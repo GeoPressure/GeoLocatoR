@@ -23,7 +23,6 @@ Imports:
     jsonlite,
     keyring,
     leaflet,
-    magrittr,
     purrr,
     readr,
     rvest,
