@@ -7,6 +7,7 @@
 #' - `update_gldp_taxonomic()`: Species vector from tags (optionally filtered by measured tag IDs).
 #' - `update_gldp_number_tags()`: Counts by resource/sensor.
 #' - `update_gldp_bibliographic_citation()`: Formatted citation from package metadata.
+#' - `update_gldp_order_resources()`: Reorder resources following schema order.
 #'
 #' `update_gldp()` runs all functions above.
 #'
@@ -17,11 +18,46 @@
 #' @export
 update_gldp <- function(pkg, ...) {
   pkg <- pkg |>
+    update_gldp_order_resources() |>
     update_gldp_temporal() |>
     update_gldp_taxonomic() |>
     update_gldp_number_tags() |>
     update_gldp_bibliographic_citation(...)
 
+  pkg
+}
+
+#' @rdname update_gldp
+#' @export
+update_gldp_order_resources <- function(pkg) {
+  check_gldp(pkg)
+
+  pkg_schema <- jsonlite::fromJSON(
+    pkg$`$schema`,
+    simplifyDataFrame = FALSE,
+    simplifyVector = TRUE
+  )
+
+  resource_order <- pkg_schema$allOf[[2]]$properties$resources$items$oneOf |>
+    purrr::map(~ .x$properties$name$enum %||% .x$properties$name$const %||% character(0)) |>
+    purrr::flatten_chr()
+
+  if (length(resource_order) == 0) {
+    return(pkg)
+  }
+
+  resources <- pkg$resources %||% list()
+  if (length(resources) <= 1) {
+    return(pkg)
+  }
+
+  resource_names <- purrr::map_chr(resources, ~ as.character((.x$name %||% NA_character_)[1]))
+  rank <- match(resource_names, resource_order)
+
+  unknown <- is.na(rank)
+  rank[unknown] <- length(resource_order) + seq_len(sum(unknown))
+
+  pkg$resources <- resources[order(rank)]
   pkg
 }
 
