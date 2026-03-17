@@ -66,17 +66,24 @@ gldp_schema_url <- function(version = NULL) {
 
 #' @noRd
 set_version <- function(x, version) {
+  # Change the schema for the package
+  x$`$schema` <- gldp_schema_url(version)
+
+  # Add new schema to resources
   x$resources <- purrr::map(x$resources %||% list(), \(r) {
     name <- r$name %||% NULL
     if (is.character(name) && length(name) == 1 && !is.na(name) && nzchar(name)) {
-      schema <- glue::glue(
-        "https://raw.githubusercontent.com/Rafnuss/GeoLocator-DP/{version}/{name}-table-schema.json"
+      r$schema <- jsonlite::fromJSON(
+        glue::glue(
+          "https://raw.githubusercontent.com/Rafnuss/GeoLocator-DP/{version}/{name}-table-schema.json"
+        ),
+        simplifyDataFrame = FALSE,
+        simplifyVector = TRUE
       )
-      r$`$schema` <- schema
     }
     r
   })
-  x$`$schema` <- gldp_schema_url(version)
+
   x
 }
 
@@ -112,6 +119,8 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
     ))
   }
 
+  cli_inform("Upgrading GeoLocator-DP from {.val {from_version}} to {.val {to_version}}.")
+
   while (!identical(from_version, to_version)) {
     next_version <- switch(
       from_version,
@@ -124,10 +133,6 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
       "v0.6" = "v1.0",
       NA_character_
     )
-
-    cli_inform(c(
-      "i" = "Upgrading GeoLocator-DP from {.val {from_version}} to {.val {next_version}}."
-    ))
 
     x <- switch(
       from_version,
