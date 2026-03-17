@@ -115,7 +115,7 @@ params_to_tags <- function(params) {
         c(
           "Type mismatch when combining tags in {.code params_to_tags}:",
           "i" = glue::glue(
-            "Column types: {paste(col_types, collapse = ' | ')}"
+            "Column types: {glue::glue_collapse(col_types, sep = ' | ')}"
           ),
           "x" = e$message
         )

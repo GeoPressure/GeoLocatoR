@@ -233,7 +233,7 @@ plot_pkg_map <- function(x) {
         data = pid,
         color = color_palette(tag),
         weight = 2,
-        popup = ~ paste0("Tag ID: ", tag_id, "<br>stap #", stap_id)
+        popup = ~ glue::glue("Tag ID: {tag_id}<br>stap #{stap_id}")
       ) |>
       leaflet::addCircleMarkers(
         lng = ~lon,
@@ -250,7 +250,7 @@ plot_pkg_map <- function(x) {
           (x - min_x) / (max_x - min_x) * (max_r - min_r) + min_r
         },
         fillOpacity = 0.8,
-        popup = ~ paste0("Tag ID: ", tag_id, "<br>stap #", stap_id)
+        popup = ~ glue::glue("Tag ID: {tag_id}<br>stap #{stap_id}")
       )
   }
 

@@ -347,7 +347,7 @@ step_v0_6_to_v1_0 <- function(x) {
 
       cli_inform(c(
         "i" = "Removed {sum(drop)} non-deployed tag row{?s} while upgrading to {.val v1.0}.",
-        "i" = "Dropped {.field tag_id}: {.val {paste(dropped_ids, collapse = ', ')}}."
+        "i" = "Dropped {.field tag_id}: {.val {glue::glue_collapse(dropped_ids, sep = ', ')}}."
       ))
     }
 

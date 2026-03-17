@@ -86,7 +86,7 @@ config_to_tibble <- function(
     "tag_set_map.include_min_duration" = as.numeric,
     "tag_set_map.extent" = \(x) list(x),
     "tag_set_map.known" = \(x) {
-      paste0("data.frame(", paste(names(x), collapse = ","), ")")
+      glue::glue("data.frame({glue::glue_collapse(names(x), sep = ',')})")
     },
     "geopressure_map.compute_known" = as.logical,
     "geopressure_map.max_sample" = as.numeric,
@@ -180,7 +180,7 @@ config_to_tibble <- function(
 
     if (any(idx)) {
       cli_warn(
-        "The following fields had length > 1 and were truncated: {paste(names(c)[idx], collapse = ', ')}"
+        "The following fields had length > 1 and were truncated: {glue::glue_collapse(names(c)[idx], sep = ', ')}"
       )
 
       # correction: keep only first element

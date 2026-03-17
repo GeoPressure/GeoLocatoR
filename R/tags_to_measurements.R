@@ -100,9 +100,8 @@ tags_to_measurements <- function(tags) {
         error = function(e) {
           cli_abort(
             c(
-              "x" = paste0(
-                "Error in {.fun tags_to_measurements} for tag {.val {tag_id}}, ",
-                "sensor {.val {sensor}}:"
+              "x" = glue::glue(
+                "Error in {{.fun tags_to_measurements}} for tag {{.val {tag_id}}}, sensor {{.val {sensor}}}:"
               ),
               ">" = e$message
             )
@@ -122,9 +121,8 @@ tags_to_measurements <- function(tags) {
           value_types <- sapply(tag_measurements, function(x) class(x$value)[1])
           cli_abort(
             c(
-              "x" = paste0(
-                "Type mismatch in {.fun tags_to_measurements} for tag {.val {tag_id}}, ",
-                "sensor {.val {sensor}}:"
+              "x" = glue::glue(
+                "Type mismatch in {{.fun tags_to_measurements}} for tag {{.val {tag_id}}}, sensor {{.val {sensor}}}:"
               ),
               "i" = "value column types: {.val {value_types}}",
               ">" = e$message

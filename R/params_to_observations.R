@@ -62,9 +62,8 @@ params_to_observations <- function(params) {
             mutate(
               longitude = known$known_lon[id],
               latitude = known$known_lat[id],
-              observation_comments = paste0(
-                "Automatically computed from `known$stap_id==1` ",
-                "with `params_to_observations()`"
+              observation_comments = glue::glue(
+                "Automatically computed from `known$stap_id==1` with `params_to_observations()`"
               )
             )
         }
@@ -75,9 +74,8 @@ params_to_observations <- function(params) {
             mutate(
               longitude = known$known_lon[id],
               latitude = known$known_lat[id],
-              observation_comments = paste0(
-                "Automatically computed from `known$stap_id==-1` ",
-                "with `params_to_observations()`"
+              observation_comments = glue::glue(
+                "Automatically computed from `known$stap_id==-1` with `params_to_observations()`"
               )
             )
         }

@@ -343,11 +343,8 @@ read_soi_gld_access <- function(
     }
     con <- DBI::dbConnect(
       odbc::odbc(),
-      .connection_string = paste0(
-        "Driver={Microsoft Access Driver (*.mdb, *.accdb)};",
-        "Dbq=",
-        access_file,
-        ";"
+      .connection_string = glue::glue(
+        "Driver={{Microsoft Access Driver (*.mdb, *.accdb)}};Dbq={access_file};"
       )
     )
     readr::write_csv(DBI::dbReadTable(con, "GDL_Orders"), order_file)

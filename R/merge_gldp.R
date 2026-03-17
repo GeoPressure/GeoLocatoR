@@ -55,7 +55,7 @@ merge_gldp <- function(x, y) {
   common_tags <- intersect(tags(x)$tag_id, tags(y)$tag_id)
   if (length(common_tags) > 0) {
     cli_abort(c(
-      "Duplicate {.field tag_id} detected: {col_red(paste(common_tags, collapse = ', '))}.",
+      "Duplicate {.field tag_id} detected: {col_red(glue::glue_collapse(common_tags, sep = ', '))}.",
       "x" = "Merging may fail due to duplicate tag IDs.",
       "i" = "Consider renaming or deleting one of the conflicting tag IDs."
     ))
@@ -149,7 +149,7 @@ merge_gldp <- function(x, y) {
 
           if (length(common_ids) > 0) {
             cli_abort(c(
-              "Duplicate {.field datapackage_id} detected: {col_red(paste(common_ids, collapse = ', '))}.",
+              "Duplicate {.field datapackage_id} detected: {col_red(glue::glue_collapse(common_ids, sep = ', '))}.",
               "x" = "Tags from both packages share the same datapackage_id.",
               "i" = "Ensure each package has distinct datapackage_id values before merging."
             ))

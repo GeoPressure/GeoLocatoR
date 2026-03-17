@@ -14,6 +14,7 @@ print.geolocatordp <- function(x, ...) {
   # check_geolocatordp() not necessary: print only triggered for geolocatordp object
 
   check_gldp(x)
+  x <- update_gldp_order_resources(x)
 
   has_value <- function(value) !is.null(value) && length(value) > 0
   format_creator_name <- function(name) {
@@ -58,13 +59,13 @@ print.geolocatordp <- function(x, ...) {
     contributors <- sapply(x_display$contributors, \(ctr) {
       str <- format_creator_name(ctr$title)
       if (has_value(ctr$email)) {
-        str <- paste0(str, " ('", ctr$email, "')")
+        str <- glue::glue("{str} ('{ctr$email}')")
       }
       if (has_value(ctr$roles)) {
-        str <- paste0(str, " (", paste(ctr$roles, collapse = ", "), ")")
+        str <- glue::glue("{str} ({glue::glue_collapse(ctr$roles, sep = ', ')})")
       }
       if (has_value(ctr$path)) {
-        str <- paste0(str, " - {.url ", ctr$path, "}")
+        str <- glue::glue("{str} - {{.url {ctr$path}}}")
       }
       str
     })
@@ -87,19 +88,19 @@ print.geolocatordp <- function(x, ...) {
       if (has_value(license$title)) {
         str <- license$title
         if (has_value(license$name)) {
-          str <- paste0(str, " (", license$name, ")")
+          str <- glue::glue("{str} ({license$name})")
         }
       } else {
         str <- license$name
       }
       if (has_value(license$path)) {
-        str <- paste0(str, " - {.url ", license$path, "}")
+        str <- glue::glue("{str} - {{.url {license$path}}}")
       }
       str
     })
     licenses <- licenses[nzchar(licenses)]
     if (length(licenses) > 0) {
-      cli_bullets(c("*" = "{.field licenses}: {paste(licenses, collapse = ', ')}"))
+      cli_bullets(c("*" = "{.field licenses}: {glue::glue_collapse(licenses, sep = ', ')}"))
     }
   }
 
@@ -107,7 +108,7 @@ print.geolocatordp <- function(x, ...) {
     desc <- as.character(x_display$description)[1]
     max_chars <- 250L
     if (!is.na(desc) && nchar(desc) > max_chars) {
-      desc <- paste0(substr(desc, 1, max_chars), "...")
+      desc <- glue::glue("{substr(desc, 1, max_chars)}...")
     }
     cli_bullets(c("*" = "{.field description}: {.val {desc}}"))
   }
@@ -119,9 +120,9 @@ print.geolocatordp <- function(x, ...) {
         toupper(ri$relatedIdentifierType %||% "") == "DOI" &&
           !grepl("^https?://", ri$relatedIdentifier)
       ) {
-        ri$relatedIdentifier <- paste0("https://doi.org/", ri$relatedIdentifier)
+        ri$relatedIdentifier <- glue::glue("https://doi.org/{ri$relatedIdentifier}")
       }
-      paste0(ri$relationType, " {.url ", ri$relatedIdentifier, "}")
+      glue::glue("{ri$relationType} {{.url {ri$relatedIdentifier}}}")
     })
     cli_bullets(c("*" = "{.field relatedIdentifiers}:"))
     for (ri in ris) {

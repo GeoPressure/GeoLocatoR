@@ -641,7 +641,7 @@ create_geopressuretemplate_config <- function(pkg) {
           if (!is.numeric(x)) {
             x <- glue::glue('"{x}"')
           }
-          tmp <- paste0("[", paste(x, collapse = ", "), "]")
+          tmp <- glue::glue("[{glue::glue_collapse(x, sep = ', ')}]")
 
           # class(tmp) <- "verbatim" # does not work
           glue::glue("{tmp}{add_text}")

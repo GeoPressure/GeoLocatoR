@@ -607,8 +607,8 @@ validate_gldp_item <- function(item, prop, field) {
       invalid_values <- item[!in_enum]
       cli_alert_danger(
         "{.field {field}} has {sum(!in_enum)} item{?s} that are not in the allowed values:
-      {.val {paste(prop$enum, collapse = ', ')}}. Invalid value{?s}:
-      {.val {paste(unique(invalid_values), collapse = ', ')}}"
+      {.val {glue::glue_collapse(prop$enum, sep = ', ')}}. Invalid value{?s}:
+      {.val {glue::glue_collapse(unique(invalid_values), sep = ', ')}}"
       )
       valid <- FALSE
     }

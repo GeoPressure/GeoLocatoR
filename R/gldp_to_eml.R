@@ -185,10 +185,8 @@ gldp_to_eml <- function(pkg, directory) {
   }
   intellectual_rights <- if (length(license_names) > 0) {
     list(
-      para = to_plain_text(paste(
-        "This work is licensed under a",
-        paste(license_names, collapse = ", "),
-        "license."
+      para = to_plain_text(glue::glue(
+        "This work is licensed under a {glue::glue_collapse(license_names, sep = ', ')} license."
       ))[1]
     )
   } else {

@@ -164,8 +164,8 @@ zenodo_to_gldp <- function(id, ...) {
     when = "1.0.0",
     what = "zenodo_to_gldp()",
     with = "read_zenodo()",
-    details = paste(
-      "`read_zenodo()` has different behavior/arguments.",
+    details = glue::glue(
+      "`read_zenodo()` has different behavior/arguments. ",
       "Migrate your call explicitly (notably `endpoint`, `token`, and `sandbox`)."
     )
   )

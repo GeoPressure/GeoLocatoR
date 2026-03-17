@@ -148,7 +148,7 @@ read_soi <- function(
       mutate(
         attachment_type = {
           vars <- pick(everything())
-          paste0(
+          glue::glue_collapse(
             c(
               if ("Harness_data" %in% names(vars) && !is.na(.data$Harness_data)) {
                 .data$Harness_data
@@ -196,7 +196,7 @@ read_soi <- function(
                 glue::glue("BreastDiameterTail:{BreastHarnessDiameterTail}")
               }
             ),
-            collapse = "|"
+            sep = "|"
           )
         }
       ) |>
