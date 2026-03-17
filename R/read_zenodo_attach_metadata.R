@@ -1,8 +1,9 @@
 #' @noRd
-read_zenodo_metadata <- function(pkg, zenodo_record) {
+read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
   # Use shorter variable name
   z <- zenodo_record
   m <- z$metadata %||% list()
+
   rights <- m$rights %||% list()
   creators <- m$creators %||% list()
   related_identifiers <- m$related_identifiers %||% list()
@@ -10,7 +11,7 @@ read_zenodo_metadata <- function(pkg, zenodo_record) {
   subjects <- m$subjects %||% list()
 
   # Standard Datapackage variable
-  pkg$id <- z$links$self_doi_html %||% NULL
+  pkg$id <- glue::glue("https://zenodo.org/doi/10.5281/zenodo.{z$id}") %||% NULL
   pkg$name <- z$id
   pkg$title <- m$title
   pkg$description <- m$description
@@ -61,11 +62,15 @@ read_zenodo_metadata <- function(pkg, zenodo_record) {
   pkg$keywords <- purrr::map_chr(subjects, \(x) x$subject %||% "")
 
   ## Additional field
-  pkg$conceptdoi <- z$getConceptDOI()
-  pkg$codeRepository <- z$custom$`code:codeRepository` %||% NULL
+  pkg$conceptdoi <- z$conceptdoi %||% purrr::pluck(z, "parent", "doi", .default = NULL)
+  if (is.null(pkg$conceptdoi) && is.function(z$getConceptDOI)) {
+    pkg$conceptdoi <- z$getConceptDOI()
+  }
+  pkg$codeRepository <- z$custom_fields$`code:codeRepository` %||% NULL
   pkg$status <- z$status
   pkg$record_type <- m$resource_type$id %||% NULL
   pkg$publisher <- m$publisher
+  pkg$communities <- z$parent$communities$ids
 
   pkg
 }

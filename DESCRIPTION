@@ -20,6 +20,7 @@ Imports:
     GeoPressureR,
     glue,
     ggplot2,
+    httr2,
     jsonlite,
     keyring,
     purrr,
@@ -30,7 +31,6 @@ Imports:
     usethis,
     withr,
     yaml,
-    zen4R
 Suggests: 
     covr,
     odbc,
