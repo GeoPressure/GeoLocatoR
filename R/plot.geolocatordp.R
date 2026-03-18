@@ -56,7 +56,7 @@ plot_pkg_coverage <- function(x) {
             "acceleration_x",
             "acceleration_y",
             "acceleration_z",
-            "pitch"
+            "mean_acceleration_z"
           ) ~
           "magnetic",
         TRUE ~ sensor # Keep other sensor names unchanged

@@ -20,7 +20,7 @@
 #' - `pressure`: data.frame with columns `date` and `value` (if pressure data available)
 #' - `light`: data.frame with columns `date` and `value` (if light data available)
 #' - `acceleration`: data.frame with columns `date`, `value` (activity measure), and optionally
-#'   `pitch` (if activity/pitch data available)
+#'   `mean_acceleration_z` (if available)
 #' - `temperature_external`: data.frame with columns `date` and `value`
 #'   (if external temperature data available)
 #' - `temperature_internal`: data.frame with columns `date` and `value`
@@ -37,7 +37,7 @@
 #' to the format expected by GeoPressureR. The conversion includes:
 #' - Filtering measurements by `tag_id`
 #' - Reshaping data from long format (measurements) to wide format (sensor-specific data.frames)
-#' - Combining related sensors (e.g., `activity` and `pitch` into `acceleration`;
+#' - Combining related sensors (e.g., `activity` and `mean_acceleration_z` into `acceleration`;
 #'   `magnetic_x/y/z` into `magnetic`)
 #' - Adding stationary period (`stap`) data if available in the package
 #' - Adding twilight data if available in the package
@@ -46,7 +46,7 @@
 #' **Sensor mapping from GLDP to GeoPressureR:**
 #' - `pressure` → `pressure` (date, value)
 #' - `light` → `light` (date, value)
-#' - `activity` + `pitch` → `acceleration` (date, value, pitch) where value = activity
+#' - `activity` + `mean_acceleration_z` → `acceleration` (date, value, mean_acceleration_z) where value = activity
 #' - `temperature-external` → `temperature_external` (date, value)
 #' - `temperature-internal` → `temperature_internal` (date, value)
 #' - `magnetic_x/y/z` → `magnetic` (date, magnetic_x, magnetic_y, magnetic_z)
@@ -150,9 +150,9 @@ gldp_to_tag_single <- function(pkg, tid) {
 
   # Extract sensor data
   # Map GLDP sensor types to GeoPressureR sensor names
-  # GLDP uses: pressure, light, activity, pitch, temperature-external,
+  # GLDP uses: pressure, light, activity, mean_acceleration_z, temperature-external,
   # temperature-internal, acceleration_x/y/z, magnetic_x/y/z
-  # GeoPressureR uses: pressure, light, acceleration (with activity and pitch columns),
+  # GeoPressureR uses: pressure, light, acceleration (with activity and mean_acceleration_z columns),
   # temperature_external, temperature_internal, magnetic
 
   # Handle standard sensors that map 1:1
@@ -183,14 +183,14 @@ gldp_to_tag_single <- function(pkg, tid) {
     }
   }
 
-  # Handle acceleration sensor (combines activity and pitch)
-  # In GLDP: "activity" is the main acceleration measure, "pitch" is separate
-  # In GeoPressureR: "acceleration" data.frame has columns: date, value, pitch (optional)
+  # Handle acceleration sensor (combines activity and mean_acceleration_z)
+  # In GLDP: "activity" is the main acceleration measure, "mean_acceleration_z" is separate.
+  # In GeoPressureR: "acceleration" data.frame has columns: date, value, mean_acceleration_z (optional)
   # where value contains the activity data
   activity_data <- meas |> dplyr::filter(.data$sensor == "activity")
-  pitch_data <- meas |> dplyr::filter(.data$sensor == "pitch")
+  mean_acc_data <- meas |> dplyr::filter(.data$sensor == "mean_acceleration_z")
 
-  if (nrow(activity_data) > 0 || nrow(pitch_data) > 0) {
+  if (nrow(activity_data) > 0 || nrow(mean_acc_data) > 0) {
     # Start with activity data (renamed to "value")
     if (nrow(activity_data) > 0) {
       acc_df <- activity_data |>
@@ -204,13 +204,13 @@ gldp_to_tag_single <- function(pkg, tid) {
       )
     }
 
-    # Merge with pitch data if available
-    if (nrow(pitch_data) > 0) {
-      pitch_df <- pitch_data |>
+    # Merge with mean_acceleration_z data if available
+    if (nrow(mean_acc_data) > 0) {
+      mean_acc_df <- mean_acc_data |>
         dplyr::select("datetime", "value") |>
-        dplyr::rename(date = "datetime", pitch = "value")
+        dplyr::rename(date = "datetime", mean_acceleration_z = "value")
 
-      acc_df <- dplyr::full_join(acc_df, pitch_df, by = "date")
+      acc_df <- dplyr::full_join(acc_df, mean_acc_df, by = "date")
     }
 
     # Arrange and set timezone

@@ -324,6 +324,23 @@ step_v0_5_to_v0_6 <- function(x) {
 step_v0_6_to_v1_0 <- function(x) {
   # Release: https://github.com/Rafnuss/GeoLocator-DP/releases/tag/v1.0
 
+  # Rename legacy SOI "pitch" sensor to "mean_acceleration_z".
+  # https://github.com/Rafnuss/GeoLocator-DP/issues/24
+  x <- mutate_resource(x, "measurements", \(d) {
+    if (!"sensor" %in% names(d)) {
+      return(d)
+    }
+
+    sensor <- as.character(d$sensor)
+    renamed <- !is.na(sensor) & sensor == "pitch"
+    if (any(renamed)) {
+      sensor[renamed] <- "mean_acceleration_z"
+      d$sensor <- sensor
+    }
+
+    d
+  })
+
   # Drop non-deployed tags (missing ring_number or scientific_name).
   # https://github.com/Rafnuss/GeoLocator-DP/commit/795ccc4cdd0bf575b39378ca3e63c61247ac2b8e
   x <- mutate_resource(x, "tags", \(d) {

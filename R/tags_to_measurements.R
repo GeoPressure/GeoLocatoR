@@ -12,7 +12,7 @@
 #' \describe{
 #'   \item{tag_id}{A character vector representing the unique identifier for each tag.}
 #'   \item{sensor}{A character vector representing the type of sensor measurement, including types
-#'   like "activity", "pitch", "light", "temperature_external", etc.}
+#'   like "activity", "mean_acceleration_z", "light", "temperature_external", etc.}
 #'   \item{datetime}{A POSIXct datetime object representing the timestamp of the measurements.}
 #'   \item{value}{A numeric vector containing the sensor measurement values.}
 #'   \item{label}{A character vector for additional labeling, which is NA if not present in the
@@ -51,7 +51,7 @@ tags_to_measurements <- function(tags) {
   select_cols <- c(
     "pressure",
     "activity",
-    "pitch",
+    "mean_acceleration_z",
     "light",
     "temperature_external",
     "temperature_internal",
