@@ -324,6 +324,25 @@ step_v0_5_to_v0_6 <- function(x) {
 step_v0_6_to_v1_0 <- function(x) {
   # Release: https://github.com/Rafnuss/GeoLocator-DP/releases/tag/v1.0
 
+  # Remove deprecated fields from paths/staps/edges.
+  # https://github.com/Rafnuss/GeoLocator-DP/commit/8ef7ad8cf9e48e82d8396f535536fb8e5b9c119f
+  # https://github.com/Rafnuss/GeoLocator-DP/commit/418f7c926fdff4af0a1c5e48d57a50f8a61c95d2
+  x <- mutate_resource(x, "paths", \(d) {
+    d$ind <- NULL
+    d$interp <- NULL
+    d$known <- NULL
+    d
+  })
+  x <- mutate_resource(x, "staps", \(d) {
+    d$include <- NULL
+    d
+  })
+  x <- mutate_resource(x, "edges", \(d) {
+    d$s <- NULL
+    d$t <- NULL
+    d
+  })
+
   # Rename legacy SOI "pitch" sensor to "mean_acceleration_z".
   # https://github.com/Rafnuss/GeoLocator-DP/issues/24
   x <- mutate_resource(x, "measurements", \(d) {
