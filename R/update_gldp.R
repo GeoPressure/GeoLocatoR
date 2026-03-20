@@ -154,7 +154,7 @@ update_gldp_number_tags <- function(pkg) {
     out$measurements <- length(unique(m$tag_id))
     out$light <- length(unique(m$tag_id[m$sensor == "light"]))
     out$pressure <- length(unique(m$tag_id[m$sensor == "pressure"]))
-    out$activity <- length(unique(m$tag_id[m$sensor == "activity" | m$sensor == "pitch"]))
+    out$activity <- length(unique(m$tag_id[m$sensor %in% c("activity", "mean_acceleration_z")]))
     out$temperature_external <- length(unique(m$tag_id[m$sensor == "temperature_external"]))
     out$temperature_internal <- length(unique(m$tag_id[m$sensor == "temperature_internal"]))
     out$magnetic <- length(unique(m$tag_id[m$sensor == "magnetic_x"]))

@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file and use devtools::build_readme() -->
 
-# GeoLocatoR 🕊️📦 <a href="https://github.com/rafnuss/geolocator"><img src="man/figures/logo.png" align="right" height="139" alt="GeoLocatoR website" /></a>
+# GeoLocatoR 🕊️📦 <a href="https://github.com/Rafnuss/GeoLocatoR"><img src="man/figures/logo.png" align="right" height="139" alt="GeoLocatoR website" /></a>
 
 <!-- badges: start -->
 
@@ -29,10 +29,10 @@ data is organized, accessible, and ready to share.
 
 ## 🦅 Main Features
 
-- **Creates a GeoLocator Data Package**: Create a geolocator datapackage
-  object, add resources (data), and write the data package to your
-  preferred directory. Or, read an existing data package from a
-  directory or from Zenodo.
+- **Creates and reads GeoLocator Data Packages**: Create a geolocator
+  datapackage object, add resources (data), and write it to your
+  preferred directory. You can also read existing packages from disk
+  (`read_gldp()`) or from Zenodo (`read_zenodo()`).
 - **Works Seamlessly with GeoPressureTemplate**: GeoLocatoR is
   compatible with
   [GeoPressureTemplate](https://github.com/Rafnuss/GeoPressureTemplate)
@@ -76,16 +76,18 @@ Learn how to use GeoLocatoR with the dedicated part of the
 
 ## Functions mapping
 
-| [frictionless](https://docs.ropensci.org/frictionless/) | Basic GeolocatoR | GeoPressureTemplate |
+| [frictionless](https://docs.ropensci.org/frictionless/) | Basic GeoLocatoR | GeoPressureTemplate |
 |----|----|----|
-| [`create_package()`](https://docs.ropensci.org/frictionless/reference/create_package.html) | [`create_gldp()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/create_gldp.html) | [`create_gldp_geopressuretemplate()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/create_gldp_geopressuretemplate.html) |
-| [`add_resource()`](https://docs.ropensci.org/frictionless/reference/add_resource.html) | [`add_gldp_resource()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/add_gldp_resource.html) | [`add_gldp_geopressuretemplate()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/add_gldp_geopressuretemplate.html) |
-| [`write_package()`](https://docs.ropensci.org/frictionless/reference/write_package.html) |  | [`write_geopressuretemplate()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/write_geopressuretemplate.html) |
+| [`create_package()`](https://docs.ropensci.org/frictionless/reference/create_package.html) | [`create_gldp()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/create_gldp.html) |  |
+| [`add_resource()`](https://docs.ropensci.org/frictionless/reference/add_resource.html) | [`add_gldp_resource()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/add_gldp_resource.html) | [`read_geopressuretemplate()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/read_geopressuretemplate.html) |
 | [`read_package()`](https://docs.ropensci.org/frictionless/reference/read_package.html) | [`read_gldp()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/read_gldp.html) |  |
+|  | [`read_zenodo()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/read_zenodo.html) |  |
+|  | [`read_soi()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/read_soi.html) |  |
+|  |  | [`create_geopressuretemplate()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/create_geopressuretemplate.html) |
 
 ## 📚 Citation
 
 If you use GeoLocatoR in your research, please cite it as follows:
 
 > Nussbaumer, R. (2024). GeoLocatoR: R package for GeoLocator Data
-> Package. <https://github.com/rafnuss/geolocator>
+> Package. <https://github.com/Rafnuss/GeoLocatoR>

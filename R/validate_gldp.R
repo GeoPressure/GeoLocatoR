@@ -1,13 +1,24 @@
 #' Validate a GeoLocator Data Package
 #'
 #' @description
-#' This function performs a comprehensive validation of a GeoLocator Data Package by checking the
-#' package metadata, profile, and resources. The validation includes verifying that the package
-#' conforms to the GeoLocator Data Package profile and that each resource adheres to its schema.
+#' `validate_gldp()` runs the standard quality-control workflow for a GeoLocator Data Package.
+#' It provides an automated check that a package is structurally valid and internally coherent
+#' before publication or reuse.
+#'
+#' @details
+#' Validation is organized in two complementary layers:
+#' 1. **Technical conformance**: checks compliance with the GeoLocator Data Package specification,
+#'    including required resources, schema conformity, required fields, and controlled vocabularies.
+#' 2. **Coherence and metadata quality**: checks consistency of identifiers and relationships across
+#'    key tables (e.g. `tags`, `observations`, and `measurements`) and reports metadata best-practice
+#'    mismatches that should be justified during curation.
+#'
+#' See the [GeoLocator-DP curation guide](https://raphaelnussbaumer.com/GeoLocator-DP/curation/) for
+#' more informations.
 #'
 #' @param pkg A GeoLocator Data Package object to be validated.
 #'
-#' @return A logical value indicating whether the package validation was successful (`TRUE`) or
+#' @return A silent logical value indicating whether the package validation was successful (`TRUE`) or
 #' failed (`FALSE`).
 #'
 #' @export
@@ -16,10 +27,13 @@ validate_gldp <- function(pkg) {
 
   valid <- validate_gldp_profile(pkg)
 
+  valid <- valid & validate_gldp_resources(pkg)
+
   valid <- valid & validate_gldp_coherence(pkg)
 
   validate_gldp_meta(pkg)
 
+  cli_h1("Final:")
   if (valid) {
     cli_alert_success("Package validation succeeded.")
   } else {
@@ -27,134 +41,6 @@ validate_gldp <- function(pkg) {
   }
 
   invisible(valid)
-}
-
-#' Validate GeoLocator Data Package metadata recommendations
-#'
-#' Internal helper function to report soft metadata recommendations for a GeoLocator
-#' Data Package. These checks are advisory but included in global validation.
-#'
-#' @param pkg A GeoLocator Data Package object
-#' @return Always returns `TRUE` and reports metadata recommendations as messages.
-#' @noRd
-validate_gldp_meta <- function(pkg) {
-  cli_h3("Check Metadata")
-
-  # Summary of metadata recommendations checked below:
-  # - title prefix convention
-  # - contributor role completeness
-  # - related identifiers presence
-  # - GeoPressureTemplate repository URL
-  # - embargo metadata quality (date, duration, justification text)
-  has_warnings <- FALSE
-
-  # 1) Title should follow the shared "GeoLocator Data Package: " prefix.
-  title <- pkg$title %||% NA_character_
-  if (!is.character(title) || length(title) != 1) {
-    title <- as.character(title[1] %||% NA_character_)
-  }
-  if (is.na(title) || !startsWith(title, "GeoLocator Data Package: ")) {
-    cli_alert_warning(
-      "Missing expected prefix {.val GeoLocator Data Package: } in {.field pkg$title}."
-    )
-    has_warnings <- TRUE
-  }
-
-  # 2) Contributors should include roles when possible.
-  contributors <- pkg$contributors %||% list()
-  if (!is.list(contributors)) {
-    contributors <- list()
-  }
-  contributors_with_role <- sum(vapply(
-    contributors,
-    \(c) {
-      roles <- c$roles %||% c$role %||% character(0)
-      length(roles) > 0 && any(!is.na(roles) & nzchar(as.character(roles)))
-    },
-    logical(1)
-  ))
-  if (contributors_with_role == 0) {
-    cli_alert_warning(
-      "Missing {.field role} in {.field pkg$contributors}."
-    )
-    has_warnings <- TRUE
-  }
-
-  # 3) Data-related publications/resources should be linked in related identifiers.
-  related <- pkg$relatedIdentifiers %||% list()
-  if (length(related) == 0) {
-    cli_alert_warning(
-      "Missing {.field relatedIdentifiers} in {.field pkg}."
-    )
-    has_warnings <- TRUE
-  }
-
-  # 4) Software/repository URL should point to GeoPressureTemplate.
-  code_repo <- pkg$codeRepository %||% NULL
-  expected_repo <- "https://github.com/Rafnuss/GeoPressureTemplate"
-  if (
-    is.null(code_repo) ||
-      length(code_repo) != 1 ||
-      !is.character(code_repo) ||
-      is.na(code_repo) ||
-      !nzchar(code_repo) ||
-      !identical(sub("/$", "", code_repo), expected_repo)
-  ) {
-    cli_alert_warning(
-      "Missing or invalid {.field pkg$codeRepository}."
-    )
-    has_warnings <- TRUE
-  }
-
-  # 5) For embargoed records, require a valid embargo date and basic justification.
-  embargo <- pkg$embargo %||% NA_character_
-  embargo <- as.character(embargo[1] %||% NA_character_)
-  embargo_is_active <- !is.na(embargo) && nzchar(embargo) && embargo != "1970-01-01"
-  if (embargo_is_active) {
-    if (is.na(embargo) || !nzchar(embargo)) {
-      cli_alert_warning(
-        "Missing {.field pkg$embargo}."
-      )
-      has_warnings <- TRUE
-    } else {
-      embargo_date <- as.Date(embargo)
-      if (is.na(embargo_date)) {
-        cli_alert_warning(
-          "Invalid {.field pkg$embargo}; use {.val YYYY-MM-DD}."
-        )
-        has_warnings <- TRUE
-      } else {
-        days <- as.integer(embargo_date - Sys.Date())
-        if (days > 730) {
-          cli_alert_warning(
-            "Invalid {.field pkg$embargo}: duration ({days} days) seems too long."
-          )
-          has_warnings <- TRUE
-        } else {
-          cli_alert_info(
-            "Embargo duration is {days} days. Ensure justification is documented."
-          )
-        }
-
-        description <- pkg$description %||% ""
-        description <- tolower(paste(as.character(description), collapse = " "))
-        if (!grepl("embargo|justif", description)) {
-          cli_alert_warning(
-            "Missing embargo justification in {.field pkg$description}."
-          )
-          has_warnings <- TRUE
-        }
-      }
-    }
-  }
-
-  if (!has_warnings) {
-    cli_alert_success("Metadata recommendations are satisfied.")
-  } else {
-    cli_alert_warning("Metadata recommendations have warnings.")
-  }
-
-  invisible(TRUE)
 }
 
 #' Validate GeoLocator Data Package profile
@@ -168,10 +54,14 @@ validate_gldp_meta <- function(pkg) {
 validate_gldp_profile <- function(pkg) {
   cli_h3("Check Profile")
 
-  schema <- jsonlite::fromJSON(pkg$`$schema`, simplifyVector = FALSE)
+  pkg_schema <- jsonlite::fromJSON(
+    pkg$`$schema`,
+    simplifyDataFrame = FALSE,
+    simplifyVector = TRUE
+  )
 
-  required <- unlist(schema$allOf[[2]]$required)
-  properties <- schema$allOf[[2]]$properties
+  required <- unlist(pkg_schema$allOf[[2]]$required)
+  properties <- pkg_schema$allOf[[2]]$properties
 
   # Skip resource validation at the profile level (handled separately)
   required <- setdiff(required, "resources")
@@ -184,11 +74,9 @@ validate_gldp_profile <- function(pkg) {
     pkg,
     required,
     properties,
-    defs = schema$`$defs`,
+    defs = pkg_schema$`$defs`,
     ignore_fields = ignore_fields
   )
-
-  valid <- valid & validate_gldp_resources(pkg)
 
   invisible(valid)
 }
@@ -202,13 +90,9 @@ validate_gldp_profile <- function(pkg) {
 #' @return Logical indicating whether all resource validations passed
 #' @noRd
 validate_gldp_resources <- function(pkg) {
-  valid <- TRUE
+  pkg <- update_gldp_order_resources(pkg)
 
-  is_tabular_resource <- function(resource) {
-    identical(resource$profile, "tabular-data-resource") &&
-      is.list(resource$schema) &&
-      !is.null(resource$schema$fields)
-  }
+  valid <- TRUE
 
   if (length(pkg$resources) == 0) {
     cli_alert_danger("Package must contain at least one resource.")
@@ -218,11 +102,15 @@ validate_gldp_resources <- function(pkg) {
   for (i in seq_along(pkg$resources)) {
     resource <- pkg$resources[[i]]
 
-    if (is_tabular_resource(resource)) {
+    is_tabular_resource <- identical(resource$profile, "tabular-data-resource") &&
+      is.list(resource$schema) &&
+      !is.null(resource$schema$fields)
+
+    if (is_tabular_resource) {
       valid <- valid & validate_gldp_table(resource$data, resource$schema)
     } else {
       cli_h3("Check Resources {.field {resource$name}}")
-      cli_alert_warning("Could not check {.field {resource$name}}")
+      cli::cli_alert_warning("Could not check {.field {resource$name}}")
       valid <- FALSE
     }
   }
@@ -313,7 +201,7 @@ validate_gldp_object <- function(
         if (!is.null(prop$`$ref`) && !startsWith(prop$`$ref`, "#/$defs/")) {
           # Not easy to implement as rely on more complex schema with anyOf, allOf etc...
           # prop <- jsonlite::fromJSON(properties[[field]]$`$ref`, simplifyVector = FALSE)
-          cli_alert_warning(
+          cli::cli_alert_warning(
             "{.field {field}} cannot be validated (external schema)."
           )
         } else if (!is.null(prop$properties)) {
@@ -331,7 +219,7 @@ validate_gldp_object <- function(
 
       if (isTRUE(prop$type == "array")) {
         if (is.null(prop$items)) {
-          cli_alert_warning(
+          cli::cli_alert_warning(
             "{.field {field}} array items schema is missing; skipping item validation."
           )
         } else {
@@ -356,7 +244,7 @@ validate_gldp_object <- function(
                 !is.null(item_prop$`$ref`) &&
                   !startsWith(item_prop$`$ref`, "#/$defs/")
               ) {
-                cli_alert_warning(
+                cli::cli_alert_warning(
                   "{.field {item_field}} cannot be validated (external schema)."
                 )
               } else if (!is.null(item_prop$properties)) {
@@ -375,7 +263,7 @@ validate_gldp_object <- function(
         }
       }
     } else {
-      cli_alert_warning("{.field {field}} does not exist in schema.")
+      cli::cli_alert_warning("{.field {field}} does not exist in schema.")
     }
   }
 
@@ -448,7 +336,7 @@ resolve_oneof <- function(value, prop, defs, field) {
   )
 
   if (!any(matches)) {
-    cli_alert_warning(
+    cli::cli_alert_warning(
       "{.field {field}} could not be matched to a `oneOf` schema; using first option."
     )
     chosen <- alternatives[[1]]
@@ -622,7 +510,7 @@ validate_gldp_item <- function(item, prop, field) {
       pattern_match <- tryCatch(
         grepl(prop$pattern, as.character(item[non_na_items]), perl = TRUE),
         error = function(e) {
-          cli_alert_warning(
+          cli::cli_alert_warning(
             "{.field {field}} pattern could not be compiled; skipping pattern check."
           )
           rep(TRUE, sum(non_na_items))
@@ -975,7 +863,7 @@ validate_gldp_pkg_coherence <- function(pkg) {
     !(min_res_required %in% sapply(pkg$resources, \(x) x$name))
   ]
   if (length(res_missing) > 0) {
-    cli_alert_warning(
+    cli::cli_alert_warning(
       "{.pkg pkg} is missing {.val {res_missing}}. \\
                       We could not check package coherence."
     )
@@ -1050,7 +938,7 @@ validate_gldp_pkg_coherence <- function(pkg) {
   # Each tag_id should have at least one observation record.
   tidmissing <- setdiff(t$tag_id, unique(o$tag_id))
   if (length(tidmissing) > 0) {
-    cli_alert_warning(
+    cli::cli_alert_warning(
       "No observations found for {.val {tidmissing}} declared in {.field tags}."
     )
     # Still valid
@@ -1245,4 +1133,191 @@ validate_gldp_observations <- function(o) {
   }
 
   invisible(valid)
+}
+
+
+#' Validate GeoLocator Data Package metadata recommendations
+#'
+#' Internal helper function to report soft metadata recommendations for a GeoLocator
+#' Data Package. These checks are advisory but included in global validation.
+#'
+#' @param pkg A GeoLocator Data Package object
+#' @return Always returns `TRUE` and reports metadata recommendations as messages.
+#' @noRd
+validate_gldp_meta <- function(pkg) {
+  cli_h3("Check Metadata")
+
+  # Summary of metadata recommendations checked below:
+  # - title prefix convention
+  # - contributor role completeness
+  # - record_type should be "dataset"
+  # - related identifiers presence
+  # - community selection
+  # - GitHub codeRepository URL
+  # - embargo metadata quality (date, duration, justification text)
+  # - allowed tag manufacturer names in tags metadata
+  # - taxonomic names present in eBird taxonomy
+  has_warnings <- FALSE
+
+  # 1) Title should follow the shared "GeoLocator Data Package: " prefix.
+  title <- pkg$title %||% ""
+
+  if (!nzchar(title)) {
+    cli::cli_alert_warning(
+      "{.field pkg$title} is missing or empty."
+    )
+    has_warnings <- TRUE
+  } else if (!startsWith(title, "GeoLocator Data Package: ")) {
+    cli::cli_alert_warning(
+      "Missing expected prefix {.val GeoLocator Data Package: } in {.field pkg$title}."
+    )
+    has_warnings <- TRUE
+  }
+
+  # 2) Contributors should include roles when possible.
+  contributors <- pkg$contributors %||% list()
+  contributors_with_role <- contributors |>
+    purrr::map_lgl(\(x) {
+      roles <- x$roles %||% character(0)
+      any(!is.na(roles) & nzchar(as.character(roles)))
+    }) |>
+    sum()
+
+  if (contributors_with_role == 0) {
+    cli::cli_alert_warning(
+      "Missing {.field role} in {.field pkg$contributors}."
+    )
+    has_warnings <- TRUE
+  }
+
+  # 3) Zenodo record type should be "dataset".
+  record_type <- pkg$record_type %||% NA_character_
+  is_dataset_record <- is.character(record_type) &&
+    length(record_type) == 1 &&
+    identical(trimws(tolower(record_type)), "dataset")
+  if (!is_dataset_record) {
+    cli::cli_alert_warning(
+      "Expected {.field pkg$record_type} to be {.val dataset}; got {.val {record_type}}."
+    )
+    has_warnings <- TRUE
+  }
+
+  # 4) tags$manufacturer should use one of the expected institution names.
+  allowed_manufacturers <- c(
+    "Swiss Ornithological Institute",
+    "Migrate Technology Limited",
+    "Lund University"
+  )
+  if ("tags" %in% frictionless::resources(pkg)) {
+    t <- tags(pkg)
+    manufacturers <- unique(t$manufacturer)
+    invalid_manufacturers <- manufacturers[
+      !is.na(manufacturers) &
+        nzchar(trimws(manufacturers)) &
+        !(manufacturers %in% allowed_manufacturers)
+    ]
+    if (length(invalid_manufacturers) > 0) {
+      cli::cli_alert_warning(
+        "Unusual {.field tags$manufacturer}: {.val {invalid_manufacturers}}. Please, try to use {.val {allowed_manufacturers}} if possible."
+      )
+      has_warnings <- TRUE
+    }
+  }
+
+  # 5) Data-related publications/resources should be linked in related identifiers.
+  related <- pkg$relatedIdentifiers %||% list()
+  if (length(related) == 0) {
+    cli::cli_alert_warning(
+      "No {.field relatedIdentifiers} present. Add any resources related to the data (e.g. papers, project pages, derived datasets, etc.)."
+    )
+    has_warnings <- TRUE
+  }
+
+  # 6) At least one community should be selected for the record.
+  communities <- pkg$communities %||% list()
+  allowed_communities <- c(
+    "b7c70316-310b-435e-9a8b-84188d60a3cc",
+    "6e9c24fb-954a-4087-ae9b-71fcba41a624" # sandbox community
+  )
+  has_expected_community <- purrr::some(
+    communities,
+    \(x) x %in% allowed_communities
+  )
+  if (!has_expected_community) {
+    cli::cli_alert_warning(
+      "Missing selected community {.url https://zenodo.org/communities/geolocator-dp/}."
+    )
+    has_warnings <- TRUE
+  }
+
+  # 7) Software/repository URL should be a GitHub repository URL.
+  code_repo <- pkg$codeRepository %||% NA_character_
+
+  is_github_repo <- is.character(code_repo) &&
+    length(code_repo) == 1 &&
+    grepl(
+      "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(\\.git)?/?$",
+      trimws(code_repo)
+    )
+
+  if (!is_github_repo) {
+    cli::cli_alert_warning(
+      "Missing or invalid {.field pkg$codeRepository}; expected a GitHub repository URL."
+    )
+    has_warnings <- TRUE
+  }
+  has_warnings <- has_warnings | validate_gldp_taxonomy(pkg)
+
+  if (!has_warnings) {
+    cli_alert_success("Metadata recommendations passed.")
+  }
+
+  invisible(has_warnings)
+}
+
+#' @noRd
+validate_gldp_taxonomy <- function(pkg) {
+  species <- pkg$taxonomy %||% pkg$taxonomic %||% character(0)
+  species <- unique(trimws(as.character(species)))
+  species <- species[!is.na(species) & nzchar(species)]
+  if (length(species) == 0) {
+    return(FALSE)
+  }
+
+  req <- httr2::request("https://api.ebird.org/v2/ref/taxonomy/ebird?fmt=json") |>
+    httr2::req_headers(Accept = "application/json") |>
+    httr2::req_timeout(20)
+
+  ebird <- tryCatch(
+    req |>
+      httr2::req_perform() |>
+      httr2::resp_body_json(simplifyVector = TRUE),
+    error = function(e) {
+      cli::cli_alert_warning(
+        "Could not validate {.field pkg$taxonomy} against eBird taxonomy: {e$message}."
+      )
+      NULL
+    }
+  )
+  if (is.null(ebird)) {
+    return(TRUE)
+  }
+
+  ebird_names <- if (is.data.frame(ebird) && "sciName" %in% names(ebird)) {
+    ebird$sciName
+  } else {
+    purrr::map_chr(ebird, \(x) x$sciName %||% NA_character_)
+  }
+  ebird_names <- unique(trimws(as.character(ebird_names)))
+  ebird_names <- ebird_names[!is.na(ebird_names) & nzchar(ebird_names)]
+
+  invalid <- setdiff(species, ebird_names)
+  if (length(invalid) > 0) {
+    cli::cli_alert_warning(
+      "Scientific names in {.field pkg$taxonomy} not matching any entry in eBird taxonomy: {.val {invalid}}."
+    )
+    return(TRUE)
+  }
+
+  FALSE
 }

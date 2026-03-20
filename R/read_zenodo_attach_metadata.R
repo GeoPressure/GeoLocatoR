@@ -1,31 +1,22 @@
 #' @noRd
 read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
-  # Use shorter variable name
   z <- zenodo_record
   m <- z$metadata %||% list()
-
-  rights <- m$rights %||% list()
-  creators <- m$creators %||% list()
-  related_identifiers <- m$related_identifiers %||% list()
-  funding <- m$funding %||% list()
-  subjects <- m$subjects %||% list()
-
-  # Standard Datapackage variable
-  pkg$id <- glue::glue("https://zenodo.org/doi/10.5281/zenodo.{z$id}") %||% NULL
+  pkg$id <- glue::glue("https://zenodo.org/doi/10.5281/zenodo.{z$id}")
   pkg$name <- z$id
   pkg$title <- m$title
   pkg$description <- m$description
   pkg$version <- m$version
   pkg$created <- z$created
   pkg$homepage <- z$links$self_html %||% NULL
-  pkg$licenses <- purrr::map(rights, \(x) {
+  pkg$licenses <- purrr::map(m$rights %||% list(), \(x) {
     list(
       name = x$id,
       title = x$title$en %||% NULL,
       path = x$props$url %||% NULL
     )
   })
-  pkg$contributors <- purrr::map(creators, \(creator) {
+  pkg$contributors <- purrr::map(m$creators %||% list(), \(creator) {
     orcid <- creator$person_or_org$identifiers |>
       purrr::keep(~ .x$scheme == "orcid") |>
       purrr::pluck(1, "identifier", .default = NULL)
@@ -43,7 +34,7 @@ read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
       )
     ))
   })
-  pkg$relatedIdentifiers <- purrr::map(related_identifiers, \(x) {
+  pkg$relatedIdentifiers <- purrr::map(m$related_identifiers %||% list(), \(x) {
     list(
       relationType = x$relation_type$id %||% NULL,
       relatedIdentifier = x$identifier,
@@ -51,26 +42,25 @@ read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
       relatedIdentifierType = x$scheme
     )
   })
-
-  # Additional old GeoLocatoR
-  pkg$embargo <- if (isTRUE(z$access$embargo$active)) {
-    z$access$embargo$until
+  access_status <- tolower(
+    as.character(z$access$status %||% z$access$record %||% "")[1]
+  )
+  pkg$access_status <- if (nzchar(access_status)) access_status else NULL
+  pkg$embargo <- if (identical(pkg$access_status, "embargoed") || isTRUE(z$access$embargo$active)) {
+    z$access$embargo$until %||% NULL
   } else {
-    "1970-01-01"
+    NULL
   }
-  pkg$grants <- purrr::map_chr(funding, \(x) x$funder$name %||% "")
-  pkg$keywords <- purrr::map_chr(subjects, \(x) x$subject %||% "")
-
-  ## Additional field
+  pkg$grants <- purrr::map_chr(m$funding %||% list(), \(x) x$funder$name %||% "")
+  pkg$keywords <- purrr::map_chr(m$subjects %||% list(), \(x) x$subject %||% "")
   pkg$conceptdoi <- z$conceptdoi %||% purrr::pluck(z, "parent", "doi", .default = NULL)
-  if (is.null(pkg$conceptdoi) && is.function(z$getConceptDOI)) {
-    pkg$conceptdoi <- z$getConceptDOI()
-  }
   pkg$codeRepository <- z$custom_fields$`code:codeRepository` %||% NULL
   pkg$status <- z$status
   pkg$record_type <- m$resource_type$id %||% NULL
   pkg$publisher <- m$publisher
-  pkg$communities <- z$parent$communities$ids
-
+  pkg$communities <- z$parent$communities$ids %||%
+    purrr::pluck(z, "parent", "review", "receiver", "community", .default = NULL)
+  pkg$is_published <- z$is_published
+  pkg$is_draft <- z$is_draft
   pkg
 }

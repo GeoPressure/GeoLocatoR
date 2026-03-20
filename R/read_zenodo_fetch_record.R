@@ -6,9 +6,8 @@ read_zenodo_fetch_record <- function(
   sandbox = FALSE
 ) {
   record_id <- parse_zenodo_id(id)
-  token <- resolve_zenodo_token(token)
+  token <- resolve_zenodo_token(token, sandbox = sandbox)
   base_url <- if (isTRUE(sandbox)) "https://sandbox.zenodo.org" else "https://zenodo.org"
-
   url <- glue::glue("{base_url}/api/records/{record_id}{ifelse(draft,'/draft','')}")
 
   req <- httr2::request(url) |>
@@ -24,10 +23,7 @@ read_zenodo_fetch_record <- function(
   req |>
     httr2::req_error(
       body = \(resp) {
-        body <- tryCatch(
-          httr2::resp_body_json(resp, simplifyVector = FALSE),
-          error = \(e) NULL
-        )
+        body <- httr2::resp_body_json(resp, simplifyVector = FALSE)
         body$message %||% httr2::resp_status_desc(resp)
       }
     ) |>
@@ -36,23 +32,32 @@ read_zenodo_fetch_record <- function(
 }
 
 #' @noRd
-resolve_zenodo_token <- function(token = NULL) {
-  # 1) explicit function argument
-  token <- as.character(token %||% NA_character_)[1]
+resolve_zenodo_token <- function(token = NULL, sandbox = FALSE) {
+  token <- as.character(token %||% "")[1]
   if (is_non_empty_string(token)) {
     return(token)
   }
 
-  # 2) environment variables (session or persistent .Renviron)
-  env_token <- Sys.getenv("ZENODO_TOKEN", unset = "")
-  if (nzchar(env_token)) {
-    return(env_token)
+  env_vars <- if (isTRUE(sandbox)) {
+    c("ZENODO_TOKEN_SANDBOX", "ZENODO_TOKEN")
+  } else {
+    "ZENODO_TOKEN"
+  }
+  for (var in env_vars) {
+    env_token <- Sys.getenv(var, unset = "")
+    if (nzchar(env_token)) {
+      return(env_token)
+    }
   }
 
-  # 3) keyring secret store (if available)
-  if (interactive() && requireNamespace("keyring", quietly = TRUE)) {
+  services <- if (isTRUE(sandbox)) {
+    c("ZENODO_TOKEN_SANDBOX", "ZENODO_TOKEN")
+  } else {
+    "ZENODO_TOKEN"
+  }
+  for (service in services) {
     keyring_token <- tryCatch(
-      keyring::key_get(service = "ZENODO_TOKEN"),
+      keyring::key_get(service = service),
       error = function(...) NULL
     )
     if (is_non_empty_string(keyring_token)) {
@@ -66,9 +71,8 @@ resolve_zenodo_token <- function(token = NULL) {
 #' @noRd
 parse_zenodo_id <- function(id) {
   id <- trimws(as.character(id)[1])
-
-  doi <- "^10\\.5281/zenodo\\.(\\d+)$"
-  doi_url <- "^https?://doi\\.org/10\\.5281/zenodo\\.(\\d+)$"
+  doi <- "^10\\.(?:5281|5072)/zenodo\\.(\\d+)$"
+  doi_url <- "^https?://doi\\.org/10\\.(?:5281|5072)/zenodo\\.(\\d+)$"
   record_url <- "^https?://zenodo\\.org/records/(\\d+)/?(?:\\?.*)?(?:#.*)?$"
   sandbox_record_url <- "^https?://sandbox\\.zenodo\\.org/records/(\\d+)/?(?:\\?.*)?(?:#.*)?$"
   record_id <- "^(\\d+)$"

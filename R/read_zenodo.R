@@ -28,13 +28,15 @@
 #' @param id Zenodo identifier. Can be a record id, DOI, DOI URL, or Zenodo
 #'   record URL. Supported examples include `"18467383"`,
 #'   `"10.5281/zenodo.18467383"`, `"https://doi.org/10.5281/zenodo.18467383"`,
+#'   `"10.5072/zenodo.470406"`, `"https://doi.org/10.5072/zenodo.470406"`,
 #'   `"https://zenodo.org/records/18467383"`, and sandbox record URLs when
 #'   `sandbox = TRUE`.
 #' @param token Optional Zenodo token. If `NULL`, token resolution follows the
 #'   same logic as Zenodo request helpers: explicit argument, then environment
-#'   variable `ZENODO_TOKEN` (for example via `.Renviron` or `Sys.setenv()`),
-#'   then keyring secret service `"ZENODO_TOKEN"` (for example
-#'   `keyring::key_set(service = "ZENODO_TOKEN")`) when available.
+#'   variable `ZENODO_TOKEN_SANDBOX` when `sandbox = TRUE` (then
+#'   `ZENODO_TOKEN` as fallback), then keyring secret services
+#'   `"ZENODO_TOKEN_SANDBOX"` / `"ZENODO_TOKEN"` when available (for example
+#'   `keyring::key_set(service = "ZENODO_TOKEN_SANDBOX")`).
 #' @param draft Logical. If `TRUE`, query the draft record endpoint
 #'   (`/api/records/{id}/draft`). Draft access usually requires authentication
 #'   and sufficient permissions.
@@ -63,6 +65,8 @@ read_zenodo <- function(
   draft = FALSE,
   sandbox = FALSE
 ) {
+  token <- resolve_zenodo_token(token = token, sandbox = sandbox)
+
   # 1) Fetch Zenodo record
   cli_progress_step("Retrieve Zenodo record")
   zenodo_record <- read_zenodo_fetch_record(
@@ -74,7 +78,11 @@ read_zenodo <- function(
 
   # 2) Validate and download record files
   cli_progress_step("Download files from Zenodo")
-  download_dir <- read_zenodo_download_files(zenodo_record = zenodo_record, token = token)
+  download_dir <- read_zenodo_download_files(
+    zenodo_record = zenodo_record,
+    token = token,
+    sandbox = sandbox
+  )
 
   # 3) Read downloaded datapackage
   if (!is.null(download_dir)) {

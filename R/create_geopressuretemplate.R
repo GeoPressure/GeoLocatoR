@@ -138,9 +138,8 @@ create_geopressuretemplate <- function(path, pkg = NULL, open = interactive()) {
 #' @return Nothing (side effect: writes DESCRIPTION file)
 #' @noRd
 create_geopressuretemplate_desc <- function(pkg) {
-  meta <- pkg$meta
-  contributors <- meta$contributors %||% meta$creators %||% list()
-  licenses <- meta$license %||% list()
+  contributors <- pkg$contributors %||% list()
+  licenses <- pkg$licenses %||% list()
 
   if (!is.list(licenses)) {
     licenses <- list(licenses)
@@ -154,22 +153,18 @@ create_geopressuretemplate_desc <- function(pkg) {
       if (!is.list(c)) {
         return(list(title = as.character(c)[1]))
       }
-      c$title <- c$title %||% c$name
-      c$organization <- c$organization %||% c$affiliation
-      c$path <- c$path %||% c$orcid
-      c$roles <- c$roles %||% c$role
       c
     })
   }
 
   d <- desc::description$new()
 
-  d$set("Title", meta$title %||% "GeoPressureTemplate project", check = FALSE)
+  d$set("Title", pkg$title %||% "GeoPressureTemplate project", check = FALSE)
 
   if (length(licenses) > 0) {
     license_text <- purrr::map_chr(licenses, \(lic) {
       if (is.list(lic)) {
-        lic$name %||% lic$id %||% lic$title %||% ""
+        lic$name %||% lic$title %||% ""
       } else {
         as.character(lic)[1]
       }
@@ -185,8 +180,8 @@ create_geopressuretemplate_desc <- function(pkg) {
   }
 
   # Optional fields
-  if (!is.null(meta$description)) {
-    description_text <- as.character(meta$description)[1] |>
+  if (!is.null(pkg$description)) {
+    description_text <- as.character(pkg$description)[1] |>
       rvest::read_html() |>
       rvest::html_text2()
     if (nzchar(description_text)) {
@@ -194,8 +189,8 @@ create_geopressuretemplate_desc <- function(pkg) {
     }
   }
 
-  if (!is.null(meta$version)) {
-    d$set_version(gsub("^v", "", as.character(meta$version)[1]))
+  if (!is.null(pkg$version)) {
+    d$set_version(gsub("^v", "", as.character(pkg$version)[1]))
   }
 
   d$normalize()
@@ -211,81 +206,28 @@ create_geopressuretemplate_desc <- function(pkg) {
 #' @return Nothing (side effect: writes README.md file)
 #' @noRd
 create_geopressuretemplate_readme <- function(pkg) {
-  meta <- pkg$meta
-
-  temporal <- pkg$temporal %||% list()
-  temporal_start <- temporal$start %||% NA_character_
-  temporal_end <- temporal$end %||% NA_character_
-  taxonomic <- paste(pkg$taxonomic %||% character(0), collapse = ", ")
-  number_tags <- pkg$numberTags
-  number_tags_md <- ""
-  if (is.list(number_tags) && length(number_tags) > 0) {
-    number_tags_md <- paste0(
-      "- ",
-      names(number_tags),
-      ": ",
-      unlist(number_tags),
-      collapse = "\n"
+  badge_part <- if (!is.null(pkg$name) && nzchar(pkg$name)) {
+    glue::glue(
+      "[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.{pkg$name}.svg)](https://doi.org/10.5281/zenodo.{pkg$name})"
     )
-  }
-  title <- meta$title %||% "GeoPressureTemplate project"
-  description <- meta$description
-  if (!is.null(description)) {
-    description <- as.character(description)[1] |> rvest::read_html() |> rvest::html_text2()
   } else {
-    description <- ""
+    ""
+  }
+  description_text <- if (!is.null(pkg$description)) {
+    as.character(pkg$description)[1] |>
+      rvest::read_html() |>
+      rvest::html_text2()
+  } else {
+    ""
   }
 
-  recid <- meta$recid %||% as.character(meta$id %||% "")[1]
-  doi <- meta$doi %||% ""
-  is_sandbox <- grepl("handle\\.test\\.datacite\\.org", meta$doi_url %||% "")
-  zenodo_base <- if (is_sandbox) "https://sandbox.zenodo.org" else "https://zenodo.org"
-  zenodo_url <- if (nzchar(recid)) paste0(zenodo_base, "/records/", recid) else ""
-  badge <- ""
-  if (nzchar(recid)) {
-    if (nzchar(doi)) {
-      badge <- paste0(
-        "[![DOI](",
-        zenodo_base,
-        "/badge/DOI/",
-        doi,
-        ".svg)](",
-        zenodo_url,
-        ")"
-      )
-    } else {
-      badge <- paste0(
-        "[![Zenodo record](https://img.shields.io/badge/Zenodo-record%20",
-        recid,
-        "-1682D4)](",
-        zenodo_url,
-        ")"
-      )
-    }
-  }
-
-  content <- paste(
-    "# ",
-    title,
-    "\n\n",
-    if (nzchar(badge)) paste0(badge, "\n\n") else "",
-    if (nzchar(description)) paste(description, "\n") else "",
-    "## Overview\n\n",
-    "**Temporal coverage:** ",
-    temporal_start,
-    " - ",
-    temporal_end,
-    "\n",
-    "**Taxonomic coverage:** ",
-    taxonomic,
-    "\n",
-    "**Number of tags:** \n",
-    number_tags_md,
-    "\n",
-    sep = ""
+  content <- glue::glue(
+    "# {pkg$title %||% 'GeoPressureTemplate project'}\n\n",
+    "{badge_part}\n\n",
+    "{description_text}\n"
   )
 
-  writeLines(content, con = "README.md")
+  writeLines(content, "README.md")
 }
 
 #' Create LICENSE file for GeoPressure template
@@ -297,8 +239,7 @@ create_geopressuretemplate_readme <- function(pkg) {
 #' @return Nothing (side effect: creates LICENSE files)
 #' @noRd
 create_geopressuretemplate_licenses <- function(pkg) {
-  meta <- pkg$meta
-  licenses <- meta$license %||% list()
+  licenses <- pkg$licenses %||% list()
 
   if (!is.list(licenses)) {
     licenses <- list(licenses)
@@ -331,7 +272,7 @@ create_geopressuretemplate_licenses <- function(pkg) {
 
   # 4. Fallback to license path if name is missing or empty
   license_name <- if (is.list(lic)) {
-    lic$name %||% lic$id %||% lic$path
+    lic$name %||% lic$path
   } else {
     as.character(lic)[1]
   }
@@ -383,27 +324,13 @@ create_geopressuretemplate_data <- function(pkg) {
   readr::write_csv(tags(pkg), "./data/tags.csv")
   readr::write_csv(observations(pkg), "./data/observations.csv")
 
-  sensor_map <- c(
-    "pressure" = "pressure",
-    "activity" = "acceleration",
-    "pitch" = "acceleration",
-    "light" = "light",
-    "temperature_internal" = "temperature_internal",
-    "temperature_external" = "temperature_external",
-    "acceleration_x" = "magnetic",
-    "acceleration_y" = "magnetic",
-    "acceleration_z" = "magnetic",
-    "magnetic_x" = "magnetic",
-    "magnetic_y" = "magnetic",
-    "magnetic_z" = "magnetic"
-  )
+  m <- measurements(pkg)
 
-  # Create variable type from sensor and re-group sensors by type
-  m <- measurements(pkg) |>
-    mutate(variable_type = .data$sensor) |>
-    mutate(
-      sensor = recode(.data$variable_type, !!!sensor_map, .default = "other")
-    )
+  tag_ids <- unique(tags(pkg)$tag_id)
+  tags_export <- gldp_to_tag(pkg, tag_id = tag_ids)
+  if (inherits(tags_export, "tag")) {
+    tags_export <- stats::setNames(list(tags_export), tag_ids[1])
+  }
 
   # Create the tag-label directory if it doesn't exist
   path_label <- glue::glue("./data/tag-label/")
@@ -415,106 +342,100 @@ create_geopressuretemplate_data <- function(pkg) {
     dir.create(path_twl, recursive = TRUE)
   }
 
-  split(m, m$tag_id) |>
-    purrr::iwalk(
-      \(dft, tag_id) {
-        # Create the raw-tag directory if it doesn't exist
-        dir_path <- glue::glue("./data/raw-tag/{tag_id}")
-        if (!dir.exists(dir_path)) {
-          dir.create(dir_path, recursive = TRUE)
+  sensor_names <- c(
+    "pressure",
+    "light",
+    "acceleration",
+    "temperature_external",
+    "temperature_internal",
+    "magnetic"
+  )
+
+  purrr::iwalk(
+    tags_export,
+    \(tag, tag_id) {
+      dir_path <- glue::glue("./data/raw-tag/{tag_id}")
+      if (!dir.exists(dir_path)) {
+        dir.create(dir_path, recursive = TRUE)
+      }
+
+      purrr::walk(sensor_names, \(sensor) {
+        if (!sensor %in% names(tag)) {
+          return(invisible(NULL))
         }
+        tag[[sensor]] |>
+          dplyr::rename(datetime = "date") |>
+          readr::write_csv(file = glue::glue("{dir_path}/{sensor}.csv"))
+      })
 
-        # Split the data by sensor
-        # Write the data to CSV
-        split(dft, dft$sensor) |>
-          purrr::iwalk(\(dfts, sensor) {
-            # remove unsed columns
-            tmp <- dfts |> select(-c("tag_id", "sensor", "label"))
+      labels_pressure <- m |>
+        dplyr::filter(.data$tag_id == !!tag_id, .data$sensor == "pressure") |>
+        dplyr::transmute(
+          date = .data$datetime,
+          label = ifelse(is.na(.data$label), "", .data$label)
+        ) |>
+        dplyr::group_by(.data$date) |>
+        dplyr::summarize(
+          label = dplyr::first(.data$label[.data$label != ""], default = ""),
+          .groups = "drop"
+        )
 
-            # Check for duplicates and merge with median if necessary
-            duplicates_exist <- tmp |>
-              group_by(.data$datetime, .data$variable_type) |>
-              filter(n() > 1) |>
-              ungroup()
+      labels_acceleration <- m |>
+        dplyr::filter(
+          .data$tag_id == !!tag_id,
+          .data$sensor %in% c("acceleration", "activity")
+        ) |>
+        dplyr::transmute(
+          date = .data$datetime,
+          label = ifelse(is.na(.data$label), "", .data$label)
+        ) |>
+        dplyr::group_by(.data$date) |>
+        dplyr::summarize(
+          label = dplyr::first(.data$label[.data$label != ""], default = ""),
+          .groups = "drop"
+        )
 
-            if (nrow(duplicates_exist) > 0) {
-              cli_warn(c(
-                "!" = "Duplicate measurements of {.var {sensor}} on the same datetime for \\
-            {.field {tag_id}}.",
-                "i" = "The median value will be taken for these duplicates."
-              ))
+      if ("pressure" %in% names(tag)) {
+        tag$pressure <- tag$pressure |>
+          dplyr::left_join(labels_pressure, by = "date") |>
+          dplyr::mutate(label = dplyr::coalesce(.data$label, ""))
+      }
+      if ("acceleration" %in% names(tag)) {
+        tag$acceleration <- tag$acceleration |>
+          dplyr::left_join(labels_acceleration, by = "date") |>
+          dplyr::mutate(label = dplyr::coalesce(.data$label, ""))
+      }
 
-              # grouping and median
-              tmp <- tmp |>
-                group_by(.data$datetime, .data$variable_type) |>
-                summarize(
-                  value = stats::median(.data$value),
-                  .groups = "drop"
-                ) |>
-                ungroup()
-            }
+      if ("pressure" %in% names(tag)) {
+        GeoPressureR::tag_label_write(
+          tag = tag,
+          file = glue::glue("{path_label}/{tag_id}-labeled.csv"),
+          quiet = TRUE
+        )
+      }
+    },
+    .progress = list(type = "tasks")
+  )
 
-            # Write raw-tag
-            tmp |>
-              tidyr::pivot_wider(
-                names_from = "variable_type",
-                values_from = "value"
-              ) |>
-              rename(
-                value = any_of(c(
-                  "pressure",
-                  "acceleration",
-                  "light",
-                  "temperature_external",
-                  "temperature_internal",
-                  "magnetic",
-                  "activity"
-                ))
-              ) |>
-              readr::write_csv(
-                file = glue::glue("{dir_path}/{sensor}.csv")
-              )
-          })
-
-        # Write tag label
-        dft |>
-          filter(.data$sensor %in% c("pressure", "acceleration")) |>
-          transmute(
-            date = .data$datetime,
-            .data$value,
-            label = ifelse(is.na(.data$label), "", .data$label),
-            series = .data$sensor
-          ) |>
-          trainset_write(
-            file = glue::glue("{path_label}/{tag_id}-labeled.csv"),
-            quiet = TRUE
-          )
-      },
-      .progress = list(type = "tasks")
-    )
-
-  # Write twilight label
-  twl <- twilights(pkg)
-
-  split(twl, twl$tag_id) |>
-    purrr::iwalk(
-      \(dft, tag_id) {
-        dft |>
-          transmute(
-            date = .data$twilight,
-            value = as.numeric(format(.data$twilight, "%H")) *
-              60 +
-              as.numeric(format(.data$twilight, "%M")),
-            label = ifelse(is.na(.data$label), "", .data$label),
-            series = ifelse(.data$rise, "Rise", "Set")
-          ) |>
-          trainset_write(
-            file = glue::glue("{path_twl}/{tag_id}-labeled.csv"),
-            quiet = TRUE
-          )
-      },
-      .progress = list(type = "tasks")
-    )
+  purrr::iwalk(
+    tags_export,
+    \(tag, tag_id) {
+      if ("twilight" %in% names(tag)) {
+        if (
+          is.null(tag$param$twilight_create$twl_offset) ||
+            length(tag$param$twilight_create$twl_offset) == 0
+        ) {
+          tag$param$twilight_create$twl_offset <- 0
+        }
+        GeoPressureR::twilight_label_write(
+          tag = tag,
+          file = glue::glue("{path_twl}/{tag_id}-labeled.csv"),
+          quiet = TRUE
+        )
+      }
+    },
+    .progress = list(type = "tasks")
+  )
 }
 
 #' @noRd

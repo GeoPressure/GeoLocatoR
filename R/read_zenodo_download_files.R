@@ -1,24 +1,20 @@
 #' @noRd
-read_zenodo_download_files <- function(zenodo_record, token = NULL) {
-  token <- resolve_zenodo_token(token)
-
+read_zenodo_download_files <- function(zenodo_record, token = NULL, sandbox = FALSE) {
+  token <- resolve_zenodo_token(token, sandbox = sandbox)
   rec_url <- zenodo_record$links$self_html %||% ""
   files <- zenodo_record$files$entries
 
   if (length(files) == 0) {
-    if (is_non_empty_string(token)) {
-      cli_warn(c(
-        "!" = "Zenodo record {.url {rec_url}} has no downloadable files for the current token.",
-        "i" = "Check that your token has access to this record.",
-        ">" = "A geolocator-dp object with only metadata is returned."
-      ))
+    auth_hint <- if (isTRUE(sandbox)) {
+      "If restricted, pass {.arg token} or set {.envvar ZENODO_TOKEN_SANDBOX} (or {.envvar ZENODO_TOKEN})."
     } else {
-      cli_warn(c(
-        "!" = "Zenodo record {.url {rec_url}} has no downloadable files visible to anonymous access.",
-        "i" = "If the record is restricted, pass {.arg token}, set {.envvar ZENODO_TOKEN}, or store a key with {.code keyring::key_set(service = 'ZENODO_TOKEN')}.",
-        ">" = "A geolocator-dp object with only metadata is returned."
-      ))
+      "If restricted, pass {.arg token} or set {.envvar ZENODO_TOKEN}."
     }
+    cli_warn(c(
+      "!" = "Zenodo record {.url {rec_url}} has no downloadable files.",
+      "i" = auth_hint,
+      ">" = "A geolocator-dp object with only metadata is returned."
+    ))
     return(NULL)
   }
 
@@ -50,7 +46,7 @@ read_zenodo_download_files <- function(zenodo_record, token = NULL) {
       httr2::req_user_agent(glue::glue("GeoLocatoR/{utils::packageVersion('GeoLocatoR')}")) |>
       httr2::req_timeout(60) |>
       httr2::req_retry(max_tries = 2) |>
-      httr2::req_error(body = function(resp) {
+      httr2::req_error(body = \(resp) {
         status <- httr2::resp_status(resp)
         glue::glue(
           "Failed to download file {.url {url}} from Zenodo record <{rec_url}> (HTTP {status})."
@@ -75,7 +71,6 @@ read_zenodo_download_files <- function(zenodo_record, token = NULL) {
     if (!inherits(resp, "error")) {
       return(NA_character_)
     }
-
     glue::glue(
       "{file$filename %||% file$key %||% '<unknown>'}: {conditionMessage(resp)}"
     )
