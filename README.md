@@ -1,52 +1,51 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file and use devtools::build_readme() -->
 
-# GeoLocatoR 🕊️📦 <a href="https://github.com/Rafnuss/GeoLocatoR"><img src="man/figures/logo.png" align="right" height="139" alt="GeoLocatoR website" /></a>
+# GeoLocatoR <a href="https://github.com/GeoPressure/GeoLocatoR"><img src="man/figures/logo.png" align="right" height="139" alt="GeoLocatoR website" /></a>
 
 <!-- badges: start -->
 
 [![Lifecycle:
 stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
-[![R-CMD-check](https://github.com/Rafnuss/GeoLocatoR/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/Rafnuss/GeoLocatoR/actions/workflows/R-CMD-check.yaml)
-[![pkgdown.yaml](https://github.com/Rafnuss/GeoLocatoR/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/Rafnuss/GeoLocatoR/actions/workflows/pkgdown.yaml)
-[![jarl](https://github.com/Rafnuss/GeoLocatoR/actions/workflows/jarl-check.yml/badge.svg)](https://github.com/Rafnuss/GeoLocatoR/actions/workflows/jarl-check.yml)
-[![format](https://github.com/Rafnuss/GeoLocatoR/actions/workflows/format-check.yml/badge.svg)](https://github.com/Rafnuss/GeoLocatoR/actions/workflows/format-check.yml)
+[![R-CMD-check](https://github.com/GeoPressure/GeoLocatoR/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/GeoPressure/GeoLocatoR/actions/workflows/R-CMD-check.yaml)
+[![pkgdown.yaml](https://github.com/GeoPressure/GeoLocatoR/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/GeoPressure/GeoLocatoR/actions/workflows/pkgdown.yaml)
+[![jarl](https://github.com/GeoPressure/GeoLocatoR/actions/workflows/jarl-check.yml/badge.svg)](https://github.com/GeoPressure/GeoLocatoR/actions/workflows/jarl-check.yml)
+[![format](https://github.com/GeoPressure/GeoLocatoR/actions/workflows/format-check.yml/badge.svg)](https://github.com/GeoPressure/GeoLocatoR/actions/workflows/format-check.yml)
 [![Codecov test
-coverage](https://codecov.io/gh/Rafnuss/GeoLocatoR/graph/badge.svg)](https://app.codecov.io/gh/Rafnuss/GeoLocatoR)
-<!-- badges: end -->
+coverage](https://codecov.io/gh/GeoPressure/GeoLocatoR/graph/badge.svg)](https://app.codecov.io/gh/GeoPressure/GeoLocatoR)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14670776.svg)](https://doi.org/10.5281/zenodo.14670776)
 
-**GeoLocatoR** is an R package that helps you create, use, and share
-your geolocator data in an easy way.
+<!-- badges: end -->
 
 ## 🚀 Overview
 
-GeoLocatoR is designed to help you create and work with the [GeoLocator
-Data Package (GeoLocator
-DP)](https://raphaelnussbaumer.com/GeoLocator-DP/), a standardized
+**GeoLocatoR** is an R package designed to help you create and work with
+the [GeoLocator Data Package (GeoLocator
+DP)](https://geopressure.org/GeoLocator-DP/), a standardized
 format for geolocator data that follows the [Data Package
 standard](https://datapackage.org/standard/data-package/), ensuring your
 data is organized, accessible, and ready to share.
 
-## 🦅 Main Features
+## 🛰️ Main Features
 
-- **Creates and reads GeoLocator Data Packages**: Create a geolocator
-  datapackage object, add resources (data), and write it to your
+- **Creates and reads GeoLocator Data Packages**: Create a GeoLocator
+  Data Package object, add resources (data), and write it to your
   preferred directory. You can also read existing packages from disk
   (`read_gldp()`) or from Zenodo (`read_zenodo()`).
 - **Works Seamlessly with GeoPressureTemplate**: GeoLocatoR is
   compatible with
-  [GeoPressureTemplate](https://github.com/Rafnuss/GeoPressureTemplate)
+  [GeoPressureTemplate](https://github.com/GeoPressure/GeoPressureTemplate)
   — a template repository for analyzing geolocator data using
   GeoPressureR. Use both together to streamline your analysis and
   maintain a standardized project structure.
-- **Supports Swiss Ornithological Institute Data**: Special functions
-  have been designed to deal with internal SOI data. [See this
-  vignette](https://rpubs.com/rafnuss/geolocator_create_from_soi).
+- **Supports Swiss Ornithological Institute Data**: Dedicated functions
+  support internal SOI exports. [See this
+  vignette](https://rpubs.com/GeoPressure/Geolocator_create_from_soi).
 - **Built on frictionless**: This package is built using the
   [`frictionless`](https://docs.ropensci.org/frictionless/) package,
   adhering to the Frictionless Data standards for open data.
 
-## 📦 What is a Data Package?
+## 📦 What is a GeoLocator Data Package?
 
 A **Data Package** is a lightweight format for packaging data using the
 [Data Package standard](https://datapackage.org/standard/data-package/).
@@ -55,7 +54,7 @@ descriptive information in a consistent and reusable manner. For
 geolocator data, this ensures that information about tagged birds, their
 movements, and associated metadata are all bundled into a single
 exchangeable package. Learn more about the GeoLocator DP standard
-[here](https://raphaelnussbaumer.com/GeoLocator-DP/).
+[here](https://geopressure.org/GeoLocator-DP/).
 
 ## 🛠️ Installation
 
@@ -63,31 +62,38 @@ You can install GeoLocatoR from GitHub:
 
 ``` r
 # install.packages("pak")
-pak::pkg_install("Rafnuss/GeoLocatoR")
+pak::pkg_install("GeoPressure/GeoLocatoR")
 
 # Install development version 
-pak::pkg_install("Rafnuss/GeoLocatoR@dev")
+pak::pkg_install("GeoPressure/GeoLocatoR@dev")
 ```
 
-## 📖 Usage
+## 📖 How to use
 
+<a href="https://geopressure.org/GeoPressureManual/geolocator-intro.html"><img src="https://github.com/GeoPressure/GeoPressureManual/raw/main/assets/cover.png" height="220" alt="GeoPressureManual cover" /></a>
 Learn how to use GeoLocatoR with the dedicated part of the
-[GeoPressureManual](https://raphaelnussbaumer.com/GeoPressureManual/geolocator-intro.html).
+[GeoPressureManual](https://geopressure.org/GeoPressureManual/geolocator-intro.html).
 
-## Functions mapping
+## 🔧 Development note
 
-| [frictionless](https://docs.ropensci.org/frictionless/) | Basic GeoLocatoR | GeoPressureTemplate |
-|----|----|----|
-| [`create_package()`](https://docs.ropensci.org/frictionless/reference/create_package.html) | [`create_gldp()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/create_gldp.html) |  |
-| [`add_resource()`](https://docs.ropensci.org/frictionless/reference/add_resource.html) | [`add_gldp_resource()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/add_gldp_resource.html) | [`read_geopressuretemplate()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/read_geopressuretemplate.html) |
-| [`read_package()`](https://docs.ropensci.org/frictionless/reference/read_package.html) | [`read_gldp()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/read_gldp.html) |  |
-|  | [`read_zenodo()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/read_zenodo.html) |  |
-|  | [`read_soi()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/read_soi.html) |  |
-|  |  | [`create_geopressuretemplate()`](https://raphaelnussbaumer.com/GeoLocatoR/reference/create_geopressuretemplate.html) |
+GeoLocatoR uses bundled local GeoLocator-DP schemas (`inst/schemas`) for
+reading, validation, and upgrade. This keeps runtime fast and
+independent from online schema downloads. When GeoLocator-DP schemas
+change, refresh local files manually:
+
+``` r
+source("data-raw/sync_schemas.R")
+sync_gldp_schemas()
+```
+
+Versions synced by this script come from `.gldp_supported_versions` in
+`R/versioning.R`.
 
 ## 📚 Citation
 
 If you use GeoLocatoR in your research, please cite it as follows:
 
-> Nussbaumer, R. (2024). GeoLocatoR: R package for GeoLocator Data
-> Package. <https://github.com/Rafnuss/GeoLocatoR>
+> Nussbaumer, R., & Desmet, P. (2024). GeoLocatoR: R package for
+> GeoLocator Data Package. Zenodo.
+> <https://doi.org/10.5281/zenodo.14670776>. Available at:
+> <https://github.com/GeoPressure/GeoLocatoR>
