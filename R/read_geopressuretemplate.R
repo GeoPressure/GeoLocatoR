@@ -493,27 +493,8 @@ read_geopressuretemplate <- function(
       added_any <- TRUE
     }
 
-    # Store params as a top-level pkg property (serialized to params.json when writing package)
-    params <- purrr::compact(params)
-    if (length(params) == 0) {
-      pkg$params <- list()
-    } else {
-      # Keep one param per id (last wins), preserve entries without id.
-      ids <- vapply(params, \(p) as.character(p$id %||% NA_character_)[1], character(1))
-      keep <- rep(TRUE, length(params))
-      seen <- character(0)
-      for (i in rev(seq_along(params))) {
-        id <- ids[[i]]
-        if (!is.na(id) && nzchar(id)) {
-          if (id %in% seen) {
-            keep[[i]] <- FALSE
-          } else {
-            seen <- c(seen, id)
-          }
-        }
-      }
-      pkg$params <- params[keep]
-    }
+    # Store params as a top-level pkg property (serialized to params.json when writing package).
+    pkg$params <- normalize_gldp_params(params)
 
     if (added_any) {
       pkg <- pkg |>
@@ -606,4 +587,31 @@ raw_tag_id_to_tag <- function(id, display_config_error = TRUE) {
   tag$param$bird_create <- config$bird_create
 
   return(tag)
+}
+
+
+normalize_gldp_params <- function(params) {
+  # Drop NULL entries and return early when there is no param payload.
+  params <- purrr::compact(params %||% list())
+  if (length(params) == 0) {
+    return(list())
+  }
+
+  # Params from GeoPressure should always expose a non-empty scalar id.
+  param_ids <- vapply(
+    params,
+    \(param) {
+      id <- as.character(param$id %||% NA_character_)[1]
+      id <- trimws(id)
+      id
+    },
+    character(1)
+  )
+  if (any(is.na(param_ids) | !nzchar(param_ids))) {
+    cli_abort(
+      "All entries in {.field params} must contain a non-empty scalar {.field id}."
+    )
+  }
+
+  params
 }

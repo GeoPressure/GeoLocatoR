@@ -45,6 +45,8 @@
 #' - **datapackages**: Carries the merged provenance table described above.
 #' - **relatedIdentifiers**: Combined, with duplicates removed, and each unique
 #'   source `datapackage_id` (or package `id`) is added as `IsCompiledBy`.
+#' - **params**: Concatenated from all inputs; every entry must contain a
+#'   non-empty `param$id`.
 #' - **created**: Set to the current timestamp at the time of merging.
 #' - All others are dropped
 #'
@@ -178,6 +180,9 @@ merge_gldp <- function(x, y = NULL, ...) {
   } else {
     NULL
   }
+  # Merge params from all sources and keep them as top-level package payload.
+  all_params <- purrr::flatten(purrr::map(pkgs, \(pkg) pkg$params %||% list()))
+  merged[["params"]] <- normalize_gldp_params(all_params)
   merged[["datapackages"]] <- datapackages
   merged[["created"]] <- format(as.POSIXct(Sys.time(), tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ")
   update_gldp(merged)
