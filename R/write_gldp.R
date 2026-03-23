@@ -12,11 +12,21 @@
 write_gldp <- function(pkg, directory = ".", compress = FALSE) {
   check_gldp(pkg)
 
+  pkg_without_params <- pkg
+  pkg_without_params$params <- NULL
+
   frictionless::write_package(
-    package = pkg,
+    package = pkg_without_params,
     directory = directory,
     compress = compress
   )
+
+  if (!is.null(pkg$params)) {
+    writeLines(
+      jsonlite::serializeJSON(pkg$params),
+      file.path(directory, "params.json")
+    )
+  }
 
   invisible(directory)
 }

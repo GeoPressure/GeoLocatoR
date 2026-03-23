@@ -100,6 +100,16 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE) {
     })
   }
 
+  pkg$params <- list()
+  params_path <- file.path(base_dir, "params.json")
+  if (file.exists(params_path)) {
+    pkg$params <- tryCatch(
+      jsonlite::unserializeJSON(paste(readLines(params_path, warn = FALSE), collapse = "\n")),
+      error = function(e) {
+        cli_warn("Could not parse {.file params.json}: {e$message}")
+        list()
+      }
+    )
   }
 
   # Conversion
