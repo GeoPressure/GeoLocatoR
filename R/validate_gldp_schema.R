@@ -671,4 +671,3 @@ check_type <- function(value, type, field) {
 
   valid
 }
-

@@ -139,7 +139,10 @@ validate_gldp_geopressure_coherence <- function(pkg) {
       for (fk in foreign_keys) {
         child_fields <- as.character(unlist(fk$fields %||% character(0), use.names = FALSE))
         parent_name <- as.character(fk$reference$resource %||% NA_character_)[1]
-        parent_fields <- as.character(unlist(fk$reference$fields %||% character(0), use.names = FALSE))
+        parent_fields <- as.character(unlist(
+          fk$reference$fields %||% character(0),
+          use.names = FALSE
+        ))
 
         if (
           length(child_fields) == 0 ||
@@ -536,4 +539,3 @@ validate_gldp_observations <- function(o) {
 
   invisible(valid)
 }
-
