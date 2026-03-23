@@ -4,20 +4,19 @@ library(GeoLocatoR)
 # pkg_shared is loaded from setup.R
 
 test_that("read_gldp reads a local datapackage.json", {
-  tmp <- withr::local_tempdir()
-  json_path <- file.path(tmp, "datapackage.json")
+  path <- file.path(withr::local_tempdir(), "datapackage.json")
 
   jsonlite::write_json(
     list(
-      `$schema` = "https://raw.githubusercontent.com/Rafnuss/GeoLocator-DP/v1.0/geolocator-dp-profile.json",
+      `$schema` = "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/v1.0/geolocator-dp-profile.json",
       id = "unit-test",
       resources = list()
     ),
-    path = json_path,
+    path,
     auto_unbox = TRUE
   )
 
-  pkg <- suppressWarnings(read_gldp(json_path))
+  pkg <- suppressWarnings(read_gldp(path))
 
   expect_s3_class(pkg, "geolocatordp")
   expect_true("resources" %in% names(pkg))
@@ -44,7 +43,7 @@ test_that("read_gldp schema version extraction supports short and explicit refs"
 
   expect_equal(
     gldp_version(pkg(
-      "https://raw.githubusercontent.com/Rafnuss/GeoLocator-DP/v0.4/geolocator-dp-profile.json"
+      "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/v0.4/geolocator-dp-profile.json"
     )),
     "v0.4"
   )
@@ -65,23 +64,9 @@ test_that("write_gldp writes a datapackage readable by read_gldp", {
 })
 
 test_that("write_gldp/read_gldp roundtrip keeps pkg$params via params.json", {
-  tmp <- withr::local_tempdir()
-  json_path <- file.path(tmp, "datapackage.json")
-
-  jsonlite::write_json(
-    list(
-      `$schema` = "https://raw.githubusercontent.com/Rafnuss/GeoLocator-DP/v1.0/geolocator-dp-profile.json",
-      id = "params-roundtrip",
-      resources = list()
-    ),
-    path = json_path,
-    auto_unbox = TRUE
-  )
-
-  pkg <- suppressWarnings(read_gldp(json_path, force_read = FALSE))
+  pkg <- pkg_shared
   param <- GeoPressureR::param_create("TEST-PARAM", default = TRUE)
-
-  pkg$params <- list(param)
+  pkg[["params"]] <- list(param)
 
   out_dir <- withr::local_tempdir()
   expect_no_error(write_gldp(pkg, directory = out_dir))

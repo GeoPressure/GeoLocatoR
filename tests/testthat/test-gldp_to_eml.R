@@ -9,7 +9,7 @@ test_that("gldp_to_eml writes eml.xml and returns EML-like object", {
   pkg <- pkg_shared
 
   # Allow for HTML entities like &nbsp; in free-text fields
-  pkg$description <- paste0(pkg$description, " with non-breaking space: &nbsp;")
+  pkg$description <- glue::glue("{pkg$description} with non-breaking space: &nbsp;")
   tmp <- withr::local_tempdir()
 
   suppressMessages({
