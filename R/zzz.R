@@ -97,9 +97,10 @@ cast_table <- function(data, schema) {
       if (type == "string") {
         data[[field]] <- as.character(data[[field]])
       } else if (type == "number") {
-        data[[field]] <- as.numeric(data[[field]])
+        # Legacy upgrades can carry non-numeric IDs in numeric schema fields; coerce silently to NA.
+        data[[field]] <- suppressWarnings(as.numeric(data[[field]]))
       } else if (type == "integer") {
-        data[[field]] <- as.integer(data[[field]])
+        data[[field]] <- suppressWarnings(as.integer(data[[field]]))
       } else if (type == "boolean") {
         data[[field]] <- as.logical(data[[field]])
       } else if (type == "date") {
@@ -113,7 +114,7 @@ cast_table <- function(data, schema) {
         }
       } else if (type == "year") {
         # For year fields, convert to integer
-        data[[field]] <- as.integer(data[[field]])
+        data[[field]] <- suppressWarnings(as.integer(data[[field]]))
       } else if (type == "yearmonth") {
         # For yearmonth fields, keep as character
         data[[field]] <- as.character(data[[field]])

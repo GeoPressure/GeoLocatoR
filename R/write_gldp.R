@@ -1,7 +1,7 @@
 #' Write a GeoLocator Data Package to disk
 #'
 #' Wrapper around [frictionless::write_package()] so users can write a package
-#' without attaching {.pkg frictionless}.
+#' without attaching frictionless.
 #'
 #' @param pkg A GeoLocator Data Package object.
 #' @param directory Directory where `datapackage.json` and resources are written.
