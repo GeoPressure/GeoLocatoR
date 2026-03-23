@@ -1,11 +1,11 @@
 #' Generate `tags` from GeoPressureR parameters
 #'
 #' This function converts a list of parameters into a single `tags` tibble according to the
-#' [GeoLocator Data Package specification](https://raphaelnussbaumer.com/GeoLocator-DP/core/tags/).
+#' [GeoLocator Data Package specification](https://geopressure.org/GeoLocator-DP/core/tags/).
 #'
 #' @param params A list of GeoPressureR parameter objects. These parameters should have been
 #' generated during the GeoPressure workflow. See [`GeoPressureR::param_create()`
-#' ](https://raphaelnussbaumer.com/GeoPressureR/reference/param_create.html) for more information.
+#' ](https://geopressure.org/GeoPressureR/reference/param_create.html) for more information.
 #'
 #' @return A [tibble::tibble()] data frame with columns `tag_id`, `manufacturer`, `scientific_name`,
 #' `ring_number`, `model`, and `firmware` (if `soi_settings` is present).
@@ -36,7 +36,7 @@ params_to_tags <- function(params) {
         )
       },
       error = function(e) {
-        cli::cli_abort(
+        cli_abort(
           c(
             glue::glue(
               "Error in {{.code params_to_tags}} for param {{.val {i}}}:"
@@ -68,7 +68,7 @@ params_to_tags <- function(params) {
           dplyr::mutate(t, model = s$`HW Version`, firmware = s$`FW Version`)
         },
         error = function(e) {
-          cli::cli_abort(
+          cli_abort(
             c(
               glue::glue(
                 "Error in {{.code params_to_tags}} for param {{.val {i}}} (soi_settings):"
@@ -87,7 +87,7 @@ params_to_tags <- function(params) {
           dplyr::mutate(t, model = param$migratec_model)
         },
         error = function(e) {
-          cli::cli_abort(
+          cli_abort(
             c(
               glue::glue(
                 "Error in {{.code params_to_tags}} for param {{.val {i}}} (migratec_model):"
@@ -111,11 +111,11 @@ params_to_tags <- function(params) {
       col_types <- sapply(tag_list, function(x) {
         paste(sapply(x, class), collapse = ", ")
       })
-      cli::cli_abort(
+      cli_abort(
         c(
           "Type mismatch when combining tags in {.code params_to_tags}:",
           "i" = glue::glue(
-            "Column types: {paste(col_types, collapse = ' | ')}"
+            "Column types: {glue::glue_collapse(col_types, sep = ' | ')}"
           ),
           "x" = e$message
         )

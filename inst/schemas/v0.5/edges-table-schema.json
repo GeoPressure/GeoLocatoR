@@ -1,0 +1,241 @@
+{
+  "name": "edges",
+  "title": "Edges",
+  "description": "In GeoPressureR, we uses `edges` (of a graph; See more information on the movement model in the [GeoPressureManual](https://raphaelnussbaumer.com/GeoPressureManual/trajectory.html)) to extract flight information from GeoPressureP [`paths`](geopressurer/paths) using path2edge().",
+  "$schema": "https://datapackage.org/profiles/2.0/tableschema.json",
+  "fields": [
+    {
+      "name": "tag_id",
+      "description": "Unique identifier of the tag. Foreign key to [`tags.tag_id`](/GeoLocator-DP/core/tags#tag_id).",
+      "type": "string",
+      "constraints": {
+        "required": true
+      },
+      "example": "18LX"
+    },
+    {
+      "name": "type",
+      "description": "Same as [`paths.type`](/GeoLocator-DP/geopressurer/paths#type). One of: `tag`, `most_likely`, `simulation` or `geopressureviz`.",
+      "type": "string",
+      "constraints": {
+        "required": true,
+        "enum": ["tag", "most_likely", "simulation", "geopressureviz"]
+      },
+      "example": "tag"
+    },
+    {
+      "name": "stap_s",
+      "description": "Identifier of the SOURCE stationary period. Foreign key to [`staps.stap_id`](/GeoLocator-DP/geopressurer/staps#stap_id)",
+      "type": "number",
+      "constraints": {
+        "required": true
+      },
+      "example": "3"
+    },
+    {
+      "name": "stap_t",
+      "description": "Identifier of the TARGET stationary period. Generally `stap_s+1` except if `include=FALSE` for intermediate stap_id. Foreign key to [`staps.stap_id`](/GeoLocator-DP/geopressurer/staps#stap_id).",
+      "type": "number",
+      "constraints": {
+        "required": true
+      },
+      "example": "4"
+    },
+    {
+      "name": "lat_s",
+      "description": "Latitude of source the stationary period.",
+      "type": "number",
+      "constraints": {
+        "required": true,
+        "minimum": -90,
+        "maximum": 90
+      },
+      "example": "52.70442",
+      "skos:exactMatch": "http://rs.tdwg.org/dwc/terms/decimalLatitude"
+    },
+    {
+      "name": "lon_s",
+      "description": "Longitude of the source stationary period.",
+      "type": "number",
+      "constraints": {
+        "required": true,
+        "minimum": -180,
+        "maximum": 180
+      },
+      "example": "23.84995",
+      "skos:exactMatch": "http://rs.tdwg.org/dwc/terms/decimalLongitude"
+    },
+    {
+      "name": "lat_t",
+      "description": "Latitude of the target stationary period.",
+      "type": "number",
+      "constraints": {
+        "required": true,
+        "minimum": -90,
+        "maximum": 90
+      },
+      "example": "52.70442",
+      "skos:exactMatch": "http://rs.tdwg.org/dwc/terms/decimalLatitude"
+    },
+    {
+      "name": "lon_t",
+      "description": "Longitude of the target stationary period.",
+      "type": "number",
+      "constraints": {
+        "required": true,
+        "minimum": -180,
+        "maximum": 180
+      },
+      "example": "23.84995",
+      "skos:exactMatch": "http://rs.tdwg.org/dwc/terms/decimalLongitude"
+    },
+    {
+      "name": "s",
+      "description": "Index of the 2D coordinate of the source stap. See [`paths.ind`](geopressurer/paths#ind) for more information",
+      "type": "integer",
+      "constraints": {
+        "required": false,
+        "minimum": 1
+      },
+      "example": "23343"
+    },
+    {
+      "name": "t",
+      "description": "Index of the 2D coordinate of the target stap. See [`paths.ind`](geopressurer/paths#ind) for more information",
+      "type": "integer",
+      "constraints": {
+        "required": false,
+        "minimum": 1
+      },
+      "example": "23343"
+    },
+    {
+      "name": "j",
+      "description": "Same as [`paths.j`](geopressurer/paths#j). Unique identifier for each trajectory. Only useful for `edges.type='simulation'`. Integer from `1` to `nj` as defined in [`GeoPressureR::graph_simulation()`](https://raphaelnussbaumer.com/GeoPressureR/reference/graph_simulation)`.",
+      "type": "integer",
+      "constraints": {
+        "required": false,
+        "minimum": 1
+      },
+      "example": "1"
+    },
+    {
+      "name": "start",
+      "description": "Date and time of the start of the flight. Formatted as an ISO 8601 string with timezone designator `YYYY-MM-DDThh:mm:ssZ`.",
+      "type": "datetime",
+      "constraints": {
+        "required": true
+      },
+      "example": "2020-04-01T05:50:00Z",
+      "skos:closeMatch": "http://vocab.nerc.ac.uk/collection/MVB/current/MVB000200"
+    },
+    {
+      "name": "end",
+      "description": "Date and time of the end of the flight. Formatted as an ISO 8601 string with timezone designator `YYYY-MM-DDThh:mm:ssZ`.",
+      "type": "datetime",
+      "constraints": {
+        "required": true
+      },
+      "example": "2020-04-02T21:18:00Z",
+      "skos:closeMatch": "http://vocab.nerc.ac.uk/collection/MVB/current/MVB000200"
+    },
+    {
+      "name": "n",
+      "description": "Number of flight.",
+      "type": "integer",
+      "constraints": {
+        "required": false,
+        "minimum": 1
+      },
+      "example": "1"
+    },
+    {
+      "name": "distance",
+      "description": "distance of the flight in km.",
+      "type": "number",
+      "constraints": {
+        "required": false,
+        "minimum": 0
+      },
+      "unit": "km",
+      "example": "235"
+    },
+    {
+      "name": "bearing",
+      "description": "Direction of the flight in degree. 0 indicates north, clockwise. In general should be 0°-365°, but also allows -180° to 180°.",
+      "type": "number",
+      "constraints": {
+        "required": false,
+        "minimum": -180,
+        "maximum": 360
+      },
+      "unit": "degree",
+      "example": "30"
+    },
+    {
+      "name": "gs_u",
+      "description": "The average groundspeed of the entire flight along the longitudinal axis (east-west direction), measured in kilometers per hour (km/h).",
+      "type": "number",
+      "constraints": {
+        "required": false
+      },
+      "unit": "km/h",
+      "example": "35.5"
+    },
+    {
+      "name": "gs_v",
+      "description": "The average groundspeed of the entire flight along the latitudinal axis (north-south direction), measured in kilometers per hour (km/h).",
+      "type": "number",
+      "constraints": {
+        "required": false
+      },
+      "unit": "km/h",
+      "example": "45.1"
+    },
+    {
+      "name": "ws_u",
+      "description": "The average windspeed of the entire flight along the longitudinal axis (east-west direction), measured in kilometers per hour (km/h).",
+      "type": "number",
+      "constraints": {
+        "required": false
+      },
+      "unit": "km/h",
+      "example": "15.1"
+    },
+    {
+      "name": "ws_v",
+      "description": "The average windspeed of the entire flight along the latitudinal axis (north-south direction), measured in kilometers per hour (km/h).",
+      "type": "number",
+      "constraints": {
+        "required": false
+      },
+      "unit": "km/h",
+      "example": "5.5"
+    }
+  ],
+  "missingValues": ["", "NA"],
+  "foreignKeys": [
+    {
+      "fields": "tag_id",
+      "reference": {
+        "resource": "tags",
+        "fields": "tag_id"
+      }
+    },
+    {
+      "fields": "stap_s",
+      "reference": {
+        "resource": "staps",
+        "fields": "stap_id"
+      }
+    },
+    {
+      "fields": "stap_t",
+      "reference": {
+        "resource": "staps",
+        "fields": "stap_id"
+      }
+    }
+  ],
+  "fieldsMatch": ["superset"]
+}

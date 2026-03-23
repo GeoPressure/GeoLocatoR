@@ -199,3 +199,41 @@ test_that("gldp_to_tag extracts stap and twilight data correctly", {
     }
   }
 })
+
+test_that("gldp_to_tag keeps mean_acceleration_z in acceleration", {
+  pkg <- pkg_shared
+
+  resource_idx <- which(vapply(pkg$resources, \(r) identical(r$name, "measurements"), logical(1)))
+  skip_if(length(resource_idx) == 0, "Package has no measurements resource")
+
+  m <- pkg$resources[[resource_idx[1]]]$data
+  skip_if(!is.data.frame(m) || nrow(m) == 0, "Measurements table is empty")
+  skip_if(
+    !all(c("tag_id", "sensor", "value", "datetime") %in% names(m)),
+    "Measurements table is missing required columns"
+  )
+
+  target_tag_id <- unique(tags(pkg)$tag_id)[1]
+  marker <- 987654.321
+
+  row <- m[1, , drop = FALSE]
+  row$tag_id <- target_tag_id
+  row$sensor <- "mean_acceleration_z"
+  row$value <- marker
+  datetimes <- m$datetime[!is.na(m$datetime)]
+  row$datetime <- if (length(datetimes) > 0) {
+    max(datetimes) + 1
+  } else {
+    as.POSIXct("2000-01-01 00:00:00", tz = "UTC")
+  }
+  if ("label" %in% names(row)) {
+    row$label <- NA_character_
+  }
+
+  pkg$resources[[resource_idx[1]]]$data <- dplyr::bind_rows(m, row)
+
+  tag <- gldp_to_tag(pkg, tag_id = target_tag_id)
+  expect_true("acceleration" %in% names(tag))
+  expect_true("mean_acceleration_z" %in% names(tag$acceleration))
+  expect_true(any(tag$acceleration$mean_acceleration_z == marker, na.rm = TRUE))
+})

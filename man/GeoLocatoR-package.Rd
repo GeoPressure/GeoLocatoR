@@ -13,14 +13,19 @@ An R package to help you create and read geolocator data using the GeoLocator Da
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/rafnuss/geolocator}
-  \item \url{https://raphaelnussbaumer.com/GeoLocatoR/}
-  \item Report bugs at \url{https://github.com/Rafnuss/GeoLocatoR/issues}
+  \item \url{https://github.com/GeoPressure/Geolocator}
+  \item \url{https://geopressure.org/GeoLocatoR/}
+  \item Report bugs at \url{https://github.com/GeoPressure/GeoLocatoR/issues}
 }
 
 }
 \author{
 \strong{Maintainer}: Raphaël Nussbaumer \email{rafnuss@gmail.com} (\href{https://orcid.org/0000-0002-8185-1020}{ORCID})
+
+Other contributors:
+\itemize{
+  \item Peter Desmet \email{peter.desmet@inbo.be} (\href{https://orcid.org/0000-0002-8442-8025}{ORCID}) [contributor]
+}
 
 }
 \keyword{internal}

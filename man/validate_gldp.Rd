@@ -4,22 +4,30 @@
 \alias{validate_gldp}
 \title{Validate a GeoLocator Data Package}
 \usage{
-validate_gldp(pkg, quiet = FALSE)
+validate_gldp(pkg)
 }
 \arguments{
 \item{pkg}{A GeoLocator Data Package object to be validated.}
-
-\item{quiet}{A logical indicating whether to suppress messages from the \code{cli} package. Defaults
-to \code{FALSE}.}
 }
 \value{
-A logical value indicating whether the package validation was successful (\code{TRUE}) or
+A silent logical value indicating whether the package validation was successful (\code{TRUE}) or
 failed (\code{FALSE}).
 }
 \description{
-This function performs a comprehensive validation of a GeoLocator Data Package by checking the
-package metadata, profile, and resources. The validation includes verifying that the package
-conforms to the GeoLocator Data Package profile and that each resource adheres to its schema.
+\code{validate_gldp()} runs the standard quality-control workflow for a GeoLocator Data Package.
+It provides an automated check that a package is structurally valid and internally coherent
+before publication or reuse.
+}
+\details{
+Validation is organized in two complementary layers:
+\enumerate{
+\item \strong{Technical conformance}: checks compliance with the GeoLocator Data Package specification,
+including required resources, schema conformity, required fields, and controlled vocabularies.
+\item \strong{Coherence and metadata quality}: checks consistency of identifiers and relationships across
+key tables (e.g. \code{tags}, \code{observations}, and \code{measurements}) and reports metadata best-practice
+mismatches that should be justified during curation.
+}
 
-If \code{quiet} is \code{TRUE}, the function suppresses the output of the \code{cli} package's messages.
+See the \href{https://geopressure.org/GeoLocator-DP/curation/}{GeoLocator-DP curation guide} for
+more informations.
 }

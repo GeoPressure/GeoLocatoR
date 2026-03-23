@@ -2,18 +2,18 @@
 #'
 #' This function converts a list of parameters into a single `observations` tibble according to the
 #' [GeoLocator Data Package specification
-#' ](https://raphaelnussbaumer.com/GeoLocator-DP/core/observations/).
+#' ](https://geopressure.org/GeoLocator-DP/core/observations/).
 #'
 #' @param params A list of GeoPressureR parameter objects. These parameters should have been
 #' generated during the GeoPressure workflow. See [`GeoPressureR::param_create()`
-#' ](https://raphaelnussbaumer.com/GeoPressureR/reference/param_create.html) for more information.
+#' ](https://geopressure.org/GeoPressureR/reference/param_create.html) for more information.
 #'
 #' @return A [tibble::tibble()] data frame with columns `ring_number`, `tag_id`,
 #' `observation_type`, `datetime`, `longitude`, `latitude`, and `comments`.
 #'
 #' @export
 params_to_observations <- function(params) {
-  params %>%
+  params |>
     purrr::map(\(param) {
       o0 <- tibble::tibble(
         ring_number = NA_character_,
@@ -28,26 +28,26 @@ params_to_observations <- function(params) {
       )
 
       if (!is.null(param$tag_create$crop_start)) {
-        oe <- o0 %>%
+        oe <- o0 |>
           mutate(
             datetime = as.POSIXct(param$tag_create$crop_start, tz = "UTC"),
             observation_type = "equipment"
           )
       } else {
-        oe <- o0 %>%
+        oe <- o0 |>
           mutate(
             observation_type = "equipment"
           )
       }
 
       if (!is.null(param$tag_create$crop_end)) {
-        or <- o0 %>%
+        or <- o0 |>
           mutate(
             datetime = as.POSIXct(param$tag_create$crop_end, tz = "UTC"),
             observation_type = "retrieval"
           )
       } else {
-        or <- o0 %>%
+        or <- o0 |>
           mutate(
             observation_type = "retrieval"
           )
@@ -58,26 +58,24 @@ params_to_observations <- function(params) {
 
         id <- known$stap_id == 1
         if (any(id)) {
-          oe <- oe %>%
+          oe <- oe |>
             mutate(
               longitude = known$known_lon[id],
               latitude = known$known_lat[id],
-              observation_comments = paste0(
-                "Automatically computed from `known$stap_id==1` ",
-                "with `params_to_observations()`"
+              observation_comments = glue::glue(
+                "Automatically computed from `known$stap_id==1` with `params_to_observations()`"
               )
             )
         }
 
         id <- known$stap_id == -1
         if (any(id)) {
-          or <- or %>%
+          or <- or |>
             mutate(
               longitude = known$known_lon[id],
               latitude = known$known_lat[id],
-              observation_comments = paste0(
-                "Automatically computed from `known$stap_id==-1` ",
-                "with `params_to_observations()`"
+              observation_comments = glue::glue(
+                "Automatically computed from `known$stap_id==-1` with `params_to_observations()`"
               )
             )
         }
@@ -86,6 +84,6 @@ params_to_observations <- function(params) {
       o <- bind_rows(oe, or)
 
       o
-    }) %>%
+    }) |>
     purrr::list_rbind()
 }

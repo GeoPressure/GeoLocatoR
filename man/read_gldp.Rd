@@ -7,36 +7,27 @@
 read_gldp(x = "datapackage.json", force_read = TRUE)
 }
 \arguments{
-\item{x}{A string specifying the path to the JSON file containing the GeoLocator Data Package
-metadata. Defaults to \code{"datapackage.json"}. Also accepts direct urls, Zenodo DOI, Zenodo link, or Zenodo record number.}
+\item{x}{Path or URL to a GeoLocator-DP \code{datapackage.json} file.}
 
-\item{force_read}{Logical indicating whether to force the reading of the data from path/URL to
-memory. Defaults to \code{TRUE}.}
+\item{force_read}{If \code{TRUE} (default), loads resource data into memory for
+resources defined by path/URL.}
 }
 \value{
-A GeoLocator Data Package object created from a file/url
+A \code{geolocatordp} object.
 }
 \description{
-This function reads a GeoLocator Data Package from a \code{"datapackage.json"} file that describes
-the Data Package metadata and its Data Resources. The function wraps the function
-\href{https://docs.ropensci.org/frictionless/reference/read_package.html}{\code{frictionless::read_package} } and assigns the class
-\code{"geolocatordp"} to the datapackage read.
+Reads a local or remote \code{datapackage.json}, validates that it uses the
+GeoLocator-DP profile schema, upgrades older versions when needed, and
+computes derived metadata.
+}
+\details{
+Schema/profile validation uses bundled local schema files shipped with
+GeoLocatoR (\code{inst/schemas}) for supported versions. Runtime reading and
+upgrade do not fetch GeoLocator-DP schemas from the internet.
 }
 \examples{
 \dontrun{
-# Local file
-read_gldp("datapackage.json")
-# Zenodo DOI
-read_gldp("10.5281/zenodo.15259676")
-# Zenodo DOI URL
-read_gldp("https://doi.org/10.5281/zenodo.15259676")
-# Zenodo record link
-read_gldp("https://zenodo.org/records/15259676")
-# Zenodo record number
-read_gldp("15259676")
+pkg <- read_gldp("datapackage.json")
+pkg_remote <- read_gldp("https://example.org/datapackage.json")
 }
-# Read a datapackage.json file
-pkg <- read_gldp("https://zenodo.org/records/14099115/files/datapackage.json")
-
-pkg
 }

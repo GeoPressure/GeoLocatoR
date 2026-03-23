@@ -1,4 +1,4 @@
-url: https://raphaelnussbaumer.com/GeoLocatoR/
+url: https://geopressure.org/GeoLocatoR/
 template:
   bootstrap: 5
   bslib:
@@ -6,15 +6,25 @@ template:
     primary: "#516F6A"
 
 reference:
-  - title: Main operation
+  - title: Core Workflow
     contents:
       - create_gldp
-      - add_gldp_resource
       - read_gldp
       - merge_gldp
       - update_gldp
-      - gldp_to_tag
-  - title: Accessor (and assignment) functions
+      - add_gldp_resource
+      - write_gldp
+      - gldp_version
+  - title: Data Import
+    contents:
+      - read_soi
+      - read_geopressuretemplate
+      - read_zenodo
+  - title: GeoPressureTemplate
+    contents:
+      - create_geopressuretemplate
+      - config_to_tibble
+  - title: Accessors
     contents:
       - tags
       - observations
@@ -24,34 +34,30 @@ reference:
       - paths
       - edges
       - pressurepaths
-  - title: GeoPressureTemplate
+  - title: Transform
     contents:
-      - create_gldp_geopressuretemplate
-      - add_gldp_geopressuretemplate
-      - create_geopressuretemplate
-      - config2tibble
-  - title: SOI
-    contents:
-      - add_gldp_soi
-      - read_gdl
-  - title: Zenodo
-    contents:
-      - gldp_to_zenodo
-      - zenodo_to_gldp
+      - params_to_tags
+      - params_to_observations
+      - tags_to_measurements
+      - gldp_to_tag
   - title: Export
     contents:
       - gldp_to_eml
       - gldp_to_dwc
-  - title: Miscellaneous functions
+  - title: Validation & Display
     contents:
+      - validate_gldp
       - print.geolocatordp
       - plot.geolocatordp
+  - title: Deprecated Compatibility
+    contents:
+      - add_gldp_geopressuretemplate
+      - create_gldp_geopressuretemplate
+      - read_gdl
+      - zenodo_to_gldp
+      - config2tibble
+      - gldp_to_zenodo
       - version
-      - validate_gldp
-      - validate_gldp_py
-      - tags_to_measurements
-      - params_to_tags
-      - params_to_observations
 
 navbar:
   structure:
@@ -59,10 +65,10 @@ navbar:
   components:
     geopressure-manual:
       text: User Guide
-      href: https://raphaelnussbaumer.com/GeoPressureManual/geolocator-intro.html
+      href: https://geopressure.org/GeoPressureManual/geolocator-intro.html
     geolocator-dp:
       text: GeolocatorDP
-      href: https://raphaelnussbaumer.com/GeoLocator-DP/
+      href: https://geopressure.org/GeoLocator-DP/
 
 vignettes:
   toc: false

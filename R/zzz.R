@@ -1,3 +1,23 @@
+#' @noRd
+`%||%` <- function(x, y) if (is.null(x)) y else x
+
+#' @noRd
+is_non_empty_string <- function(x) {
+  is.character(x) && length(x) == 1 && !is.na(x) && nzchar(x)
+}
+
+#' @noRd
+first_non_empty_string <- function(...) {
+  values <- list(...)
+  for (value in values) {
+    scalar <- as.character(value %||% NA_character_)[1]
+    if (is_non_empty_string(scalar)) {
+      return(scalar)
+    }
+  }
+  NULL
+}
+
 #' Convert contributors to person objects
 #'
 #' Internal helper function to convert a list of contributors to person objects
@@ -6,7 +26,7 @@
 #' @param contributors A list of contributor objects from a GeoLocator Data Package
 #' @return A list of person objects
 #' @noRd
-contributors2persons <- function(contributors) {
+contributors_to_persons <- function(contributors) {
   role_mapping <- c(
     "contactperson" = "ctr", # Contractor (assumed due to lack of clear match)
     "contributor" = "ctb", # Contributor
@@ -31,7 +51,7 @@ contributors2persons <- function(contributors) {
     "workpackageleader" = "cre" # Creator (assumed leader role)
   )
 
-  persons <- contributors %>%
+  persons <- contributors |>
     purrr::map(
       ~ {
         utils::person(
@@ -56,153 +76,6 @@ contributors2persons <- function(contributors) {
   persons
 }
 
-#' @noRd
-normalize_enum <- function(value, allowed, default = NULL, output = "allowed") {
-  if (is.null(value) || length(value) == 0) {
-    return(default)
-  }
-
-  if (length(value) > 1) {
-    value <- value[1]
-  }
-
-  if (is.na(value)) {
-    return(default)
-  }
-
-  match_idx <- match(tolower(value), tolower(allowed))
-  if (is.na(match_idx)) {
-    result <- if (is.null(default)) value else default
-  } else {
-    result <- allowed[match_idx]
-  }
-
-  if (identical(output, "lower")) {
-    return(tolower(result))
-  }
-
-  result
-}
-
-.gldp_contributor_roles <- c(
-  "ContactPerson",
-  "ProjectLeader",
-  "DataCollector",
-  "DataCurator",
-  "Researcher",
-  "RightsHolder",
-  "Supervisor",
-  "Other"
-)
-
-.gldp_relation_types <- c(
-  "IsCitedBy",
-  "Cites",
-  "IsSupplementTo",
-  "IsSupplementedBy",
-  "IsContinuedBy",
-  "Continues",
-  "IsNewVersionOf",
-  "IsPreviousVersionOf",
-  "IsPartOf",
-  "HasPart",
-  "IsPublishedIn",
-  "IsReferencedBy",
-  "References",
-  "IsDocumentedBy",
-  "Documents",
-  "IsCompiledBy",
-  "Compiles",
-  "IsVariantFormOf",
-  "IsOriginalFormOf",
-  "IsIdenticalTo",
-  "HasMetadata",
-  "IsMetadataFor",
-  "Reviews",
-  "IsReviewedBy",
-  "IsDerivedFrom",
-  "IsSourceOf",
-  "Describes",
-  "IsDescribedBy",
-  "HasVersion",
-  "IsVersionOf",
-  "Requires",
-  "IsRequiredBy",
-  "Obsoletes",
-  "IsObsoletedBy"
-)
-
-.gldp_identifier_types <- c(
-  "DOI",
-  "URL",
-  "ARK",
-  "arXiv",
-  "bibcode",
-  "CSTR",
-  "EAN13",
-  "EISSN",
-  "Handle",
-  "IGSN",
-  "ISBN",
-  "ISSN",
-  "ISTC",
-  "LISSN",
-  "LSID",
-  "PMID",
-  "PURL",
-  "RRID",
-  "UPC",
-  "URN",
-  "w3id",
-  "Other"
-)
-
-.gldp_resource_types <- c(
-  "Audiovisual",
-  "Book",
-  "BookChapter",
-  "Collection",
-  "ComputationalNotebook",
-  "ConferencePaper",
-  "ConferenceProceeding",
-  "DataPaper",
-  "Dataset",
-  "Dissertation",
-  "Event",
-  "Image",
-  "InteractiveResource",
-  "Journal",
-  "JournalArticle",
-  "Model",
-  "OutputManagementPlan",
-  "PeerReview",
-  "PhysicalObject",
-  "Preprint",
-  "Report",
-  "Service",
-  "Software",
-  "Sound",
-  "Standard",
-  "Text",
-  "Workflow",
-  "Other"
-)
-
-#' @noRd
-map_gldp_to_zenodo <- function(value, allowed, default = "Other") {
-  if (is.null(value) || length(value) == 0 || is.na(value)) {
-    return(default)
-  }
-
-  match_idx <- match(tolower(value), tolower(allowed))
-  if (is.na(match_idx)) {
-    return(default)
-  }
-
-  allowed[[match_idx]]
-}
-
-
 #' Cast data frame columns according to schema types
 #'
 #' Internal helper function to cast data frame columns to the appropriate types
@@ -224,9 +97,10 @@ cast_table <- function(data, schema) {
       if (type == "string") {
         data[[field]] <- as.character(data[[field]])
       } else if (type == "number") {
-        data[[field]] <- as.numeric(data[[field]])
+        # Legacy upgrades can carry non-numeric IDs in numeric schema fields; coerce silently to NA.
+        data[[field]] <- suppressWarnings(as.numeric(data[[field]]))
       } else if (type == "integer") {
-        data[[field]] <- as.integer(data[[field]])
+        data[[field]] <- suppressWarnings(as.integer(data[[field]]))
       } else if (type == "boolean") {
         data[[field]] <- as.logical(data[[field]])
       } else if (type == "date") {
@@ -240,7 +114,7 @@ cast_table <- function(data, schema) {
         }
       } else if (type == "year") {
         # For year fields, convert to integer
-        data[[field]] <- as.integer(data[[field]])
+        data[[field]] <- suppressWarnings(as.integer(data[[field]]))
       } else if (type == "yearmonth") {
         # For yearmonth fields, keep as character
         data[[field]] <- as.character(data[[field]])

@@ -4,10 +4,10 @@
 \alias{gldp_to_eml}
 \title{Transform a GeoLocator Data Package to EML}
 \usage{
-gldp_to_eml(package, directory)
+gldp_to_eml(pkg, directory)
 }
 \arguments{
-\item{package}{A GeoLocator Data Package object.}
+\item{pkg}{A GeoLocator Data Package object.}
 
 \item{directory}{Path to local directory to write files to.}
 }
@@ -16,7 +16,7 @@ gldp_to_eml(package, directory)
 Invisibly, an \link[EML:eml]{EML::eml} object.
 }
 \description{
-Transforms a \href{https://raphaelnussbaumer.com/GeoLocator-DP/}{GeoLocator Data Package}
+Transforms a \href{https://geopressure.org/GeoLocator-DP/}{GeoLocator Data Package (GLDP)}
 to \href{https://eml.ecoinformatics.org/}{Ecological Metadata Language (EML)}.
 The resulting EML file can be uploaded to an \href{https://www.gbif.org/ipt}{IPT} for
 publication to GBIF and/or OBIS. A corresponding Darwin Core Archive can be created
@@ -27,29 +27,29 @@ with \code{\link[=gldp_to_dwc]{gldp_to_dwc()}}.
 Metadata are derived from the GeoLocator Data Package and transformed to EML.
 The following properties are set:
 \itemize{
-\item \code{title}: Package title as provided in \code{package$title}.
-\item \code{abstract}: Package description as provided in \code{package$description}.
-\item \code{pubDate}: Publication year extracted from \code{package$created}.
+\item \code{title}: Package title.
+\item \code{abstract}: Package description.
+\item \code{pubDate}: Publication year extracted from publication/creation date.
 \item \code{creator}: Contributors with roles \code{"ProjectLeader"}, \code{"Researcher"}, or
-\code{"DataCurator"} as provided in \code{package$contributors}.
+\code{"DataCurator"} when available.
 \item \code{contact}: Contributors with role \code{"ContactPerson"} as provided in
-\code{package$contributors}.
-\item \code{associatedParty}: Other contributors as provided in \code{package$contributors},
+contributors.
+\item \code{associatedParty}: Other contributors,
 including those with role \code{"RightsHolder"}.
-\item \code{intellectualRights}: License information from \code{package$licenses}.
-\item \code{keywords}: Keywords as provided in \code{package$keywords}.
-\item \code{packageId}: Package identifier as provided in \code{package$id}. If no ID is
+\item \code{intellectualRights}: License information.
+\item \code{keywords}: Package keywords.
+\item \code{packageId}: Package identifier. If no ID is
 provided, a UUID is generated. As a result, no new DOI will be created when
-publishing to GBIF if \code{package$id} contains a DOI.
+publishing to GBIF if the package ID contains a DOI.
 }
 
 Coverage information:
 \itemize{
-\item \code{temporalCoverage}: Date range from \code{package$temporal} (if available),
+\item \code{temporalCoverage}: Date range from package temporal coverage (if available),
 derived from measurement timestamps.
-\item \code{geographicCoverage}: Bounding box from \code{package$spatial} (if available),
+\item \code{geographicCoverage}: Bounding box from package spatial coverage (if available),
 calculated from all locations in observations, paths, and pressurepaths.
-\item \code{taxonomicCoverage}: Species list from \code{package$taxonomic} (if available),
+\item \code{taxonomicCoverage}: Species list from package taxonomic coverage (if available),
 derived from unique scientific names in tags.
 }
 

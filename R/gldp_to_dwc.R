@@ -1,13 +1,13 @@
 #' Transform a GeoLocator Data Package to Darwin Core
 #'
 #' @description
-#' Transforms a [GeoLocator Data Package](https://raphaelnussbaumer.com/GeoLocator-DP/)
+#' Transforms a [GeoLocator Data Package (GLDP)](https://geopressure.org/GeoLocator-DP/)
 #' to a [Darwin Core Archive](https://dwc.tdwg.org/).
 #' The resulting CSV files can be uploaded to an [IPT](https://www.gbif.org/ipt)
 #' for publication to GBIF. A `meta.xml` file is included as well.
 #' See [gldp_to_eml()] to create an `eml.xml` file.
 #'
-#' @param package A GeoLocator Data Package object.
+#' @param pkg A GeoLocator Data Package object.
 #' @param directory Path to local directory to write file(s) to.
 #'   If `NULL`, then a data frame is returned instead, which can be useful
 #'   for extending/adapting the Darwin Core mapping before writing with
@@ -24,17 +24,18 @@
 #' @section Transformation details:
 #' Data are transformed into an [Occurrence core](https://rs.gbif.org/core/dwc_occurrence).
 #' This transformation combines data from three resources:
-#' - [`tags`](https://raphaelnussbaumer.com/GeoLocator-DP/core/tags/): metadata about the device and deployment
-#' - [`staps`](https://raphaelnussbaumer.com/GeoLocator-DP/geopressurer/staps/): stationary periods with temporal information
-#' - [`paths`](https://raphaelnussbaumer.com/GeoLocator-DP/geopressurer/paths/): spatial positions estimated for each stationary period
+#' - [`tags`](https://geopressure.org/GeoLocator-DP/core/tags/): metadata about the device and deployment
+#' - [`staps`](https://geopressure.org/GeoLocator-DP/geopressurer/staps/): stationary periods with temporal information
+#' - [`paths`](https://geopressure.org/GeoLocator-DP/geopressurer/paths/): spatial positions estimated for each stationary period
 #'
-#' The following terms are set from the package metadata:
-#' - `datasetName`: Title as provided in `package$title`.
-#' - `datasetID`: Identifier as provided in `package$id`.
-#' - `rightsHolder`: Rights holder as provided in `package$contributors`
+#' The following terms are set from normalized package metadata
+#' (sourced from top-level package fields):
+#' - `datasetName`: Package title.
+#' - `datasetID`: Package identifier (DOI/ID).
+#' - `rightsHolder`: Rights holder as provided in contributors
 #'   (contributor with `"rightsHolder"` role). If no rightsHolder role is found,
 #'   this field will be `NA`.
-#' - `license`: License name as provided in `package$licenses`.
+#' - `license`: License name.
 #'
 #' Key features of the Darwin Core transformation:
 #' - Stationary periods (`staps`) are treated as events, with each position
@@ -59,34 +60,40 @@
 #'   the distance between each simulation and the aggregated center.
 #'
 #' @export
-gldp_to_dwc <- function(package, directory, path_type = "most_likely") {
-  check_gldp(package)
+gldp_to_dwc <- function(pkg, directory, path_type = "most_likely") {
+  check_gldp(pkg)
 
   # Set properties from metadata
-  dataset_name <- package$title
-  dataset_id <- package$id
+  dataset_name <- pkg$title %||% "GeoLocator Data Package"
+  dataset_id <- pkg$id
 
   # Find rightsHolder from contributors (optional)
   rights_holder <- NA_character_
-  for (contributor in package$contributors) {
-    if (!is.null(contributor$roles) && "rightsHolder" %in% contributor$roles) {
-      rights_holder <- contributor$title
+  for (contributor in (pkg$contributors %||% list())) {
+    roles <- tolower(as.character(contributor$roles %||% character(0)))
+    if ("rightsholder" %in% roles) {
+      rights_holder <- contributor$title %||%
+        paste(stats::na.omit(c(contributor$givenName, contributor$familyName)), collapse = " ")
       break
     }
   }
 
   # Get first license name
-  license <- package$licenses[[1]]$name
+  license <- NA_character_
+  if (is.list(pkg$licenses) && length(pkg$licenses) > 0) {
+    first_license <- pkg$licenses[[1]]
+    license <- first_license$name %||% first_license$title %||% first_license$id %||% NA_character_
+  }
 
   # Read resources
-  tags <- tags(package)
-  staps <- staps(package)
-  paths <- paths(package)
+  tags <- tags(pkg)
+  staps <- staps(pkg)
+  paths <- paths(pkg)
 
   # Validate path_type
   allowed_types <- c("most_likely", "mean_simulation", "median_simulation", "geopressureviz")
   if (!path_type %in% allowed_types) {
-    cli::cli_abort(
+    cli_abort(
       c(
         "x" = "{.arg path_type} must be one of {.val {allowed_types}}.",
         "i" = "You provided: {.val {path_type}}"
@@ -149,7 +156,7 @@ gldp_to_dwc <- function(package, directory, path_type = "most_likely") {
   }
 
   if (nrow(paths) == 0) {
-    cli::cli_warn("No paths found for type {.val {path_type}}.")
+    cli_warn("No paths found for type {.val {path_type}}.")
   }
 
   # Join data and create occurrence data frame
@@ -207,7 +214,7 @@ gldp_to_dwc <- function(package, directory, path_type = "most_likely") {
 
   readr::write_csv(occurrence, occurrence_path, na = "")
 
-  cli::cli_alert_success("Darwin Core occurrence file written to {.file {occurrence_path}}")
+  cli_alert_success("Darwin Core occurrence file written to {.file {occurrence_path}}")
 
   invisible(occurrence)
 }

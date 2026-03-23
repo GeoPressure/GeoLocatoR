@@ -2,49 +2,80 @@
 % Please edit documentation in R/merge_gldp.R
 \name{merge_gldp}
 \alias{merge_gldp}
-\title{Merge Two GeoLocator Data Packages}
+\title{Merge GeoLocator Data Packages}
 \usage{
-merge_gldp(x, y)
+merge_gldp(x, y = NULL, ...)
 }
 \arguments{
-\item{x}{A GeoLocator Data Package object.}
+\item{x}{A GeoLocator Data Package object, or a list of them.}
 
 \item{y}{A GeoLocator Data Package object.}
+
+\item{...}{Additional GeoLocator Data Package objects, or lists of them.}
 }
 \value{
-A GeoLocator Data Package object containing the merged data from both \code{x} and \code{y}.
+A GeoLocator Data Package object containing the merged data from all inputs.
 }
 \description{
-Merges two GeoLocator Data Package objects (\code{x} and \code{y}) into a single combined package.
+Merges two or more GeoLocator Data Package objects into a single combined package.
 The metadata properties from both packages are merged according to specific rules,
 and resource data is combined based on their presence in either package.
 }
 \details{
-\strong{Metadata merging rules:}
+\strong{Input formats:}
 \itemize{
-\item \strong{title}: Combined from both packages, separated by a "/".
-\item \strong{contributors}: Combined from both packages, with duplicates removed.
-\item \strong{embargo}: Set to the latest date from both packages.
-\item \strong{licenses}: Combined from both packages, with duplicates removed.
-\item \strong{id}: Replaced with a new UUID for the merged package.
-\item \strong{source_ids}: Added (custom property) storing the original package IDs.
-\item \strong{description}: Combined as two separate paragraphs, with a newline separator.
-\item \strong{version}: Use the latest version (same as \code{create_gldp()})
-\item \strong{relatedIdentifiers}: Combined, with duplicates removed.
-\item \strong{grants}: Combined from both packages, with duplicates removed.
-\item \strong{keywords}: Combined from both packages, with duplicates removed.
-\item \strong{created}: Set to the current timestamp at the time of merging.
-\item \strong{bibliographicCitation}: Removed from the merged package.
-\item Custom properties from \code{x} are retained in the merged package.
+\item \code{merge_gldp(x, y, ...)}
+\item \code{merge_gldp(list(x, y, ...))}
+\item \code{merge_gldp(x, list(y, ...))}
 }
-
-Merging requires the \href{https://cran.r-project.org/package=uuid}{\code{uuid}} package to generate
-a globally unique identifier for the merged package.
 
 \strong{Resource merging logic:}
 \itemize{
-\item Each resource is checked for its presence in both \code{x} and \code{y}.
-\item Data from both sources is combined if the resource exists in either \code{x} or \code{y}.
-\item Resources are only included if they exist in at least one of the packages.
+\item Resource names come from the union of resources present in all inputs.
+\item For each resource, rows from available inputs are combined with \code{dplyr::bind_rows()}.
+\item A resource is added when at least one input package contains it.
+}
+
+\strong{Check for unique tag_id:}
+\itemize{
+\item The merge aborts if any \code{tag_id} is present in both packages.
+\item This prevents ambiguous joins across resources after merge.
+}
+
+\strong{datapackage_id in tags:}
+\itemize{
+\item For the \code{tags} resource, each row must have a \code{datapackage_id}.
+\item Missing \code{datapackage_id} values are filled with the package \code{id}.
+\item The merge aborts if \code{tags$datapackage_id} overlaps between the two inputs.
+}
+
+\strong{datapackages provenance table:}
+\itemize{
+\item \code{pkg$datapackages} is a one-row-per-source tibble keyed by \code{datapackage_id}
+(\code{pkg$id}) and accumulated across sequential merges.
+\item The merge aborts if two input provenance rows share the same
+\code{datapackage_id}.
+\item Metadata vectors/lists are flattened to plain text for easy comparison
+between source packages.
+\item It includes key source metadata fields (e.g. title/version/status/access),
+temporal coverage (\code{temporal_start}, \code{temporal_end}), taxonomic summary
+(\code{taxonomic}), and resource/sensor counts as \verb{numberTags_*} columns.
+}
+
+\strong{Metadata merging rules:}
+\itemize{
+\item \strong{version}: Uses the package default version from \code{create_gldp()}.
+\item \strong{title}: Combined from both packages, separated by a "/".
+\item \strong{contributors}: Combined from both packages, with duplicates removed.
+\item \strong{licenses}: Combined, with duplicates removed.
+\item \strong{record_type}: Combined from both packages, with duplicates removed.
+\item \strong{codeRepository}: Combined from both packages, with duplicates removed.
+\item \strong{datapackages}: Carries the merged provenance table described above.
+\item \strong{relatedIdentifiers}: Combined, with duplicates removed, and each unique
+source \code{datapackage_id} (or package \code{id}) is added as \code{IsCompiledBy}.
+\item \strong{params}: Concatenated from all inputs; every entry must contain a
+non-empty \code{param$id}.
+\item \strong{created}: Set to the current timestamp at the time of merging.
+\item All others are dropped
 }
 }

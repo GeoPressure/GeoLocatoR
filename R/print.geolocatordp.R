@@ -11,174 +11,257 @@
 #' @family print functions
 #' @export
 print.geolocatordp <- function(x, ...) {
-  # check_geolocatordp() not necessary: print only triggered for geolocatordp object
-
   check_gldp(x)
+  x <- update_gldp_order_resources(x)
 
-  cli_h3("A GeoLocator Data Package ({version(x)})")
+  cli_h1("A GeoLocator Data Package `pkg` ({gldp_version(x)})")
 
-  cli_bullets(c("*" = "{.field title}: {.val {x$title}}"))
-
-  contributors <- sapply(x$contributors, \(x) {
-    str <- x$title
-    # if (!is.null(x$givenName)) {
-    #  str <- paste0(str, " ", x$givenName)
-    # }
-    # if (!is.null(x$familyName)) {
-    #  str <- paste0(str, " ", x$familyName)
-    # }
-    if (!is.null(x$email) && length(x$email) > 0) {
-      str <- paste0(str, " ({.email ", x$email, "})")
-    }
-    if (!is.null(x$roles) && length(x$roles) > 0) {
-      str <- paste0(str, " (", paste(x$roles, collapse = ", "), ")")
-    }
-    if (!is.null(x$path) && length(x$path) > 0) {
-      str <- paste0(str, " - {.url ", x$path, "}")
-    }
-    str
-  })
-  cli_bullets(c("*" = "{.field contributors}:"))
-  for (ctr in contributors) {
-    cli_bullets(c(" " = ctr))
-  }
-
-  embargo_date <- as.POSIXct(x$embargo, format = "%Y-%m-%d", tz = "UTC")
-  cli_bullets(c("*" = "{.field embargo}: {.val {embargo_date}}"))
-
-  licenses <- sapply(x$licenses, \(x) {
-    if (!is.null(x$title)) {
-      str <- x$title
-      if (!is.null(x$name)) {
-        str <- paste0(str, " (", x$name, ")")
-      }
-    } else {
-      str <- x$name
-    }
-    if (!is.null(x$path)) {
-      str <- paste0(str, " - {.url ", x$path, "}")
-    }
-    str
-  })
-  cli_bullets(c("*" = "{.field licenses}:"))
-  for (l in licenses) {
-    cli_bullets(c(" " = l))
-  }
-  if (!is.null(x$id)) {
-    cli_bullets(c("*" = "{.field id}: {.url {x$id}}"))
-  }
-
-  if (!is.null(x$description)) {
-    cli_bullets(c("*" = "{.field description}: {.val {x$description}}"))
-  }
-
-  if (!is.null(x$version)) {
-    cli_bullets(c("*" = "{.field version}: {.val {x$version}}"))
-  }
-
-  if (!is.null(x$relatedIdentifiers)) {
-    ris <- sapply(x$relatedIdentifiers, \(x) {
-      if (
-        x$relatedIdentifierType == "doi" &&
-          !grepl("^https?://", x$relatedIdentifier)
-      ) {
-        x$relatedIdentifier <- paste0("https://doi.org/", x$relatedIdentifier)
-      }
-      paste0(x$relationType, " {.url ", x$relatedIdentifier, "}")
-    })
-    cli_bullets(c("*" = "{.field relatedIdentifiers}:"))
-    for (ri in ris) {
-      cli_bullets(c(" " = ri))
-    }
-  }
-
-  if (!is.null(x$grants)) {
-    cli_bullets(c("*" = "{.field grants}: {.val {x$grants}}"))
-  }
-
-  if (!is.null(x$keywords)) {
-    cli_bullets(c("*" = "{.field keywords}: {.val {x$keywords}}"))
-  }
-
-  created_datetime <- as.POSIXct(
-    x$created,
-    format = "%Y-%m-%dT%H:%M:%SZ",
-    tz = "UTC"
-  )
-  cli_bullets(c("*" = "{.field created}: {.val {created_datetime}}"))
-
-  if (!is.null(x$bibliographicCitation)) {
-    cli_bullets(c(
-      "*" = "{.field bibliographicCitation}: {.val {x$bibliographicCitation}}"
-    ))
-  }
-
-  cli_bullets(c("*" = "{.field spatial}: {.val {x$spatial}}"))
-  cli_bullets(
-    c(
-      "*" = "{.field temporal}: {.val {x$temporal$start}} to {.val {x$temporal$end}}"
-    )
-  )
-  cli_bullets(c("*" = "{.field taxonomic}: {.val {x$taxonomic}}"))
-
-  if (!is.null(x$referenceLocation)) {
-    cli_bullets(c(
-      "*" = "{.field referenceLocation}: {.val {x$referenceLocation}}"
-    ))
-  }
-
-  cli_bullets(c("*" = "{.field numberTags}:"))
-  for (nt in names(x$numberTags)) {
-    if (x$numberTags[[nt]] > 0) {
-      cli_bullets(c(" " = "{.strong {nt}}: {.val {x$numberTags[[nt]]}}"))
-    }
-  }
-
-  # cli_bullets(c("*" = "{.field schema}: {.url {x$`$schema`}}"))
-
-  cli_h3("{length(x$resources)} {.field resources}")
-  if (length(x$resources) > 0) {
-    purrr::walk(x$resources, \(x) {
-      cli_bullets(c(
-        "*" = "{.field {x$name}} (n={format(nrow(x$data), big.mark=',')})"
-      ))
-    })
-  }
-
-  # Provide help
+  cli::cli_h3("Metadata")
   cat_line(
     format_inline(
-      "Use {.fun unclass} to print the Geolocator Data Package as a list."
+      "{.strong Note}: All {.field green} texts are fields of `pkg` which can be accessed with `pkg${.field field}`)."
     ),
     col = "silver"
   )
+  if (isTRUE(x$is_draft)) {
+    cli_bullets(c("!" = "{.field status}: {.strong draft}"))
+  }
+
+  bullets(x, "title")
+  if (has_value(x$id)) {
+    cli_bullets(c("*" = "{.field doi}: {.url {x$id}}"))
+  }
+
+  if (has_value(x$contributors)) {
+    contributors <- purrr::map_chr(x$contributors, \(ctr) {
+      name <- ctr$title
+      if (
+        is.character(name) && length(name) > 0 && !is.na(name) && grepl(",", name, fixed = TRUE)
+      ) {
+        parts <- trimws(strsplit(name, ",", fixed = TRUE)[[1]])
+        if (length(parts) >= 2) {
+          name <- glue::glue_collapse(c(parts[-1], parts[1]), sep = " ")
+        }
+      }
+      if (!has_value(name)) {
+        return(NA_character_)
+      }
+      str <- as.character(name)[1]
+      if (has_value(ctr$email)) {
+        str <- glue::glue("{str} ('{ctr$email}')")
+      }
+      if (has_value(ctr$roles)) {
+        str <- glue::glue("{str} ({glue::glue_collapse(ctr$roles, sep = ', ')})")
+      }
+      if (has_value(ctr$path)) {
+        str <- glue::glue("{str} - {{.url {ctr$path}}}")
+      }
+      str
+    })
+    contributors <- contributors[!is.na(contributors) & nzchar(trimws(contributors))]
+    if (length(contributors) > 0) {
+      cli_bullets(c("*" = "{.field contributors}:"))
+      purrr::walk(contributors, \(ctr) cli_bullets(c(" " = ctr)))
+    }
+  }
+
+  access_status <- tolower(as.character(x$access_status %||% "")[1])
+  embargo <- as.character(x$embargo %||% "")[1]
+  has_embargo <- nzchar(embargo) && !identical(embargo, "1970-01-01")
+  if (identical(access_status, "restricted")) {
+    cli::cli_bullets(c("x" = "{.field access}: restricted"))
+  } else if (has_embargo) {
+    cli::cli_bullets(c("!" = "{.field access}: with embargo until {embargo}"))
+  } else {
+    cli::cli_bullets(c("v" = "{.field access}: Open access"))
+  }
+
+  if (has_value(x$licenses)) {
+    licenses <- purrr::map_chr(x$licenses, \(license) {
+      str <- if (has_value(license$title)) {
+        if (has_value(license$name)) {
+          glue::glue("{license$title} ({license$name})")
+        } else {
+          license$title
+        }
+      } else {
+        license$name
+      }
+      if (!has_value(str)) {
+        return(NA_character_)
+      }
+      if (has_value(license$path)) {
+        str <- glue::glue("{str} - {{.url {license$path}}}")
+      }
+      str
+    })
+    licenses <- licenses[!is.na(licenses) & nzchar(trimws(licenses))]
+    if (length(licenses) > 0) {
+      cli_bullets(c("*" = "{.field licenses}: {glue::glue_collapse(licenses, sep = ', ')}"))
+    }
+  }
+
+  if (has_value(x$description)) {
+    desc <- as.character(x$description)[1] |>
+      rvest::read_html() |>
+      rvest::html_text2()
+    desc <- trimws(gsub("\\s+", " ", desc))
+    if (has_value(desc)) {
+      if (nchar(desc) > 250L) {
+        desc <- glue::glue("{substr(desc, 1, 250L)}...")
+      }
+      cli_bullets(c("*" = "{.field description}: {.val {desc}}"))
+    }
+  }
+
+  bullets(x, "version")
+
+  if (has_value(x$codeRepository)) {
+    code_repository <- as.character(x$codeRepository)[1]
+    if (grepl("^https?://", code_repository)) {
+      cli_bullets(c("*" = "{.field codeRepository}: {.url {code_repository}}"))
+    } else {
+      cli_bullets(c("*" = "{.field codeRepository}: {.val {code_repository}}"))
+    }
+  }
+
+  communities <- as.character(unlist(x$communities, recursive = TRUE, use.names = FALSE))
+  communities <- communities[!is.na(communities) & nzchar(trimws(communities))]
+  allowed_communities <- c(
+    "b7c70316-310b-435e-9a8b-84188d60a3cc",
+    "6e9c24fb-954a-4087-ae9b-71fcba41a624"
+  )
+  if (any(communities %in% allowed_communities)) {
+    cli::cli_bullets(c("v" = "{.field community}: Geolocator DP community"))
+  } else {
+    cli::cli_bullets(c("!" = "{.field community}: no Geolocator DP community"))
+  }
+
+  if (has_value(x$relatedIdentifiers)) {
+    ris <- purrr::map_chr(x$relatedIdentifiers, \(ri) {
+      identifier <- ri$relatedIdentifier
+      if (
+        toupper(ri$relatedIdentifierType %||% "") == "DOI" &&
+          has_value(identifier) &&
+          !grepl("^https?://", identifier)
+      ) {
+        identifier <- glue::glue("https://doi.org/{identifier}")
+      }
+      if (!has_value(identifier)) {
+        return(NA_character_)
+      }
+      if (!has_value(ri$relationType)) {
+        return(glue::glue("{{.url {identifier}}}"))
+      }
+      glue::glue("{ri$relationType} {{.url {identifier}}}")
+    })
+    ris <- ris[!is.na(ris) & nzchar(trimws(ris))]
+    if (length(ris) > 0) {
+      cli_bullets(c("*" = "{.field relatedIdentifiers}:"))
+      purrr::walk(ris, \(ri) cli_bullets(c(" " = ri)))
+    }
+  }
+
+  bullets(x, "grants")
+  bullets(x, "keywords")
+
+  if (has_value(x$created)) {
+    created_raw <- x$created
+    created_datetime <- if (is.character(created_raw)) {
+      created_raw <- sub("([+-][0-9]{2}):([0-9]{2})$", "\\1\\2", created_raw)
+      created_datetime <- as.POSIXct(created_raw, format = "%Y-%m-%dT%H:%M:%OS%z", tz = "UTC")
+      if (is.na(created_datetime)) {
+        created_datetime <- as.POSIXct(created_raw, format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
+      }
+      created_datetime
+    } else {
+      as.POSIXct(created_raw, tz = "UTC")
+    }
+    cli_bullets(c("*" = "{.field created}: {.val {created_datetime}}"))
+  }
+
+  bullets(x, "bibliographicCitation")
+
+  if (has_value(x$temporal) && (has_value(x$temporal$start) || has_value(x$temporal$end))) {
+    if (has_value(x$temporal$start) && has_value(x$temporal$end)) {
+      cli_bullets(c(
+        "*" = "{.field temporal}: {.val {x$temporal$start}} to {.val {x$temporal$end}}"
+      ))
+    } else if (has_value(x$temporal$start)) {
+      cli_bullets(c("*" = "{.field temporal}: {.val {x$temporal$start}}"))
+    } else {
+      cli_bullets(c("*" = "{.field temporal}: {.val {x$temporal$end}}"))
+    }
+  }
+
+  bullets(x, "taxonomic")
+
+  if (has_value(x$numberTags)) {
+    number_tags <- names(x$numberTags)[x$numberTags > 0]
+    if (length(number_tags) > 0) {
+      number_tags_inline <- purrr::map_chr(
+        number_tags,
+        \(nt) glue::glue("{nt}: {x$numberTags[[nt]]}")
+      )
+      cli_bullets(c(
+        "*" = "{.field numberTags}: {glue::glue_collapse(number_tags_inline, sep = ', ')}"
+      ))
+    }
+  }
+
+  cli_h3("Resources: ({length(x$resources)} {.field resources}) ")
+  if (length(x$resources) > 0) {
+    purrr::walk(x$resources, \(res) {
+      n <- if (is.data.frame(res$data)) {
+        nrow(res$data)
+      } else if (is.list(res$data)) {
+        length(res$data)
+      } else {
+        NA_integer_
+      }
+      if (is.na(n)) {
+        cli_bullets(c("*" = "{.fun {res$name}}"))
+      } else {
+        cli_bullets(c("*" = "{.fun {res$name}} (n={format(n, big.mark=',')})"))
+      }
+    })
+  }
 
   invisible(x)
 }
 
+# Returns TRUE when a value contains at least one meaningful entry.
+has_value <- function(value) {
+  if (is.null(value) || length(value) == 0) {
+    return(FALSE)
+  }
+  if (is.character(value)) {
+    return(any(!is.na(value) & nzchar(trimws(value))))
+  }
+  if (is.atomic(value)) {
+    return(!all(is.na(value)))
+  }
+  TRUE
+}
 
-#' Print formatted bullets for package fields
-#'
-#' Internal helper function to print formatted bullet points for specific fields
-#' in a GeoLocator Data Package object.
-#'
-#' @param pkg A GeoLocator Data Package object
-#' @param field_name Character string of the field name to print
-#' @return Nothing (side effect: prints to console)
-#' @noRd
+# Print formatted bullets for package fields
 bullets <- function(pkg, field_name) {
   val <- pkg[[field_name]]
-  if (!is.null(val)) {
-    if (is.data.frame(val)) {
-      cli_bullets(c("*" = "{.field {field_name}}:"))
-      cat_print(val)
-    } else if (is.list(val) && length(val) > 1) {
-      cli_bullets(c("*" = "{.field {field_name}}:"))
-      for (n in names(val)) {
+  if (!has_value(val)) {
+    return(invisible(NULL))
+  }
+  if (is.data.frame(val)) {
+    cli_bullets(c("*" = "{.field {field_name}}:"))
+    cat_print(val)
+  } else if (is.list(val) && length(val) > 1) {
+    cli_bullets(c("*" = "{.field {field_name}}:"))
+    purrr::walk(names(val), \(n) {
+      if (has_value(val[[n]])) {
         cli_bullets(c(" " = "{.field {n}}: {.val {val[[n]]}}"))
       }
-    } else {
-      cli_bullets(c("*" = "{.field {field_name}}: {.val {val}}"))
-    }
+    })
+  } else {
+    cli_bullets(c("*" = "{.field {field_name}}: {.val {val}}"))
   }
+  invisible(NULL)
 }

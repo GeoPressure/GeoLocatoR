@@ -4,148 +4,24 @@
 \alias{create_gldp}
 \title{Create a GeoLocator Data Package}
 \usage{
-create_gldp(
-  title = "",
-  contributors = list(list(title = "")),
-  embargo = "1970-01-01",
-  licenses = list(list(name = "CC-BY-4.0", title = "Creative Commons Attribution 4.0",
-    path = "https://creativecommons.org/licenses/by/4.0/")),
-  id = NULL,
-  description = NULL,
-  version = NULL,
-  relatedIdentifiers = NULL,
-  grants = NULL,
-  keywords = NULL,
-  created = format(as.POSIXct(Sys.time(), tz = "UTC"), "\%Y-\%m-\%dT\%H:\%M:\%SZ"),
-  bibliographicCitation = NULL,
-  schema = NULL
-)
+create_gldp(version = NULL, ...)
 }
 \arguments{
-\item{title}{A string providing a title or one sentence description for this package. It should
-be plain text (no markup), capitalised like a title, NOT end in a period and less than 65
-characters. See \href{https://raphaelnussbaumer.com/GeoLocator-DP/datapackage/#title}{Geolocator DP}
-and the \href{https://datapackage.org/standard/data-package/#title}{Data Package specification}.}
+\item{version}{(optional) Version of GeoLocator Data Package to use. Defaults to the
+GeoLocatoR default (latest).}
 
-\item{contributors}{A list of contributors, where each contributor is a list with properties
-including at least \code{title} but also optionally \code{givenName}, \code{familyName}, \code{path}, \code{email},
-\code{roles}, and \code{organization}. See the
-\href{https://raphaelnussbaumer.com/GeoLocator-DP/datapackage/#contributors}{Geolocator DP}, the
-\href{https://datapackage.org/standard/data-package/#contributors}{Data Package specification} and the
-\href{https://r-pkgs.org/description.html#sec-description-authors-at-r}{R Packages}.}
-
-\item{embargo}{End date of the embargo as ISO 8601 date string (YYYY-MM-DD). The repository
-will restrict access to the data until the end of the embargo period; at which time, the
-content will become publicly available automatically. Default to \code{"1970-01-01"} (no embargo).
-See the \href{https://raphaelnussbaumer.com/GeoLocator-DP/datapackage/#embargo}{Geolocator DP} and the
-\href{https://datapackage.org/standard/data-package/#embargo}{Data Package specification}.}
-
-\item{licenses}{A list of licenses under which the data is provided. Usually, a single license
-is sufficient and preferred. If you're not sure, check out the \href{https://chooser-beta.creativecommons.org/}{Creative Commons License Chooser } and the \href{https://opendatacommons.org/}{Open Data Commons }. \code{name} or \code{path} must be provided. Default is a CC-BY-4.0
-license. See the \href{https://raphaelnussbaumer.com/GeoLocator-DP/datapackage/#licenses}{Geolocator DP } and the
-\href{https://datapackage.org/standard/data-package/#licenses}{Data Package specification}.}
-
-\item{id}{A globally unique identifier for the package, typically the DOI link of the
-corresponding Zenodo repository which \href{https://help.zenodo.org/docs/deposit/describe-records/reserve-doi/#reserve-doi}{can be reserved prior to publication }. Defaults to
-\code{NULL}. See the \href{https://raphaelnussbaumer.com/GeoLocator-DP/datapackage/#id}{Geolocator DP} and
-the \href{https://datapackage.org/standard/data-package/#id}{Data Package specification}.}
-
-\item{description}{A markdown-formatted string describing the package. You can
-(and should!) use multiple sentences, but limited to a single paragraph. See the
-\href{https://raphaelnussbaumer.com/GeoLocator-DP/datapackage/#description}{Geolocator DP} and the
-\href{https://datapackage.org/standard/data-package/#description}{Data Package specification}.}
-
-\item{version}{(optional) A version string identifying the version of the package, following
-Semantic Versioning. Defaults to "1.0.0". See
-\href{https://raphaelnussbaumer.com/GeoLocator-DP/datapackage/#version}{Geolocator DP} and the
-\href{https://datapackage.org/standard/data-package/#version}{Data Package specification} and \href{https://datapackage.org/recipes/data-package-version/}{Data Package Version recipe}.}
-
-\item{relatedIdentifiers}{(optional) A list of related identifiers for the package. Each related
-identifier is a list with properties \code{relationType}, \code{relatedIdentifier}, and
-\code{relatedIdentifierType}. See the
-\href{https://raphaelnussbaumer.com/GeoLocator-DP/datapackage/#relatedIdentifiers}{Geolocator DP} and
-the \href{https://camtrap-dp.tdwg.org/metadata/#relatedIdentifiers}{Camtrap DP specification }.}
-
-\item{grants}{(optional) A list of grants that funded the creation of the package. See the
-\href{https://raphaelnussbaumer.com/GeoLocator-DP/datapackage/#grants}{Geolocator DP} and the
-\href{https://datapackage.org/standard/data-package/#grants}{Data Package specification}.}
-
-\item{keywords}{(optional) A list of keywords to assist users in searching for the package.
-See the \href{https://raphaelnussbaumer.com/GeoLocator-DP/datapackage/#keywords}{Geolocator DP} and
-the \href{https://datapackage.org/standard/data-package/#keywords}{Data Package specification}.}
-
-\item{created}{Datetime on which this was created. See the
-\href{https://raphaelnussbaumer.com/GeoLocator-DP/datapackage/#created}{Geolocator DP} and the
-\href{https://datapackage.org/standard/data-package/#created}{Data Package specification}.}
-
-\item{bibliographicCitation}{(optional) A string providing a citation for the package. See the
-\href{https://raphaelnussbaumer.com/GeoLocator-DP/datapackage/#citation}{Geolocator DP} and the
-\href{https://datapackage.org/standard/data-package/#citation}{Data Package specification}.}
-
-\item{schema}{(optional) A URL to the JSON Table Schema that describes the data package. Defaults
-to the GeoLocator Data Package profile. See the \href{https://datapackage.org/standard/data-package/#dollar-schema}{Data Package specification }.}
+\item{...}{Additional descriptor fields to include}
 }
 \value{
-A Geolocator Data Package object containing only metadata.
+A GeoLocator Data Package object.
 }
 \description{
-This function create a geolocator data package R object. The arguments of the functions
-correspond to the \href{https://raphaelnussbaumer.com/GeoLocator-DP/datapackage/}{standard geolocator Data Package properties}.
-
-This function initiate a Geolocator Data Package R object. This function is similar to
-\code{\link[frictionless:create_package]{frictionless::create_package()}} but required specific metadata provided as arguments to the
-function rather than the list \code{descriptor}. These arguments correspond to field of
-\href{https://raphaelnussbaumer.com/GeoLocator-DP/datapackage/}{\code{datapackage.json}}.
-
-A geolocator data package is also a Data Package object created by
-\href{https://docs.ropensci.org/frictionless/reference/create_package.html}{\code{frictionless::create_package()} } and most (all?) functions
-from the frictionless package should work.
-
-Note that this function does not add any data resources, it returns an empty shell with only
-project level metadata.
+Create a GeoLocator Data Package shell with a minimal descriptor.
 }
 \examples{
-# Create a Data Package with all possible metadata
-pkg <- create_gldp(
-  title = "Geolocator Data Package example",
-  contributors = list(
-    list(
-      title = "Raphaël Nussbaumer",
-      roles = c("ContactPerson", "DataCurator", "ProjectLeader")
-    ),
-    list(
-      title = "Yann Rime",
-      givenName = "Yann",
-      familyName = "Rime",
-      path = "https://orcid.org/0000-0003-2745-0557",
-      email = "yann.rime@vogelwarte.ch",
-      roles = c("Researcher"),
-      organization = "Swiss Ornithological Institute"
-    )
-  ),
-  embargo = "2025-01-01",
-  licenses = list(list(name = "CC-BY-4.0")),
-  id = "https://doi.org/10.5281/zenodo.13829929",
-  description = NULL,
-  version = "1.0.1",
-  relatedIdentifiers = list(
-    list(
-      relationType = "IsPartOf",
-      relatedIdentifier = "10.5281/zenodo.11207081",
-      relatedIdentifierType = "DOI"
-    ),
-    list(
-      relationType = "IsSupplementTo",
-      relatedIdentifier = "10.1007/s00114-018-1566-9",
-      relatedIdentifierType = "DOI"
-    )
-  ),
-  grants = c("Swiss National Foundation grant no. 354251"),
-  keywords = c("Woodland Kingfisher", "intra-african", "multi-sensor geolocator"),
-  created = "2024-05-17",
-  bibliographicCitation = "Nussbaumer, R., & Rime, Y. (2024). Woodland Kingfisher: Migration
-  route and timing of South African Woodland Kingfisher (v1.1). Zenodo.
-  https://doi.org/10.5281/zenodo.11207141"
-)
+pkg <- create_gldp()
+
+# Previous version
+pkg <- create_gldp(version = "v0.2")
 
 }

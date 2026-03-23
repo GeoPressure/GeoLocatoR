@@ -1,9 +1,9 @@
-#' Add a Geolocator Data Resource
+#' Add a GeoLocator Data Resource
 #'
 #' @description
-#' This function adds a resource to a geolocator data package and ensures that the data conforms to
+#' This function adds a resource to a GeoLocator Data Package and ensures that the data conforms to
 #' the schema defined for that resource. It is a wrapper of [`frictionless::add_resource`
-#' ](https://docs.ropensci.org/frictionless/reference/add_resource.html) where it first validate
+#' ](https://docs.ropensci.org/frictionless/reference/add_resource.html) where it first validates
 #' against the schema and potentially modify the data frame `data` before adding it to the package.
 #'
 #' More specifically, the function adjusts the data frame according to the schema's
@@ -13,7 +13,7 @@
 #' Note that this function is generally not recommended to be used as all resources can be added or
 #' modified with their respective [accessors functions](https://bit.ly/41HruRs).
 #'
-#' @param package A GeoLocator Data Package object to which the resource will be added.
+#' @param pkg A GeoLocator Data Package object to which the resource will be added.
 #' @param resource_name A character string specifying the name of the resource. This name is used
 #' to locate the schema file.
 #' @param data A data frame containing the data to be added as a resource. The data frame will be
@@ -26,42 +26,34 @@
 #'
 #' @export
 add_gldp_resource <- function(
-  package,
+  pkg,
   resource_name,
   data,
   cast_type = FALSE,
   replace = FALSE,
   delim = ","
 ) {
-  check_gldp(package)
+  check_gldp(pkg)
+  version <- gldp_version(pkg)
 
-  # Retrieve full schema (package$resources) does not have schema at first
-  pkg_schema <- jsonlite::fromJSON(
-    package$`$schema`,
-    simplifyDataFrame = FALSE,
-    simplifyVector = TRUE
-  )
-  possible_resources <-
+  # Retrieve full schema (pkg$resources) does not have schema at first
+  pkg_schema <- gldp_profile_schema(version)
+  possible_gldp_resources <-
     pkg_schema$allOf[[2]]$properties$resources$items$oneOf[[
       1
     ]]$properties$name$enum
 
-  if (!resource_name %in% possible_resources) {
+  if (!resource_name %in% possible_gldp_resources) {
     cli_abort(c(
-      "x" = "{.val {resource_name}} is not a valid resource.",
-      "i" = "Possible resources are: {.val {possible_resources}}."
+      "x" = "{.val {resource_name}} is not a supported GeoLocatoR resource for {.fn add_gldp_resource}.",
+      "i" = "Supported GeoLocatoR resources are: {.val {possible_gldp_resources}}.",
+      "i" = "To add custom resources, use {.fn frictionless::add_resource} directly."
     ))
   }
 
   # Retrieve the resource schema
-  schema <- jsonlite::fromJSON(
-    glue::glue(
-      "https://raw.githubusercontent.com/Rafnuss/GeoLocator-DP/{version(package)}/{resource_name}",
-      "-table-schema.json"
-    ),
-    simplifyDataFrame = FALSE,
-    simplifyVector = TRUE
-  )
+
+  schema <- gldp_resource_schema(version, resource_name)
 
   # We need to massage a bit the data to make it adequate for add_resource in v1.
   # https://github.com/frictionlessdata/frictionless-r/issues/254
@@ -124,14 +116,14 @@ add_gldp_resource <- function(
   }
 
   # Update schema_fields
-  data <- data %>% select(all_of(schema_fields))
+  data <- data |> select(all_of(schema_fields))
 
   if (cast_type) {
     data <- cast_table(data, schema)
   }
 
-  package <- frictionless::add_resource(
-    package = package,
+  pkg <- frictionless::add_resource(
+    package = pkg,
     resource_name = resource_name,
     data = data,
     schema = schema,
@@ -139,5 +131,5 @@ add_gldp_resource <- function(
     delim = delim
   )
 
-  return(package)
+  return(pkg)
 }

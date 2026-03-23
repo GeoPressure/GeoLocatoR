@@ -12,7 +12,7 @@
 #' \describe{
 #'   \item{tag_id}{A character vector representing the unique identifier for each tag.}
 #'   \item{sensor}{A character vector representing the type of sensor measurement, including types
-#'   like "activity", "pitch", "light", "temperature_external", etc.}
+#'   like "activity", "mean_acceleration_z", "light", "temperature_external", etc.}
 #'   \item{datetime}{A POSIXct datetime object representing the timestamp of the measurements.}
 #'   \item{value}{A numeric vector containing the sensor measurement values.}
 #'   \item{label}{A character vector for additional labeling, which is NA if not present in the
@@ -51,7 +51,7 @@ tags_to_measurements <- function(tags) {
   select_cols <- c(
     "pressure",
     "activity",
-    "pitch",
+    "mean_acceleration_z",
     "light",
     "temperature_external",
     "temperature_internal",
@@ -98,11 +98,10 @@ tags_to_measurements <- function(tags) {
           )
         },
         error = function(e) {
-          cli::cli_abort(
+          cli_abort(
             c(
-              "x" = paste0(
-                "Error in {.fun tags_to_measurements} for tag {.val {tag_id}}, ",
-                "sensor {.val {sensor}}:"
+              "x" = glue::glue(
+                "Error in {{.fun tags_to_measurements}} for tag {{.val {tag_id}}}, sensor {{.val {sensor}}}:"
               ),
               ">" = e$message
             )
@@ -120,11 +119,10 @@ tags_to_measurements <- function(tags) {
         },
         error = function(e) {
           value_types <- sapply(tag_measurements, function(x) class(x$value)[1])
-          cli::cli_abort(
+          cli_abort(
             c(
-              "x" = paste0(
-                "Type mismatch in {.fun tags_to_measurements} for tag {.val {tag_id}}, ",
-                "sensor {.val {sensor}}:"
+              "x" = glue::glue(
+                "Type mismatch in {{.fun tags_to_measurements}} for tag {{.val {tag_id}}}, sensor {{.val {sensor}}}:"
               ),
               "i" = "value column types: {.val {value_types}}",
               ">" = e$message
@@ -142,7 +140,7 @@ tags_to_measurements <- function(tags) {
     },
     error = function(e) {
       value_types <- sapply(all_measurements, function(x) class(x$value)[1])
-      cli::cli_abort(
+      cli_abort(
         c(
           "Type mismatch when combining tags in {.fun tags_to_measurements}:",
           "i" = "value column types: {.val {value_types}}",
@@ -151,7 +149,7 @@ tags_to_measurements <- function(tags) {
       )
     }
   )
-  m <- dplyr::rename(m, datetime = date)
+  m <- dplyr::rename(m, datetime = "date")
   m <- dplyr::filter(m, !is.na(.data$value))
   m
 }

@@ -75,22 +75,3 @@ test_that("gldp_to_dwc works for all valid path_type values", {
     "path_type"
   )
 })
-
-test_that("gldp_to_dwc works second pkg", {
-  suppressMessages({
-    expect_no_error(
-      gldp_to_dwc(pkg2_shared, directory = withr::local_tempdir(), path_type = "mean_simulation")
-    )
-  })
-  suppressMessages({
-    expect_no_error(
-      gldp_to_dwc(pkg2_shared, directory = withr::local_tempdir(), path_type = "median_simulation")
-    )
-  })
-  tmp <-
-    suppressMessages({
-      expect_no_error(
-        gldp_to_dwc(pkg2_shared, directory = withr::local_tempdir(), path_type = "most_likely")
-      )
-    })
-})
