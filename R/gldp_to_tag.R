@@ -76,7 +76,7 @@
 #' @seealso
 #' - [`read_gldp()`] for reading a GeoLocator Data Package
 #' - [`GeoPressureR::tag_create()`] for creating tag objects from raw files
-#' - [GeoPressureR documentation](https://raphaelnussbaumer.com/GeoPressureR/)
+#' - [GeoPressureR documentation](https://geopressure.org/GeoPressureR/)
 #'
 #' @export
 gldp_to_tag <- function(pkg, tag_id = NULL) {

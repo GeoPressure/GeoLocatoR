@@ -1,13 +1,15 @@
-.navbar a[href="https://raphaelnussbaumer.com/GeoLocator-DP/"] {
-  background-color: #f0f0f0;  /* Background color to make it stand out */
-  color: #000000;             /* Optional: Sets text color */
+.navbar a[href="https://geopressure.org/GeoLocator-DP/"] {
+  background-color: #f0f0f0;
+  /* Background color to make it stand out */
+  color: #000000;
+  /* Optional: Sets text color */
   margin-left: 10px;
 }
 
-.navbar a[href="https://raphaelnussbaumer.com/GeoLocator-DP/"]::before {
+.navbar a[href="https://geopressure.org/GeoLocator-DP/"]::before {
   content: '';
   display: inline-block;
-  background-image: url(https://raphaelnussbaumer.com/GeoLocator-DP/assets/logo.png);
+  background-image: url(https://geopressure.org/GeoLocator-DP/assets/logo.png);
   background-size: contain;
   background-repeat: no-repeat;
   width: 22px;

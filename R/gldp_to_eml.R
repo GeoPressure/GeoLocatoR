@@ -1,7 +1,7 @@
 #' Transform a GeoLocator Data Package to EML
 #'
 #' @description
-#' Transforms a [GeoLocator Data Package (GLDP)](https://raphaelnussbaumer.com/GeoLocator-DP/)
+#' Transforms a [GeoLocator Data Package (GLDP)](https://geopressure.org/GeoLocator-DP/)
 #' to [Ecological Metadata Language (EML)](https://eml.ecoinformatics.org/).
 #' The resulting EML file can be uploaded to an [IPT](https://www.gbif.org/ipt) for
 #' publication to GBIF and/or OBIS. A corresponding Darwin Core Archive can be created

@@ -13,7 +13,7 @@ source("R/versioning.R")
 
 sync_gldp_schemas <- function(
   versions = setdiff(.gldp_supported_versions, "main"),
-  repo = "Rafnuss/GeoLocator-DP",
+  repo = "GeoPressure/GeoLocator-DP",
   root = "inst/schemas"
 ) {
   dir.create(root, recursive = TRUE, showWarnings = FALSE)

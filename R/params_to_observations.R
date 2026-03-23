@@ -2,11 +2,11 @@
 #'
 #' This function converts a list of parameters into a single `observations` tibble according to the
 #' [GeoLocator Data Package specification
-#' ](https://raphaelnussbaumer.com/GeoLocator-DP/core/observations/).
+#' ](https://geopressure.org/GeoLocator-DP/core/observations/).
 #'
 #' @param params A list of GeoPressureR parameter objects. These parameters should have been
 #' generated during the GeoPressure workflow. See [`GeoPressureR::param_create()`
-#' ](https://raphaelnussbaumer.com/GeoPressureR/reference/param_create.html) for more information.
+#' ](https://geopressure.org/GeoPressureR/reference/param_create.html) for more information.
 #'
 #' @return A [tibble::tibble()] data frame with columns `ring_number`, `tag_id`,
 #' `observation_type`, `datetime`, `longitude`, `latitude`, and `comments`.

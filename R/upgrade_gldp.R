@@ -102,21 +102,21 @@ normalize_upgraded_resources <- function(x) {
 
 #' @noRd
 upgrade_gldp_v0_1_to_v0_2 <- function(x) {
-  # Release: https://github.com/Rafnuss/GeoLocator-DP/releases/tag/v0.2
+  # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v0.2
   # citation -> bibliographicCitation
-  # https://github.com/Rafnuss/GeoLocator-DP/commit/477f3899194edf2a31b93a1019d654714084eeb4
+  # https://github.com/GeoPressure/GeoLocator-DP/commit/477f3899194edf2a31b93a1019d654714084eeb4
   if (!is.null(x$citation) && is.null(x$bibliographicCitation)) {
     x$bibliographicCitation <- x$citation
   }
 
   # reference_location -> referenceLocation
-  # https://github.com/Rafnuss/GeoLocator-DP/commit/b9a1f0dc1d1788fcd5dcc3be4bf52ac3ac4c6de8
+  # https://github.com/GeoPressure/GeoLocator-DP/commit/b9a1f0dc1d1788fcd5dcc3be4bf52ac3ac4c6de8
   if (!is.null(x$reference_location) && is.null(x$referenceLocation)) {
     x$referenceLocation <- x$reference_location
   }
 
   # Drop removed metadata fields.
-  # https://github.com/Rafnuss/GeoLocator-DP/commit/db091f74245c1b521d3dbe2a3665452bf4f70c53
+  # https://github.com/GeoPressure/GeoLocator-DP/commit/db091f74245c1b521d3dbe2a3665452bf4f70c53
   x$citation <- NULL
   x$reference_location <- NULL
   x$homepage <- NULL
@@ -125,13 +125,13 @@ upgrade_gldp_v0_1_to_v0_2 <- function(x) {
   x$name <- NULL
 
   # Add numberTags top-level field.
-  # https://github.com/Rafnuss/GeoLocator-DP/commit/8e059382e1157fa9a97962f01a3bf05da600f7f7
+  # https://github.com/GeoPressure/GeoLocator-DP/commit/8e059382e1157fa9a97962f01a3bf05da600f7f7
   if (is.null(x$numberTags)) {
     x$numberTags <- list()
   }
 
   # Build spatial from referenceLocation when missing.
-  # https://github.com/Rafnuss/GeoLocator-DP/commit/2e91036e6bfb718623b4b784e41abf43541c827d
+  # https://github.com/GeoPressure/GeoLocator-DP/commit/2e91036e6bfb718623b4b784e41abf43541c827d
   if (is.null(x$spatial) && !is.null(x$referenceLocation)) {
     lat <- as.numeric(x$referenceLocation$latitude %||% NA_real_)
     lon <- as.numeric(x$referenceLocation$longitude %||% NA_real_)
@@ -141,7 +141,7 @@ upgrade_gldp_v0_1_to_v0_2 <- function(x) {
   }
 
   # firwmare -> firmware (typo fix).
-  # https://github.com/Rafnuss/GeoLocator-DP/commit/90b65c555720a006aa814e91f04dc85209be7df1
+  # https://github.com/GeoPressure/GeoLocator-DP/commit/90b65c555720a006aa814e91f04dc85209be7df1
   x <- mutate_resource(x, "tags", \(d) {
     if ("firwmare" %in% names(d) && !"firmware" %in% names(d)) {
       names(d)[names(d) == "firwmare"] <- "firmware"
@@ -150,13 +150,13 @@ upgrade_gldp_v0_1_to_v0_2 <- function(x) {
   })
   x <- mutate_resource(x, "observations", \(d) {
     # life_stage -> age_class
-    # https://github.com/Rafnuss/GeoLocator-DP/commit/4a6d8bcae5d211822799ad4f09e341687d53d321
+    # https://github.com/GeoPressure/GeoLocator-DP/commit/4a6d8bcae5d211822799ad4f09e341687d53d321
     if ("life_stage" %in% names(d) && !"age_class" %in% names(d)) {
       names(d)[names(d) == "life_stage"] <- "age_class"
     }
     if ("device_status" %in% names(d)) {
       # Replace broken_damage with missing.
-      # https://github.com/Rafnuss/GeoLocator-DP/commit/56f19ad6de7dd2c80e5839b05f49975ea79dfa3a
+      # https://github.com/GeoPressure/GeoLocator-DP/commit/56f19ad6de7dd2c80e5839b05f49975ea79dfa3a
       i <- !is.na(d$device_status) & d$device_status == "broken_damage"
       d$device_status[i] <- "missing"
     }
@@ -169,18 +169,18 @@ upgrade_gldp_v0_1_to_v0_2 <- function(x) {
 
 #' @noRd
 upgrade_gldp_v0_2_to_v0_3 <- function(x) {
-  # Release: https://github.com/Rafnuss/GeoLocator-DP/releases/tag/v0.3
+  # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v0.3
   # embargo removed from required fields (schema-only change)
-  # https://github.com/Rafnuss/GeoLocator-DP/commit/c489984a3c4928d28f52615d2032a17c93d0909e
+  # https://github.com/GeoPressure/GeoLocator-DP/commit/c489984a3c4928d28f52615d2032a17c93d0909e
   x[["$schema"]] <- gldp_schema_url("v0.3")
   x
 }
 
 #' @noRd
 upgrade_gldp_v0_3_to_v0_4 <- function(x) {
-  # Release: https://github.com/Rafnuss/GeoLocator-DP/releases/tag/v0.4
+  # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v0.4
   # Add tags.datapackage_id
-  # https://github.com/Rafnuss/GeoLocator-DP/commit/a85af2d8ad9f16297fb5cbb07a448d1c3aab24b2
+  # https://github.com/GeoPressure/GeoLocator-DP/commit/a85af2d8ad9f16297fb5cbb07a448d1c3aab24b2
   x <- mutate_resource(x, "tags", \(d) {
     if (!"datapackage_id" %in% names(d)) {
       fill <- if (!is.null(x$id)) as.character(x$id) else NA_character_
@@ -195,9 +195,9 @@ upgrade_gldp_v0_3_to_v0_4 <- function(x) {
 
 #' @noRd
 upgrade_gldp_v0_4_to_v0_5 <- function(x) {
-  # Release: https://github.com/Rafnuss/GeoLocator-DP/releases/tag/v0.5
+  # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v0.5
   # Add edges.type
-  # https://github.com/Rafnuss/GeoLocator-DP/commit/60251cd0117856fc7302ce9d3d0abfab81ad0893
+  # https://github.com/GeoPressure/GeoLocator-DP/commit/60251cd0117856fc7302ce9d3d0abfab81ad0893
   x <- mutate_resource(x, "edges", \(d) {
     if ("type" %in% names(d) && !any(is.na(d$type) | trimws(as.character(d$type)) == "")) {
       return(d)
@@ -263,9 +263,9 @@ upgrade_gldp_v0_4_to_v0_5 <- function(x) {
 
 #' @noRd
 upgrade_gldp_v0_5_to_v0_6 <- function(x) {
-  # Release: https://github.com/Rafnuss/GeoLocator-DP/releases/tag/v0.6
+  # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v0.6
   # Remove pressurepaths.ind
-  # https://github.com/Rafnuss/GeoLocator-DP/commit/c278695d094ea40e13fea6458a078a7711ea0d1a
+  # https://github.com/GeoPressure/GeoLocator-DP/commit/c278695d094ea40e13fea6458a078a7711ea0d1a
   x <- mutate_resource(x, "pressurepaths", \(d) {
     if ("ind" %in% names(d)) {
       d$ind <- NULL
@@ -279,11 +279,11 @@ upgrade_gldp_v0_5_to_v0_6 <- function(x) {
 
 #' @noRd
 upgrade_gldp_v0_6_to_v1_0 <- function(x) {
-  # Release: https://github.com/Rafnuss/GeoLocator-DP/releases/tag/v1.0
+  # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v1.0
 
   # Remove deprecated fields from paths/staps/edges.
-  # https://github.com/Rafnuss/GeoLocator-DP/commit/8ef7ad8cf9e48e82d8396f535536fb8e5b9c119f
-  # https://github.com/Rafnuss/GeoLocator-DP/commit/418f7c926fdff4af0a1c5e48d57a50f8a61c95d2
+  # https://github.com/GeoPressure/GeoLocator-DP/commit/8ef7ad8cf9e48e82d8396f535536fb8e5b9c119f
+  # https://github.com/GeoPressure/GeoLocator-DP/commit/418f7c926fdff4af0a1c5e48d57a50f8a61c95d2
   x <- mutate_resource(x, "paths", \(d) {
     d$ind <- NULL
     d$interp <- NULL
@@ -301,7 +301,7 @@ upgrade_gldp_v0_6_to_v1_0 <- function(x) {
   })
 
   # Rename legacy SOI "pitch" sensor to "mean_acceleration_z".
-  # https://github.com/Rafnuss/GeoLocator-DP/issues/24
+  # https://github.com/GeoPressure/GeoLocator-DP/issues/24
   x <- mutate_resource(x, "measurements", \(d) {
     if (!"sensor" %in% names(d)) {
       return(d)
@@ -318,7 +318,7 @@ upgrade_gldp_v0_6_to_v1_0 <- function(x) {
   })
 
   # Drop non-deployed tags (missing ring_number or scientific_name).
-  # https://github.com/Rafnuss/GeoLocator-DP/commit/795ccc4cdd0bf575b39378ca3e63c61247ac2b8e
+  # https://github.com/GeoPressure/GeoLocator-DP/commit/795ccc4cdd0bf575b39378ca3e63c61247ac2b8e
   x <- mutate_resource(x, "tags", \(d) {
     if (!"ring_number" %in% names(d)) {
       d$ring_number <- NA_character_

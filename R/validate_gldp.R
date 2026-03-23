@@ -13,7 +13,7 @@
 #'    key tables (e.g. `tags`, `observations`, and `measurements`) and reports metadata best-practice
 #'    mismatches that should be justified during curation.
 #'
-#' See the [GeoLocator-DP curation guide](https://raphaelnussbaumer.com/GeoLocator-DP/curation/) for
+#' See the [GeoLocator-DP curation guide](https://geopressure.org/GeoLocator-DP/curation/) for
 #' more informations.
 #'
 #' @param pkg A GeoLocator Data Package object to be validated.

@@ -1,4 +1,4 @@
-url: https://raphaelnussbaumer.com/GeoLocatoR/
+url: https://geopressure.org/GeoLocatoR/
 template:
   bootstrap: 5
   bslib:
@@ -13,6 +13,7 @@ reference:
       - merge_gldp
       - update_gldp
       - add_gldp_resource
+      - write_gldp
       - gldp_version
   - title: Data Import
     contents:
@@ -54,6 +55,7 @@ reference:
       - create_gldp_geopressuretemplate
       - read_gdl
       - zenodo_to_gldp
+      - config2tibble
       - gldp_to_zenodo
       - version
 
@@ -63,10 +65,10 @@ navbar:
   components:
     geopressure-manual:
       text: User Guide
-      href: https://raphaelnussbaumer.com/GeoPressureManual/geolocator-intro.html
+      href: https://geopressure.org/GeoPressureManual/geolocator-intro.html
     geolocator-dp:
       text: GeolocatorDP
-      href: https://raphaelnussbaumer.com/GeoLocator-DP/
+      href: https://geopressure.org/GeoLocator-DP/
 
 vignettes:
   toc: false

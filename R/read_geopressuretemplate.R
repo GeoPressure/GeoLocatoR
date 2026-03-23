@@ -2,7 +2,7 @@
 #'
 #' @description
 #' This function adds all possible resources to a GeolocatoR Data Package by reading data from
-#' a [GeoPressureTemplate](https://github.com/Rafnuss/GeoPressureTemplate) directories and files.
+#' a [GeoPressureTemplate](https://github.com/GeoPressure/GeoPressureTemplate) directories and files.
 #'
 #' The function performs the following steps:
 #' 1. If `"interim"` in `from`,  reads all interim ".RData" files, extract all variables and add
@@ -24,7 +24,7 @@
 #' simultaneously.
 #'
 #' You can find more information on the use of this function in the [GeoPressureManual
-#' ](https://raphaelnussbaumer.com/GeoPressureManual/geolocator-create.html)
+#' ](https://geopressure.org/GeoPressureManual/geolocator-create.html)
 #'
 #' @param directory A character string specifying the geopressuretemplate directory.
 #' @param from A character vector specifying the source of the data files. Either or both of

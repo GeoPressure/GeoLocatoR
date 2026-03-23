@@ -6,7 +6,7 @@
 #' tags, measurements, and observations based on the provided data frame and directory of data. The
 #' function also handles missing directories and updates the package accordingly.
 #'
-#' See an example of use [with this tutorial](https://rpubs.com/rafnuss/geolocator_create_from_soi).
+#' See an example of use [with this tutorial](https://rpubs.com/GeoPressure/Geolocator_create_from_soi).
 #'
 #' @param gdl A data frame containing the SOI data. Must include columns like `OrderName`,
 #' `GDL_ID`, and other relevant fields for tags, measurements, and observations. See `read_soi_gld()`

@@ -1,7 +1,7 @@
 #' Transform a GeoLocator Data Package to Darwin Core
 #'
 #' @description
-#' Transforms a [GeoLocator Data Package (GLDP)](https://raphaelnussbaumer.com/GeoLocator-DP/)
+#' Transforms a [GeoLocator Data Package (GLDP)](https://geopressure.org/GeoLocator-DP/)
 #' to a [Darwin Core Archive](https://dwc.tdwg.org/).
 #' The resulting CSV files can be uploaded to an [IPT](https://www.gbif.org/ipt)
 #' for publication to GBIF. A `meta.xml` file is included as well.
@@ -24,9 +24,9 @@
 #' @section Transformation details:
 #' Data are transformed into an [Occurrence core](https://rs.gbif.org/core/dwc_occurrence).
 #' This transformation combines data from three resources:
-#' - [`tags`](https://raphaelnussbaumer.com/GeoLocator-DP/core/tags/): metadata about the device and deployment
-#' - [`staps`](https://raphaelnussbaumer.com/GeoLocator-DP/geopressurer/staps/): stationary periods with temporal information
-#' - [`paths`](https://raphaelnussbaumer.com/GeoLocator-DP/geopressurer/paths/): spatial positions estimated for each stationary period
+#' - [`tags`](https://geopressure.org/GeoLocator-DP/core/tags/): metadata about the device and deployment
+#' - [`staps`](https://geopressure.org/GeoLocator-DP/geopressurer/staps/): stationary periods with temporal information
+#' - [`paths`](https://geopressure.org/GeoLocator-DP/geopressurer/paths/): spatial positions estimated for each stationary period
 #'
 #' The following terms are set from normalized package metadata
 #' (sourced from top-level package fields):

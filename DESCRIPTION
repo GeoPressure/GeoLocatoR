@@ -2,12 +2,14 @@ Package: GeoLocatoR
 Title: R package for GeoLocator Data Package
 Version: 1.0.0.9000
 Authors@R: 
-    person("Raphaël", "Nussbaumer", , "rafnuss@gmail.com", role = c("aut", "cre"),
-           comment = c(ORCID = "0000-0002-8185-1020"))
+    c(
+      person("Raphaël", "Nussbaumer", , "rafnuss@gmail.com", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-8185-1020")),
+      person("Peter", "Desmet", , "peter.desmet@inbo.be", role = "ctb", comment = c(ORCID = "0000-0002-8442-8025"))
+    )
 Description: An R package to help you create and read geolocator data using the GeoLocator Data Package standard.
-URL: https://github.com/rafnuss/geolocator,
-    https://raphaelnussbaumer.com/GeoLocatoR/
-BugReports: https://github.com/Rafnuss/GeoLocatoR/issues
+URL: https://github.com/GeoPressure/Geolocator,
+    https://geopressure.org/GeoLocatoR/
+BugReports: https://github.com/GeoPressure/GeoLocatoR/issues
 Depends: 
     R (>= 4.1.0)
 License: GPL (>= 3)
@@ -47,7 +49,7 @@ Suggests:
     EML,
     uuid
 Remotes: 
-  rafnuss/GeoPressureR
+  GeoPressure/GeoPressureR
 Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

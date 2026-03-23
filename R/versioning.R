@@ -56,7 +56,7 @@ gldp_schema_url <- function(version = NULL) {
   }
 
   schema_url <- glue::glue(
-    "https://raw.githubusercontent.com/Rafnuss/GeoLocator-DP/{version}/geolocator-dp-profile.json"
+    "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/{version}/geolocator-dp-profile.json"
   ) |>
     as.character()
 

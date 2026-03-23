@@ -47,7 +47,7 @@
 #'
 #' @seealso
 #' - [`GeoPressureR::geopressuretemplate_config()`] for the underlying config parser
-#' - [GeoPressureTemplate](https://github.com/Rafnuss/GeoPressureTemplate) for the
+#' - [GeoPressureTemplate](https://github.com/GeoPressure/GeoPressureTemplate) for the
 #'   template structure
 #'
 #' @export
