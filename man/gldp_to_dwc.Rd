@@ -4,10 +4,10 @@
 \alias{gldp_to_dwc}
 \title{Transform a GeoLocator Data Package to Darwin Core}
 \usage{
-gldp_to_dwc(package, directory, path_type = "most_likely")
+gldp_to_dwc(pkg, directory, path_type = "most_likely")
 }
 \arguments{
-\item{package}{A GeoLocator Data Package object.}
+\item{pkg}{A GeoLocator Data Package object.}
 
 \item{directory}{Path to local directory to write file(s) to.
 If \code{NULL}, then a data frame is returned instead, which can be useful
@@ -25,7 +25,7 @@ all simulated paths. Defaults to \code{"most_likely"}. See \link{paths} for more
 Invisibly, an occurrence data frame.
 }
 \description{
-Transforms a \href{https://raphaelnussbaumer.com/GeoLocator-DP/}{GeoLocator Data Package}
+Transforms a \href{https://geopressure.org/GeoLocator-DP/}{GeoLocator Data Package (GLDP)}
 to a \href{https://dwc.tdwg.org/}{Darwin Core Archive}.
 The resulting CSV files can be uploaded to an \href{https://www.gbif.org/ipt}{IPT}
 for publication to GBIF. A \code{meta.xml} file is included as well.
@@ -36,19 +36,20 @@ See \code{\link[=gldp_to_eml]{gldp_to_eml()}} to create an \code{eml.xml} file.
 Data are transformed into an \href{https://rs.gbif.org/core/dwc_occurrence}{Occurrence core}.
 This transformation combines data from three resources:
 \itemize{
-\item \href{https://raphaelnussbaumer.com/GeoLocator-DP/core/tags/}{\code{tags}}: metadata about the device and deployment
-\item \href{https://raphaelnussbaumer.com/GeoLocator-DP/geopressurer/staps/}{\code{staps}}: stationary periods with temporal information
-\item \href{https://raphaelnussbaumer.com/GeoLocator-DP/geopressurer/paths/}{\code{paths}}: spatial positions estimated for each stationary period
+\item \href{https://geopressure.org/GeoLocator-DP/core/tags/}{\code{tags}}: metadata about the device and deployment
+\item \href{https://geopressure.org/GeoLocator-DP/geopressurer/staps/}{\code{staps}}: stationary periods with temporal information
+\item \href{https://geopressure.org/GeoLocator-DP/geopressurer/paths/}{\code{paths}}: spatial positions estimated for each stationary period
 }
 
-The following terms are set from the package metadata:
+The following terms are set from normalized package metadata
+(sourced from top-level package fields):
 \itemize{
-\item \code{datasetName}: Title as provided in \code{package$title}.
-\item \code{datasetID}: Identifier as provided in \code{package$id}.
-\item \code{rightsHolder}: Rights holder as provided in \code{package$contributors}
+\item \code{datasetName}: Package title.
+\item \code{datasetID}: Package identifier (DOI/ID).
+\item \code{rightsHolder}: Rights holder as provided in contributors
 (contributor with \code{"rightsHolder"} role). If no rightsHolder role is found,
 this field will be \code{NA}.
-\item \code{license}: License name as provided in \code{package$licenses}.
+\item \code{license}: License name.
 }
 
 Key features of the Darwin Core transformation:

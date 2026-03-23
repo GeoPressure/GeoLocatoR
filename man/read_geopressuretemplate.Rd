@@ -24,7 +24,7 @@ The updated GLDP package object with new resources
 }
 \description{
 This function adds all possible resources to a GeolocatoR Data Package by reading data from
-a \href{https://github.com/Rafnuss/GeoPressureTemplate}{GeoPressureTemplate} directories and files.
+a \href{https://github.com/GeoPressure/GeoPressureTemplate}{GeoPressureTemplate} directories and files.
 
 The function performs the following steps:
 \enumerate{
@@ -47,5 +47,5 @@ file name with an \code{"_"}.
 It is possible to do a mix of some \code{tag} read from \code{"interim"} and other from \code{"raw-data"}
 simultaneously.
 
-You can find more information on the use of this function in the \href{https://raphaelnussbaumer.com/GeoPressureManual/geolocator-create.html}{GeoPressureManual }
+You can find more information on the use of this function in the \href{https://geopressure.org/GeoPressureManual/geolocator-create.html}{GeoPressureManual }
 }

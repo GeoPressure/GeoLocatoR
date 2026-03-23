@@ -2,10 +2,10 @@
 % Please edit documentation in R/add_gldp_resource.R
 \name{add_gldp_resource}
 \alias{add_gldp_resource}
-\title{Add a Geolocator Data Resource}
+\title{Add a GeoLocator Data Resource}
 \usage{
 add_gldp_resource(
-  package,
+  pkg,
   resource_name,
   data,
   cast_type = FALSE,
@@ -14,7 +14,7 @@ add_gldp_resource(
 )
 }
 \arguments{
-\item{package}{A GeoLocator Data Package object to which the resource will be added.}
+\item{pkg}{A GeoLocator Data Package object to which the resource will be added.}
 
 \item{resource_name}{A character string specifying the name of the resource. This name is used
 to locate the schema file.}
@@ -37,8 +37,8 @@ Will be set as \code{delimiter} in the resource Table Dialect, so read functions
 The updated GeoLocator Data Package object with the new resource added.
 }
 \description{
-This function adds a resource to a geolocator data package and ensures that the data conforms to
-the schema defined for that resource. It is a wrapper of \href{https://docs.ropensci.org/frictionless/reference/add_resource.html}{\code{frictionless::add_resource} } where it first validate
+This function adds a resource to a GeoLocator Data Package and ensures that the data conforms to
+the schema defined for that resource. It is a wrapper of \href{https://docs.ropensci.org/frictionless/reference/add_resource.html}{\code{frictionless::add_resource} } where it first validates
 against the schema and potentially modify the data frame \code{data} before adding it to the package.
 
 More specifically, the function adjusts the data frame according to the schema's

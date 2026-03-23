@@ -8,7 +8,7 @@ params_to_tags(params)
 }
 \arguments{
 \item{params}{A list of GeoPressureR parameter objects. These parameters should have been
-generated during the GeoPressure workflow. See \href{https://raphaelnussbaumer.com/GeoPressureR/reference/param_create.html}{\code{GeoPressureR::param_create()} } for more information.}
+generated during the GeoPressure workflow. See \href{https://geopressure.org/GeoPressureR/reference/param_create.html}{\code{GeoPressureR::param_create()} } for more information.}
 }
 \value{
 A \code{\link[tibble:tibble]{tibble::tibble()}} data frame with columns \code{tag_id}, \code{manufacturer}, \code{scientific_name},
@@ -16,5 +16,5 @@ A \code{\link[tibble:tibble]{tibble::tibble()}} data frame with columns \code{ta
 }
 \description{
 This function converts a list of parameters into a single \code{tags} tibble according to the
-\href{https://raphaelnussbaumer.com/GeoLocator-DP/core/tags/}{GeoLocator Data Package specification}.
+\href{https://geopressure.org/GeoLocator-DP/core/tags/}{GeoLocator Data Package specification}.
 }

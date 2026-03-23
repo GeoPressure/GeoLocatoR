@@ -18,5 +18,5 @@ Invisibly returns \code{directory}.
 }
 \description{
 Wrapper around \code{\link[frictionless:write_package]{frictionless::write_package()}} so users can write a package
-without attaching {.pkg frictionless}.
+without attaching frictionless.
 }

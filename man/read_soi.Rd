@@ -27,7 +27,7 @@ a new package created with \code{\link[=create_gldp]{create_gldp()}}. It include
 tags, measurements, and observations based on the provided data frame and directory of data. The
 function also handles missing directories and updates the package accordingly.
 
-See an example of use \href{https://rpubs.com/rafnuss/geolocator_create_from_soi}{with this tutorial}.
+See an example of use \href{https://rpubs.com/GeoPressure/Geolocator_create_from_soi}{with this tutorial}.
 }
 \details{
 The function performs the following steps:

@@ -67,7 +67,7 @@ View(cfg)
 \seealso{
 \itemize{
 \item \code{\link[GeoPressureR:geopressuretemplate]{GeoPressureR::geopressuretemplate_config()}} for the underlying config parser
-\item \href{https://github.com/Rafnuss/GeoPressureTemplate}{GeoPressureTemplate} for the
+\item \href{https://github.com/GeoPressure/GeoPressureTemplate}{GeoPressureTemplate} for the
 template structure
 }
 }

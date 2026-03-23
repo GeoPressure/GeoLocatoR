@@ -10,14 +10,16 @@ read_zenodo(id, token = NULL, draft = FALSE, sandbox = FALSE)
 \item{id}{Zenodo identifier. Can be a record id, DOI, DOI URL, or Zenodo
 record URL. Supported examples include \code{"18467383"},
 \code{"10.5281/zenodo.18467383"}, \code{"https://doi.org/10.5281/zenodo.18467383"},
+\code{"10.5072/zenodo.470406"}, \code{"https://doi.org/10.5072/zenodo.470406"},
 \code{"https://zenodo.org/records/18467383"}, and sandbox record URLs when
 \code{sandbox = TRUE}.}
 
 \item{token}{Optional Zenodo token. If \code{NULL}, token resolution follows the
 same logic as Zenodo request helpers: explicit argument, then environment
-variable \code{ZENODO_TOKEN} (for example via \code{.Renviron} or \code{Sys.setenv()}),
-then keyring secret service \code{"ZENODO_TOKEN"} (for example
-\code{keyring::key_set(service = "ZENODO_TOKEN")}) when available.}
+variable \code{ZENODO_TOKEN_SANDBOX} when \code{sandbox = TRUE} (then
+\code{ZENODO_TOKEN} as fallback), then keyring secret services
+\code{"ZENODO_TOKEN_SANDBOX"} / \code{"ZENODO_TOKEN"} when available (for example
+\code{keyring::key_set(service = "ZENODO_TOKEN_SANDBOX")}).}
 
 \item{draft}{Logical. If \code{TRUE}, query the draft record endpoint
 (\verb{/api/records/\{id\}/draft}). Draft access usually requires authentication

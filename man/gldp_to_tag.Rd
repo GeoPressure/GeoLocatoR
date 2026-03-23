@@ -24,7 +24,7 @@ A GeoPressureR \code{tag} object contains:
 \item \code{pressure}: data.frame with columns \code{date} and \code{value} (if pressure data available)
 \item \code{light}: data.frame with columns \code{date} and \code{value} (if light data available)
 \item \code{acceleration}: data.frame with columns \code{date}, \code{value} (activity measure), and optionally
-\code{pitch} (if activity/pitch data available)
+\code{mean_acceleration_z} (if available)
 \item \code{temperature_external}: data.frame with columns \code{date} and \code{value}
 (if external temperature data available)
 \item \code{temperature_internal}: data.frame with columns \code{date} and \code{value}
@@ -38,28 +38,28 @@ A GeoPressureR \code{tag} object contains:
 }
 }
 \description{
-This function converts a GeoLocator Data Package (gldp) object to one or more GeoPressureR
-\code{tag} objects. The gldp structure contains data for potentially multiple tags, while each
+This function converts a GeoLocator Data Package (GLDP) object to one or more GeoPressureR
+\code{tag} objects. A GLDP can contain data for multiple tags, while each
 GeoPressureR \code{tag} object represents a single tag's sensor data.
 }
 \details{
-The function extracts sensor data from the gldp's \code{measurements} resource and converts it
+The function extracts sensor data from the GLDP \code{measurements} resource and converts it
 to the format expected by GeoPressureR. The conversion includes:
 \itemize{
 \item Filtering measurements by \code{tag_id}
 \item Reshaping data from long format (measurements) to wide format (sensor-specific data.frames)
-\item Combining related sensors (e.g., \code{activity} and \code{pitch} into \code{acceleration};
+\item Combining related sensors (e.g., \code{activity} and \code{mean_acceleration_z} into \code{acceleration};
 \code{magnetic_x/y/z} into \code{magnetic})
 \item Adding stationary period (\code{stap}) data if available in the package
 \item Adding twilight data if available in the package
-\item Setting appropriate parameter values from the gldp metadata
+\item Setting appropriate parameter values from GLDP metadata
 }
 
 \strong{Sensor mapping from GLDP to GeoPressureR:}
 \itemize{
 \item \code{pressure} → \code{pressure} (date, value)
 \item \code{light} → \code{light} (date, value)
-\item \code{activity} + \code{pitch} → \code{acceleration} (date, value, pitch) where value = activity
+\item \code{activity} + \code{mean_acceleration_z} → \code{acceleration} (date, value, mean_acceleration_z) where value = activity
 \item \code{temperature-external} → \code{temperature_external} (date, value)
 \item \code{temperature-internal} → \code{temperature_internal} (date, value)
 \item \code{magnetic_x/y/z} → \code{magnetic} (date, magnetic_x, magnetic_y, magnetic_z)
@@ -76,7 +76,7 @@ parameters, consistent with how GeoPressureR handles data from GeoLocator Data P
 }
 \examples{
 \dontrun{
-# Read a gldp from a file
+# Read a GLDP from a file
 pkg <- read_gldp("path/to/datapackage.json")
 
 # Convert all tags
@@ -94,6 +94,6 @@ tags <- gldp_to_tag(pkg, tag_id = c("18LX", "18IC"))
 \itemize{
 \item \code{\link[=read_gldp]{read_gldp()}} for reading a GeoLocator Data Package
 \item \code{\link[GeoPressureR:tag_create]{GeoPressureR::tag_create()}} for creating tag objects from raw files
-\item \href{https://raphaelnussbaumer.com/GeoPressureR/}{GeoPressureR documentation}
+\item \href{https://geopressure.org/GeoPressureR/}{GeoPressureR documentation}
 }
 }
