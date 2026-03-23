@@ -1,0 +1,91 @@
+{
+  "name": "pressurepaths",
+  "title": "Pressurepaths",
+  "description": "{:.alert .alert-info}\nA GeoPressureR `pressurepath` contains ERA5 variables along the bird trajectory at hourly intervals, using the exact bird location (including flight segments). [Read more about pressurepaths in the GeoPressureManual](https://raphaelnussbaumer.com/GeoPressureManual/pressurepath.html)\n\nSimilarly to [`path`](/GeoLocator-DP/geopressurer/paths), there are 4 `pressurepath` types: `tag`, `most_likely`, `simulation`, and `geopressureviz`. See [`pressurepaths.type`](#type) for more details.\n\n`pressurepath` should be used in combination with [`staps`](/GeoLocator-DP/geopressurer/staps) and [`paths`](/GeoLocator-DP/geopressurer/paths). Joins are performed on `tag_id` and, for stationary rows, `stap_id`.\n\n{:.alert .alert-warning}\nOnly `tag_id` is defined as a strict foreign key here. `stap_id` can be decimal during migration segments, so it cannot be enforced as a strict foreign key to `staps` in all rows.\n\nThe definition below does not list ERA5 variables, which can (and should!) be added to the table as additional columns (e.g., `'altitude'` or `'surface_pressure'`). Read more about these variables in [the documentation of `pressurepath_create()`](https://raphaelnussbaumer.com/GeoPressureR/reference/pressurepath_create.html#arg-variable).",
+  "$schema": "https://datapackage.org/profiles/2.0/tableschema.json",
+  "fields": [
+    {
+      "name": "tag_id",
+      "description": "Unique identifier of the tag. Foreign key to [`tags.tag_id`](/GeoLocator-DP/core/tags#tag_id).",
+      "type": "string",
+      "constraints": {
+        "required": true
+      },
+      "example": "18LX"
+    },
+    {
+      "name": "datetime",
+      "description": "Date and time of the pressure measurement. Formatted as an ISO 8601 string with timezone designator `YYYY-MM-DDThh:mm:ssZ`.",
+      "type": "datetime",
+      "constraints": {
+        "required": true
+      },
+      "example": "2020-04-01T22:00:00Z",
+      "skos:closeMatch": "http://vocab.nerc.ac.uk/collection/MVB/current/MVB000200"
+    },
+    {
+      "name": "stap_id",
+      "description": "Identifier of the stationary-period index for the trajectory. Integer values correspond to `staps.stap_id` within the same `tag_id`; decimal values indicate pressure measurements taken during migration between two integer stationary periods. For this reason, `stap_id` is not a strict foreign key in this table.",
+      "type": "number",
+      "constraints": {
+        "required": true
+      },
+      "example": "3"
+    },
+    {
+      "name": "type",
+      "description": "One of:\n - `tag`: Created with [`tag2path()`](https://raphaelnussbaumer.com/GeoPressureR/reference/tag2path) from a likelihood map.\n - `most_likely`: Created with [`graph_most_likely()`](https://raphaelnussbaumer.com/GeoPressureR/reference/graph_most_likely.html).\n - `simulation`: Created by [`graph_simulation()`](https://raphaelnussbaumer.com/GeoPressureR/reference/graph_simulation).\n - `geopressureviz`: Created by [`geopressureviz()`](https://raphaelnussbaumer.com/GeoPressureR/reference/geopressureviz).",
+      "type": "string",
+      "constraints": {
+        "required": true,
+        "enum": ["tag", "most_likely", "simulation", "geopressureviz"]
+      },
+      "example": "3"
+    },
+    {
+      "name": "lat",
+      "description": "Latitude of the trajectory position at this timestamp.",
+      "type": "number",
+      "constraints": {
+        "required": true,
+        "minimum": -90,
+        "maximum": 90
+      },
+      "example": "52.70442",
+      "skos:exactMatch": "http://rs.tdwg.org/dwc/terms/decimalLatitude"
+    },
+    {
+      "name": "lon",
+      "description": "Longitude of the trajectory position at this timestamp.",
+      "type": "number",
+      "constraints": {
+        "required": true,
+        "minimum": -180,
+        "maximum": 180
+      },
+      "example": "23.84995",
+      "skos:exactMatch": "http://rs.tdwg.org/dwc/terms/decimalLongitude"
+    },
+    {
+      "name": "j",
+      "description": "Only useful for `pressurepaths.type='simulation'`. Unique identifier for each trajectory, integer from `1` to `nj` as defined in [`GeoPressureR::graph_simulation()`](https://raphaelnussbaumer.com/GeoPressureR/reference/graph_simulation).",
+      "type": "integer",
+      "constraints": {
+        "required": false,
+        "minimum": 1
+      },
+      "example": "1"
+    }
+  ],
+  "missingValues": ["", "NA"],
+  "foreignKeys": [
+    {
+      "fields": "tag_id",
+      "reference": {
+        "resource": "tags",
+        "fields": "tag_id"
+      }
+    }
+  ],
+  "fieldsMatch": ["partial"]
+}

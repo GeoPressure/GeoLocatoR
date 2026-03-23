@@ -53,12 +53,9 @@ validate_gldp <- function(pkg) {
 #' @noRd
 validate_gldp_profile <- function(pkg) {
   cli_h3("Check Profile")
+  version <- gldp_version(pkg)
 
-  pkg_schema <- jsonlite::fromJSON(
-    pkg$`$schema`,
-    simplifyDataFrame = FALSE,
-    simplifyVector = TRUE
-  )
+  pkg_schema <- gldp_profile_schema(version)
 
   required <- unlist(pkg_schema$allOf[[2]]$required)
   properties <- pkg_schema$allOf[[2]]$properties

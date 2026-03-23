@@ -31,12 +31,9 @@ update_gldp <- function(pkg, ...) {
 #' @export
 update_gldp_order_resources <- function(pkg) {
   check_gldp(pkg)
+  version <- gldp_version(pkg)
 
-  pkg_schema <- jsonlite::fromJSON(
-    pkg$`$schema`,
-    simplifyDataFrame = FALSE,
-    simplifyVector = TRUE
-  )
+  pkg_schema <- gldp_profile_schema(version)
 
   resource_order <- pkg_schema$allOf[[2]]$properties$resources$items$oneOf |>
     purrr::map(~ .x$properties$name$enum %||% .x$properties$name$const %||% character(0)) |>

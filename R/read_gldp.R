@@ -4,6 +4,10 @@
 #' GeoLocator-DP profile schema, upgrades older versions when needed, and
 #' computes derived metadata.
 #'
+#' Schema/profile validation uses bundled local schema files shipped with
+#' GeoLocatoR (`inst/schemas`) for supported versions. Runtime reading and
+#' upgrade do not fetch GeoLocator-DP schemas from the internet.
+#'
 #' @param x Path or URL to a GeoLocator-DP `datapackage.json` file.
 #' @param force_read If `TRUE` (default), loads resource data into memory for
 #'   resources defined by path/URL.
