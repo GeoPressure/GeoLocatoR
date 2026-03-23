@@ -7,6 +7,8 @@
 - Do not add validation for internal functions.
 - Only add checks at clear external boundaries (I/O, user input) when necessary.
 - Do not add defensive guards/fallback logic unless explicitly asked or required for external I/O.
+- Ask or inform on potential fallback logic, but don't add them by default
+- Warn me in case of breaking back compatibility. I generally only care about released/version back-compabtility not during develeopement.
 - Do not run tests unless explicitly asked.
 - Do not run `devtools::document()` or regenerate roxygen outputs unless explicitly asked.
 - Do not use `:::` or `::` in tests.

@@ -39,3 +39,6 @@
 
 # pkgdown site
 docs/
+
+/.quarto/
+**/*.quarto_ipynb
