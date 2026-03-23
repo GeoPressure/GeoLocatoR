@@ -14,20 +14,17 @@ print.geolocatordp <- function(x, ...) {
   check_gldp(x)
   x <- update_gldp_order_resources(x)
 
-  cli_h3("A GeoLocator Data Package ({gldp_version(x)})")
+  cli_h1("A GeoLocator Data Package `pkg` ({gldp_version(x)})")
+
+  cli::cli_h3("Metadata")
+  cat_line(
+    format_inline(
+      "{.strong Note}: All {.field green} texts are fields of `pkg` which can be accessed with `pkg${.field field}`)."
+    ),
+    col = "silver"
+  )
   if (isTRUE(x$is_draft)) {
     cli_bullets(c("!" = "{.field status}: {.strong draft}"))
-  }
-  communities <- as.character(unlist(x$communities, recursive = TRUE, use.names = FALSE))
-  communities <- communities[!is.na(communities) & nzchar(trimws(communities))]
-  allowed_communities <- c(
-    "b7c70316-310b-435e-9a8b-84188d60a3cc",
-    "6e9c24fb-954a-4087-ae9b-71fcba41a624"
-  )
-  if (any(communities %in% allowed_communities)) {
-    cli::cli_alert_success("Geolocator DP community")
-  } else {
-    cli::cli_alert_warning("no \"Geolocator DP community\"")
   }
 
   bullets(x, "title")
@@ -72,11 +69,11 @@ print.geolocatordp <- function(x, ...) {
   embargo <- as.character(x$embargo %||% "")[1]
   has_embargo <- nzchar(embargo) && !identical(embargo, "1970-01-01")
   if (identical(access_status, "restricted")) {
-    cli::cli_alert_danger("restricted")
+    cli::cli_bullets(c("x" = "{.field access}: restricted"))
   } else if (has_embargo) {
-    cli::cli_alert_warning("with embargo until: {embargo}")
+    cli::cli_bullets(c("!" = "{.field access}: with embargo until {embargo}"))
   } else {
-    cli::cli_alert_success("no embargo")
+    cli::cli_bullets(c("v" = "{.field access}: Open access"))
   }
 
   if (has_value(x$licenses)) {
@@ -126,6 +123,18 @@ print.geolocatordp <- function(x, ...) {
     } else {
       cli_bullets(c("*" = "{.field codeRepository}: {.val {code_repository}}"))
     }
+  }
+
+  communities <- as.character(unlist(x$communities, recursive = TRUE, use.names = FALSE))
+  communities <- communities[!is.na(communities) & nzchar(trimws(communities))]
+  allowed_communities <- c(
+    "b7c70316-310b-435e-9a8b-84188d60a3cc",
+    "6e9c24fb-954a-4087-ae9b-71fcba41a624"
+  )
+  if (any(communities %in% allowed_communities)) {
+    cli::cli_bullets(c("v" = "{.field community}: Geolocator DP community"))
+  } else {
+    cli::cli_bullets(c("!" = "{.field community}: no Geolocator DP community"))
   }
 
   if (has_value(x$relatedIdentifiers)) {
@@ -190,14 +199,17 @@ print.geolocatordp <- function(x, ...) {
   if (has_value(x$numberTags)) {
     number_tags <- names(x$numberTags)[x$numberTags > 0]
     if (length(number_tags) > 0) {
-      cli_bullets(c("*" = "{.field numberTags}:"))
-      purrr::walk(number_tags, \(nt) {
-        cli_bullets(c(" " = "{.strong {nt}}: {.val {x$numberTags[[nt]]}}"))
-      })
+      number_tags_inline <- purrr::map_chr(
+        number_tags,
+        \(nt) glue::glue("{nt}: {x$numberTags[[nt]]}")
+      )
+      cli_bullets(c(
+        "*" = "{.field numberTags}: {glue::glue_collapse(number_tags_inline, sep = ', ')}"
+      ))
     }
   }
 
-  cli_h3("{length(x$resources)} {.field resources}")
+  cli_h3("Resources: ({length(x$resources)} {.field resources}) ")
   if (length(x$resources) > 0) {
     purrr::walk(x$resources, \(res) {
       n <- if (is.data.frame(res$data)) {
@@ -208,17 +220,13 @@ print.geolocatordp <- function(x, ...) {
         NA_integer_
       }
       if (is.na(n)) {
-        cli_bullets(c("*" = "{.field {res$name}}"))
+        cli_bullets(c("*" = "{.fun {res$name}}"))
       } else {
-        cli_bullets(c("*" = "{.field {res$name}} (n={format(n, big.mark=',')})"))
+        cli_bullets(c("*" = "{.fun {res$name}} (n={format(n, big.mark=',')})"))
       }
     })
   }
 
-  cat_line(
-    format_inline("Use {.fun unclass} to print the Geolocator Data Package as a list."),
-    col = "silver"
-  )
   invisible(x)
 }
 
@@ -236,15 +244,7 @@ has_value <- function(value) {
   TRUE
 }
 
-#' Print formatted bullets for package fields
-#'
-#' Internal helper function to print formatted bullet points for specific fields
-#' in a GeoLocator Data Package object.
-#'
-#' @param pkg A GeoLocator Data Package object
-#' @param field_name Character string of the field name to print
-#' @return Nothing (side effect: prints to console)
-#' @noRd
+# Print formatted bullets for package fields
 bullets <- function(pkg, field_name) {
   val <- pkg[[field_name]]
   if (!has_value(val)) {

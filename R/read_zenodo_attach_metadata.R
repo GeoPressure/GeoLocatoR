@@ -2,7 +2,24 @@
 read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
   z <- zenodo_record
   m <- z$metadata %||% list()
-  pkg$id <- glue::glue("https://zenodo.org/doi/10.5281/zenodo.{z$id}")
+  doi <- z$doi %||% purrr::pluck(z, "pids", "doi", "identifier", .default = NULL)
+  doi <- sub("^https?://(dx\\.)?doi\\.org/", "", as.character(doi)[1], ignore.case = TRUE)
+  pkg$id <- if (!is.na(doi) && nzchar(doi)) {
+    as.character(glue::glue("https://doi.org/{doi}"))
+  } else {
+    NULL
+  }
+  concept_id <- as.character(purrr::pluck(z, "parent", "id", .default = NA_character_))[1]
+  concept_doi <- if (!is.na(concept_id) && nzchar(concept_id) && !is.na(doi) && nzchar(doi)) {
+    sub("[0-9]+$", concept_id, doi)
+  } else {
+    NA_character_
+  }
+  pkg$conceptid <- if (!is.na(concept_doi) && nzchar(concept_doi)) {
+    as.character(glue::glue("https://doi.org/{concept_doi}"))
+  } else {
+    NULL
+  }
   pkg$name <- z$id
   pkg$title <- m$title
   pkg$description <- m$description
@@ -28,10 +45,10 @@ read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
       path = if (is.null(orcid)) NULL else glue::glue("https://orcid.org/{orcid}"),
       # email = NULL,
       roles = creator$role$id %||% NULL,
-      organization = glue::glue_collapse(
+      organization = as.character(glue::glue_collapse(
         purrr::map_chr(creator$affiliations, "name"),
         sep = ", "
-      )
+      ))
     ))
   })
   pkg$relatedIdentifiers <- purrr::map(m$related_identifiers %||% list(), \(x) {
@@ -53,7 +70,6 @@ read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
   }
   pkg$grants <- purrr::map_chr(m$funding %||% list(), \(x) x$funder$name %||% "")
   pkg$keywords <- purrr::map_chr(m$subjects %||% list(), \(x) x$subject %||% "")
-  pkg$conceptdoi <- z$conceptdoi %||% purrr::pluck(z, "parent", "doi", .default = NULL)
   pkg$codeRepository <- z$custom_fields$`code:codeRepository` %||% NULL
   pkg$status <- z$status
   pkg$record_type <- m$resource_type$id %||% NULL

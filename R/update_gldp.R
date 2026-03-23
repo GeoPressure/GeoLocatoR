@@ -179,14 +179,15 @@ update_gldp_number_tags <- function(pkg) {
 update_gldp_bibliographic_citation <- function(pkg, ...) {
   check_gldp(pkg)
 
-  doi_raw <- first_non_empty_string(pkg$id, pkg$conceptdoi)
+  doi_raw <- first_non_empty_string(pkg$conceptid, pkg$id)
   doi <- if (!is.null(doi_raw)) {
-    sub(
-      "^https?://(dx\\.)?doi\\.org/|^https?://handle(\\.test)?\\.datacite\\.org/",
+    doi_candidate <- sub(
+      "^https?://(dx\\.)?doi\\.org/",
       "",
-      doi_raw,
+      as.character(doi_raw)[1],
       ignore.case = TRUE
     )
+    if (grepl("^10\\.", doi_candidate)) doi_candidate else NULL
   } else {
     NULL
   }

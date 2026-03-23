@@ -1203,7 +1203,8 @@ validate_gldp_meta <- function(pkg) {
   allowed_manufacturers <- c(
     "Swiss Ornithological Institute",
     "Migrate Technology Limited",
-    "Lund University"
+    "Lund University",
+    "British Antarctic Survey"
   )
   if ("tags" %in% frictionless::resources(pkg)) {
     t <- tags(pkg)
@@ -1263,7 +1264,7 @@ validate_gldp_meta <- function(pkg) {
     )
     has_warnings <- TRUE
   }
-  has_warnings <- has_warnings | validate_gldp_taxonomy(pkg)
+  has_warnings <- has_warnings | validate_gldp_taxonomic(pkg)
 
   if (!has_warnings) {
     cli_alert_success("Metadata recommendations passed.")
@@ -1273,8 +1274,8 @@ validate_gldp_meta <- function(pkg) {
 }
 
 #' @noRd
-validate_gldp_taxonomy <- function(pkg) {
-  species <- pkg$taxonomy %||% pkg$taxonomic %||% character(0)
+validate_gldp_taxonomic <- function(pkg) {
+  species <- pkg$taxonomic %||% character(0)
   species <- unique(trimws(as.character(species)))
   species <- species[!is.na(species) & nzchar(species)]
   if (length(species) == 0) {
@@ -1291,7 +1292,7 @@ validate_gldp_taxonomy <- function(pkg) {
       httr2::resp_body_json(simplifyVector = TRUE),
     error = function(e) {
       cli::cli_alert_warning(
-        "Could not validate {.field pkg$taxonomy} against eBird taxonomy: {e$message}."
+        "Could not validate {.field pkg$taxonomic} against eBird taxonomy: {e$message}."
       )
       NULL
     }
@@ -1311,7 +1312,7 @@ validate_gldp_taxonomy <- function(pkg) {
   invalid <- setdiff(species, ebird_names)
   if (length(invalid) > 0) {
     cli::cli_alert_warning(
-      "Scientific names in {.field pkg$taxonomy} not matching any entry in eBird taxonomy: {.val {invalid}}."
+      "Scientific names in {.field pkg$taxonomic} not matching any entry in eBird taxonomy: {.val {invalid}}."
     )
     return(TRUE)
   }

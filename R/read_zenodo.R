@@ -68,7 +68,7 @@ read_zenodo <- function(
   token <- resolve_zenodo_token(token = token, sandbox = sandbox)
 
   # 1) Fetch Zenodo record
-  cli_progress_step("Retrieve Zenodo record")
+  cli_progress_step("Retrieve Zenodo record {.field {parse_zenodo_id(id)}}")
   zenodo_record <- read_zenodo_fetch_record(
     id,
     token = token,
@@ -86,7 +86,7 @@ read_zenodo <- function(
 
   # 3) Read downloaded datapackage
   if (!is.null(download_dir)) {
-    cli_progress_step("Read and upgrade geolocator dp")
+    cli_progress_step("Read and upgrade GeoLocator-DP")
     pkg <- read_gldp(file.path(download_dir, "datapackage.json"))
   } else {
     pkg <- create_gldp()
