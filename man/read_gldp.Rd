@@ -4,13 +4,17 @@
 \alias{read_gldp}
 \title{Read a GeoLocator Data Package}
 \usage{
-read_gldp(x = "datapackage.json", force_read = TRUE)
+read_gldp(x = "datapackage.json", force_read = TRUE, drop_measurements = FALSE)
 }
 \arguments{
 \item{x}{Path or URL to a GeoLocator-DP \code{datapackage.json} file.}
 
 \item{force_read}{If \code{TRUE} (default), loads resource data into memory for
 resources defined by path/URL.}
+
+\item{drop_measurements}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}} If \code{TRUE},
+drops the \code{measurements} resource after reading \code{datapackage.json} and
+before loading resource data.}
 }
 \value{
 A \code{geolocatordp} object.
@@ -19,11 +23,6 @@ A \code{geolocatordp} object.
 Reads a local or remote \code{datapackage.json}, validates that it uses the
 GeoLocator-DP profile schema, upgrades older versions when needed, and
 computes derived metadata.
-}
-\details{
-Schema/profile validation uses bundled local schema files shipped with
-GeoLocatoR (\code{inst/schemas}) for supported versions. Runtime reading and
-upgrade do not fetch GeoLocator-DP schemas from the internet.
 }
 \examples{
 \dontrun{

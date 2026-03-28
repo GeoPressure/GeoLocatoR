@@ -4,13 +4,13 @@
 #' GeoLocator-DP profile schema, upgrades older versions when needed, and
 #' computes derived metadata.
 #'
-#' Schema/profile validation uses bundled local schema files shipped with
-#' GeoLocatoR (`inst/schemas`) for supported versions. Runtime reading and
-#' upgrade do not fetch GeoLocator-DP schemas from the internet.
 #'
 #' @param x Path or URL to a GeoLocator-DP `datapackage.json` file.
 #' @param force_read If `TRUE` (default), loads resource data into memory for
 #'   resources defined by path/URL.
+#' @param drop_measurements `r lifecycle::badge("experimental")` If `TRUE`,
+#'   drops the `measurements` resource after reading `datapackage.json` and
+#'   before loading resource data.
 #'
 #' @return A `geolocatordp` object.
 #'
@@ -20,7 +20,7 @@
 #' pkg_remote <- read_gldp("https://example.org/datapackage.json")
 #' }
 #' @export
-read_gldp <- function(x = "datapackage.json", force_read = TRUE) {
+read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measurements = FALSE) {
   pkg <- frictionless::read_package(x)
   base_dir <- dirname(x)
 
@@ -32,6 +32,11 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE) {
 
   # Add class
   class(pkg) <- c("geolocatordp", class(pkg))
+
+  # Drop measurements
+  if (isTRUE(drop_measurements)) {
+    pkg$resources <- purrr::keep(pkg$resources, \(r) !identical(r$name, "measurements"))
+  }
 
   # Optionally load each resource table immediately into memory.
   # Goal: return a self-contained package where `resources[[i]]$data` is available
