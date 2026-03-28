@@ -32,7 +32,7 @@
 #' - **`read_soi_gld_access()`**: Extracts GDL data and order information from an Access database file
 #' and exports them to temporary CSV files.
 #'
-#' @noRd
+#' @export
 read_soi_gld <- function(
   access_file = NA,
   data_file = NA,

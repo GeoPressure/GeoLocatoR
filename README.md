@@ -21,8 +21,8 @@ coverage](https://codecov.io/gh/GeoPressure/GeoLocatoR/graph/badge.svg)](https:/
 
 **GeoLocatoR** is an R package designed to help you create and work with
 the [GeoLocator Data Package (GeoLocator
-DP)](https://geopressure.org/GeoLocator-DP/), a standardized
-format for geolocator data that follows the [Data Package
+DP)](https://geopressure.org/GeoLocator-DP/), a standardized format for
+geolocator data that follows the [Data Package
 standard](https://datapackage.org/standard/data-package/), ensuring your
 data is organized, accessible, and ready to share.
 
@@ -32,15 +32,12 @@ data is organized, accessible, and ready to share.
   Data Package object, add resources (data), and write it to your
   preferred directory. You can also read existing packages from disk
   (`read_gldp()`) or from Zenodo (`read_zenodo()`).
-- **Works Seamlessly with GeoPressureTemplate**: GeoLocatoR is
-  compatible with
+- **Integration with GeoPressureTemplate**: GeoLocatoR is compatible
+  with
   [GeoPressureTemplate](https://github.com/GeoPressure/GeoPressureTemplate)
   — a template repository for analyzing geolocator data using
   GeoPressureR. Use both together to streamline your analysis and
   maintain a standardized project structure.
-- **Supports Swiss Ornithological Institute Data**: Dedicated functions
-  support internal SOI exports. [See this
-  vignette](https://rpubs.com/GeoPressure/Geolocator_create_from_soi).
 - **Built on frictionless**: This package is built using the
   [`frictionless`](https://docs.ropensci.org/frictionless/) package,
   adhering to the Frictionless Data standards for open data.

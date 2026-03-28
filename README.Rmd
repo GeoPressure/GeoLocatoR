@@ -34,8 +34,7 @@ knitr::opts_chunk$set(
 ## 🛰️ Main Features
 
 - **Creates and reads GeoLocator Data Packages**: Create a GeoLocator Data Package object, add resources (data), and write it to your preferred directory. You can also read existing packages from disk (`read_gldp()`) or from Zenodo (`read_zenodo()`).
-- **Works Seamlessly with GeoPressureTemplate**: GeoLocatoR is compatible with [GeoPressureTemplate](https://github.com/GeoPressure/GeoPressureTemplate) — a template repository for analyzing geolocator data using GeoPressureR. Use both together to streamline your analysis and maintain a standardized project structure.
-- **Supports Swiss Ornithological Institute Data**: Dedicated functions support internal SOI exports. [See this vignette](https://rpubs.com/GeoPressure/Geolocator_create_from_soi).
+- **Integration with GeoPressureTemplate**: GeoLocatoR is compatible with [GeoPressureTemplate](https://github.com/GeoPressure/GeoPressureTemplate) — a template repository for analyzing geolocator data using GeoPressureR. Use both together to streamline your analysis and maintain a standardized project structure.
 - **Built on frictionless**: This package is built using the [`frictionless`](https://docs.ropensci.org/frictionless/) package, adhering to the Frictionless Data standards for open data.
 
 ## 📦 What is a GeoLocator Data Package?

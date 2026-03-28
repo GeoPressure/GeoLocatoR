@@ -377,37 +377,55 @@ read_soi_directory <- function(gdl, directory_data) {
       "x" = "{.arg gdl} must contain {.field OrderName} and {.field GDL_ID} columns."
     ))
   }
-  if (any(is.na(gdl$OrderName) | gdl$OrderName == "")) {
-    cli_abort(c(
-      "x" = "The {.field OrderName} column contains empty values."
-    ))
-  }
-  if (any(is.na(gdl$GDL_ID) | gdl$GDL_ID == "")) {
-    cli_abort(c(
-      "x" = "The {.field GDL_ID} column contains empty values."
-    ))
-  }
   if (!dir.exists(directory_data)) {
     cli_abort(c(
       "x" = "{.arg directory_data} must be an existing directory."
     ))
   }
 
-  # Function to get the highest alphabetical directory path matching the GDL_ID pattern
+  # Function to retrieve data directory path and an optional issue description
   check_folder_exists <- function(order_name, gdl_id, base_dir) {
+    if (length(order_name) != 1 || is.na(order_name) || order_name == "") {
+      return(list(
+        directory = NA_character_,
+        reason = "OrderName is missing or empty."
+      ))
+    }
+    if (length(gdl_id) != 1 || is.na(gdl_id) || gdl_id == "") {
+      return(list(
+        directory = NA_character_,
+        reason = "GDL_ID is missing or empty."
+      ))
+    }
+
     order_dir <- file.path(base_dir, order_name)
+    if (!dir.exists(order_dir) && order_name != "Wallis") {
+      return(list(
+        directory = NA_character_,
+        reason = glue::glue("Order directory not found: {order_dir}")
+      ))
+    }
 
     # 1 find folder with tag_id name
-    folders <- list.dirs(order_dir, recursive = FALSE, full.names = FALSE)
+    folders <- if (dir.exists(order_dir)) {
+      list.dirs(order_dir, recursive = FALSE, full.names = FALSE)
+    } else {
+      character()
+    }
     matching_folders <- sort(
-      folders[grepl(glue::glue("^{gdl_id}"), folders)],
+      folders[startsWith(folders, as.character(gdl_id))],
       decreasing = TRUE
     )
     if (length(matching_folders) == 1) {
-      return(file.path(order_dir, matching_folders[1]))
+      return(list(
+        directory = file.path(order_dir, matching_folders[1]),
+        reason = NA_character_
+      ))
     } else if (length(matching_folders) > 1) {
-      print(matching_folders)
-      return(file.path(order_dir, matching_folders[1]))
+      return(list(
+        directory = file.path(order_dir, matching_folders[1]),
+        reason = NA_character_
+      ))
     }
 
     # 2 find file with tag_id name
@@ -428,7 +446,7 @@ read_soi_directory <- function(gdl, directory_data) {
       files <- list.files(order_dir, recursive = FALSE, full.names = TRUE)
     }
 
-    matching_files <- files[grepl(glue::glue("^{gdl_id}"), basename(files))]
+    matching_files <- files[startsWith(basename(files), as.character(gdl_id))]
     # Check if there are matching files and prioritize .glf files
     if (length(matching_files) > 0) {
       # Look for a .glf file first
@@ -436,35 +454,55 @@ read_soi_directory <- function(gdl, directory_data) {
 
       # If there are .glf files, return the first one, otherwise return the first matching file
       if (length(glf_files) > 0) {
-        return(glf_files[1])
+        return(list(
+          directory = glf_files[1],
+          reason = NA_character_
+        ))
       } else {
-        return(matching_files[1])
+        return(list(
+          directory = matching_files[1],
+          reason = NA_character_
+        ))
       }
     }
-    NA
+    list(
+      directory = NA_character_,
+      reason = glue::glue(
+        "No folder or file starting with GDL_ID {gdl_id} was found in {order_name}."
+      )
+    )
   }
 
-  # Apply the check_folder_exists function to each row and add directory and folder_exists columns
-  gdl <- gdl |>
-    rowwise() |>
-    mutate(
-      directory = check_folder_exists(
-        .data$OrderName,
-        .data$GDL_ID,
-        directory_data
-      )
-    ) |>
-    ungroup()
+  # Apply directory lookup row-wise while preserving table shape
+  directory_lookup <- purrr::map2(
+    gdl$OrderName,
+    gdl$GDL_ID,
+    check_folder_exists,
+    base_dir = directory_data
+  )
+  gdl$directory <- purrr::map_chr(directory_lookup, "directory")
+  directory_reason <- purrr::map_chr(directory_lookup, "reason")
 
-  # Display warning for any missing directories
-  gdl_id_na_dir <- gdl |>
-    filter(is.na(.data$directory)) |>
-    pull(.data$GDL_ID)
+  # Display warning for missing directories with reasons
+  missing_directory <- gdl |>
+    mutate(directory_reason = directory_reason) |>
+    filter(is.na(.data$directory))
 
-  if (length(gdl_id_na_dir) > 0) {
+  if (nrow(missing_directory) > 0) {
+    details <- paste0(
+      "GDL_ID=", missing_directory$GDL_ID,
+      " | OrderName=", missing_directory$OrderName,
+      " | reason=", missing_directory$directory_reason
+    )
     cli_warn(c(
-      "!" = "Could not find data directory for {length(gdl_id_na_dir)} tags (out of {nrow(gdl)}).",
-      ">" = "GDL_IDs: {.field {gdl_id_na_dir}}. These will not be imported."
+      "!" = paste0(
+        "Could not find data directory for ",
+        nrow(missing_directory),
+        " tags (out of ",
+        nrow(gdl),
+        "). Rows are kept with {.field directory} = NA."
+      ),
+      setNames(as.list(details), rep("x", length(details)))
     ))
   }
   gdl
