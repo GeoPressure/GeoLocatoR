@@ -54,8 +54,11 @@ pak::pkg_install("GeoPressure/GeoLocatoR@dev")
 ```
 
 ## 📖 How to use 
+Learn how to use GeoLocatoR with the dedicated part of the [GeoPressureManual](https://geopressure.org/GeoPressureManual/geolocator-intro.html).
 
-<a href="https://geopressure.org/GeoPressureManual/geolocator-intro.html"><img src="https://github.com/GeoPressure/GeoPressureManual/raw/main/assets/cover.png" height="220" alt="GeoPressureManual cover" /></a> Learn how to use GeoLocatoR with the dedicated part of the [GeoPressureManual](https://geopressure.org/GeoPressureManual/geolocator-intro.html).
+<p align="center">
+<a href="https://geopressure.org/GeoPressureManual/"><img src="https://github.com/GeoPressure/GeoPressureManual/raw/main/assets/cover.png" style="margin: 0 1rem 0 1rem;box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);" align="center" width="250" height="328"></a>
+</p>
 
 ## 🔧 Development note
 

@@ -490,9 +490,12 @@ read_soi_directory <- function(gdl, directory_data) {
 
   if (nrow(missing_directory) > 0) {
     details <- paste0(
-      "GDL_ID=", missing_directory$GDL_ID,
-      " | OrderName=", missing_directory$OrderName,
-      " | reason=", missing_directory$directory_reason
+      "GDL_ID=",
+      missing_directory$GDL_ID,
+      " | OrderName=",
+      missing_directory$OrderName,
+      " | reason=",
+      missing_directory$directory_reason
     )
     cli_warn(c(
       "!" = paste0(
