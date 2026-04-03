@@ -4,6 +4,8 @@ template:
   bslib:
     bootswatch: flatly
     primary: "#516F6A"
+  includes:
+    in_header: pkgdown/analytics.html
 
 reference:
   - title: Core Workflow
