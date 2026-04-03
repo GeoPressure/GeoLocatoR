@@ -20,26 +20,7 @@ validate_gldp_coherence <- function(pkg) {
 validate_gldp_geopressure_coherence <- function(pkg) {
   valid <- TRUE
   resources <- pkg$resources %||% list()
-
-  # Retrieve a resource descriptor and data by resource name.
-  get_resource <- function(resource_name) {
-    idx <- which(vapply(
-      resources,
-      \(r) identical(as.character(r$name %||% NA_character_)[1], resource_name),
-      logical(1)
-    ))
-    if (length(idx) == 0) {
-      return(NULL)
-    }
-    resources[[idx[1]]]
-  }
-  get_resource_data <- function(resource_name) {
-    resource <- get_resource(resource_name)
-    if (is.null(resource) || !is.data.frame(resource$data)) {
-      return(NULL)
-    }
-    resource$data
-  }
+  resource_names <- vapply(resources, \(x) x$name %||% NA_character_, character(1))
 
   # Validate numeric columns that should stay below strict thresholds.
   check_lt <- function(data, resource_name, field, upper) {
@@ -81,7 +62,8 @@ validate_gldp_geopressure_coherence <- function(pkg) {
     start_field,
     end_field,
     min_seconds,
-    max_seconds
+    max_seconds,
+    warn_unusual = FALSE
   ) {
     if (
       is.null(data) ||
@@ -97,31 +79,38 @@ validate_gldp_geopressure_coherence <- function(pkg) {
     invalid <- !is.na(duration) &
       (duration <= min_seconds | duration >= max_seconds)
     if (any(invalid)) {
-      cli_alert_danger(
-        "{sum(invalid)} duration{?s} in {.field {resource_name}${start_field}/{end_field}} are outside expected range."
-      )
-      valid <<- FALSE
-    }
-  }
+      format_duration <- function(seconds) {
+        if (abs(seconds) >= 24 * 60 * 60) {
+          return(glue::glue("{round(seconds / (24 * 60 * 60), 1)} days"))
+        }
+        if (abs(seconds) >= 60 * 60) {
+          return(glue::glue("{round(seconds / (60 * 60), 1)} hours"))
+        }
+        glue::glue("{round(seconds / 60, 1)} min")
+      }
+      invalid_duration <- duration[invalid]
+      expected_range_label <- purrr::map_chr(c(min_seconds, max_seconds), format_duration)
+      invalid_high <- invalid_duration[invalid_duration >= max_seconds]
+      invalid_low <- invalid_duration[invalid_duration <= min_seconds]
 
-  # Validate vector magnitudes (ground speed and wind speed components).
-  check_vector_magnitude <- function(data, resource_name, u_field, v_field, upper) {
-    if (
-      is.null(data) ||
-        !all(c(u_field, v_field) %in% names(data))
-    ) {
-      return(invisible(NULL))
-    }
+      if (length(invalid_high) > 0) {
+        extreme_label <- format_duration(max(invalid_high))
+        extreme_kind <- "Maximum"
+      } else {
+        extreme_label <- format_duration(min(invalid_low))
+        extreme_kind <- "Minimum"
+      }
 
-    u <- suppressWarnings(as.numeric(data[[u_field]]))
-    v <- suppressWarnings(as.numeric(data[[v_field]]))
-    magnitude <- sqrt(u^2 + v^2)
-    invalid <- !is.na(magnitude) & magnitude >= upper
-    if (any(invalid)) {
-      cli_alert_danger(
-        "{sum(invalid)} vector magnitude{?s} in {.field {resource_name}${u_field}/{v_field}} must be < {.val {upper}}."
-      )
-      valid <<- FALSE
+      if (warn_unusual) {
+        cli_alert_warning(
+          "We detected unusual duration for {.field {resource_name}} ({sum(invalid)} value{?s} outside expected range: {expected_range_label[1]} < duration < {expected_range_label[2]}). {extreme_kind} unusual duration: {extreme_label}."
+        )
+      } else {
+        cli_alert_danger(
+          "{sum(invalid)} duration{?s} in {.field {resource_name}} are outside expected range ({expected_range_label[1]} < duration < {expected_range_label[2]}). {extreme_kind} invalid duration: {extreme_label}."
+        )
+        valid <<- FALSE
+      }
     }
   }
 
@@ -152,9 +141,9 @@ validate_gldp_geopressure_coherence <- function(pkg) {
           next
         }
 
-        parent_resource <- get_resource(parent_name)
-        parent_data <- parent_resource$data %||% NULL
-        if (is.null(parent_resource) || !is.data.frame(parent_data)) {
+        parent_idx <- match(parent_name, resource_names)
+        parent_data <- if (is.na(parent_idx)) NULL else resources[[parent_idx]]$data %||% NULL
+        if (is.null(parent_data) || !is.data.frame(parent_data)) {
           cli_alert_danger(
             "Foreign key check for {.field {child_name}} failed: parent resource {.field {parent_name}} is missing."
           )
@@ -203,55 +192,107 @@ validate_gldp_geopressure_coherence <- function(pkg) {
   }
 
   # Check realistic value ranges in staps.
-  staps_data <- get_resource_data("staps")
-  check_lt(staps_data, "staps", "stap_id", 300)
-  check_datetime_window(staps_data, "staps", "start")
-  check_datetime_window(staps_data, "staps", "end")
-  check_duration_window(
-    staps_data,
-    "staps",
-    "start",
-    "end",
-    min_seconds = 5 * 60,
-    max_seconds = 360 * 24 * 60 * 60
-  )
+  if ("staps" %in% resource_names) {
+    staps_data <- staps(pkg)
+    check_lt(staps_data, "staps", "stap_id", 300)
+    check_datetime_window(staps_data, "staps", "start")
+    check_datetime_window(staps_data, "staps", "end")
+    check_duration_window(
+      staps_data,
+      "staps",
+      "start",
+      "end",
+      min_seconds = 5 * 60,
+      max_seconds = 360 * 24 * 60 * 60
+    )
+  }
 
   # Check realistic date ranges in twilights and pressurepaths.
-  twilights_data <- get_resource_data("twilights")
-  check_datetime_window(twilights_data, "twilights", "twilight")
+  if ("twilights" %in% resource_names) {
+    twilights_data <- twilights(pkg)
+    check_datetime_window(twilights_data, "twilights", "twilight")
+  }
 
-  pressurepaths_data <- get_resource_data("pressurepaths")
-  check_datetime_window(pressurepaths_data, "pressurepaths", "datetime")
-  if (!is.null(pressurepaths_data) && "altitude" %in% names(pressurepaths_data)) {
-    altitude <- suppressWarnings(as.numeric(pressurepaths_data$altitude))
-    invalid_altitude <- !is.na(altitude) & (altitude <= -10 | altitude >= 7000)
-    if (any(invalid_altitude)) {
-      cli_alert_danger(
-        "{sum(invalid_altitude)} value{?s} in {.field pressurepaths$altitude} must be > -10 and < 7000."
-      )
-      valid <- FALSE
+  if ("pressurepaths" %in% resource_names) {
+    pressurepaths_data <- pressurepaths(pkg)
+    check_datetime_window(pressurepaths_data, "pressurepaths", "datetime")
+    if ("altitude" %in% names(pressurepaths_data)) {
+      altitude <- suppressWarnings(as.numeric(pressurepaths_data$altitude))
+      invalid_altitude <- !is.na(altitude) & (altitude <= -200 | altitude >= 7000)
+      if (any(invalid_altitude)) {
+        cli_alert_danger(
+          "{sum(invalid_altitude)} value{?s} in {.field pressurepaths$altitude} must be > -200 and < 7000."
+        )
+        valid <- FALSE
+      }
     }
   }
 
   # Check realistic value ranges in paths and edges.
-  paths_data <- get_resource_data("paths")
-  check_lt(paths_data, "paths", "j", 500)
+  if ("paths" %in% resource_names) {
+    paths_data <- paths(pkg)
+    check_lt(paths_data, "paths", "j", 500)
+  }
 
-  edges_data <- get_resource_data("edges")
-  check_datetime_window(edges_data, "edges", "start")
-  check_datetime_window(edges_data, "edges", "end")
-  check_duration_window(
-    edges_data,
-    "edges",
-    "start",
-    "end",
-    min_seconds = 5 * 60,
-    max_seconds = 50 * 60 * 60
-  )
-  check_lt(edges_data, "edges", "n", 10)
-  check_lt(edges_data, "edges", "distance", 3000)
-  check_vector_magnitude(edges_data, "edges", "gs_u", "gs_v", 150)
-  check_vector_magnitude(edges_data, "edges", "ws_u", "ws_v", 100)
+  if ("edges" %in% resource_names) {
+    edges_data <- edges(pkg)
+    check_datetime_window(edges_data, "edges", "start")
+    check_datetime_window(edges_data, "edges", "end")
+    check_duration_window(
+      edges_data,
+      "edges",
+      "start",
+      "end",
+      min_seconds = 5 * 60,
+      max_seconds = 50 * 60 * 60,
+      warn_unusual = TRUE
+    )
+    check_lt(edges_data, "edges", "n", 10)
+
+    if ("distance" %in% names(edges_data)) {
+      distance_values <- suppressWarnings(as.numeric(edges_data$distance))
+      unusual_distance <- !is.na(distance_values) & distance_values >= 3000
+      if (any(unusual_distance)) {
+        max_unusual_distance <- max(distance_values[unusual_distance])
+        max_unusual_distance_label <- if (max_unusual_distance %% 1 == 0) {
+          format(
+            max_unusual_distance,
+            big.mark = ",",
+            scientific = FALSE,
+            trim = TRUE
+          )
+        } else {
+          format(
+            round(max_unusual_distance, 1),
+            nsmall = 1,
+            big.mark = ",",
+            scientific = FALSE,
+            trim = TRUE
+          )
+        }
+        cli_alert_warning(
+          "We detected unusual distance for {.field edges} ({sum(unusual_distance)} value{?s} > 3000 km). Maximum unusual distance: {max_unusual_distance_label} km."
+        )
+      }
+    }
+
+    unusual_speed <- FALSE
+    if (all(c("gs_u", "gs_v") %in% names(edges_data))) {
+      gs_u <- suppressWarnings(as.numeric(edges_data$gs_u))
+      gs_v <- suppressWarnings(as.numeric(edges_data$gs_v))
+      gs_magnitude <- sqrt(gs_u^2 + gs_v^2)
+      unusual_speed <- unusual_speed | any(!is.na(gs_magnitude) & gs_magnitude >= 150)
+    }
+    if (all(c("ws_u", "ws_v") %in% names(edges_data))) {
+      ws_u <- suppressWarnings(as.numeric(edges_data$ws_u))
+      ws_v <- suppressWarnings(as.numeric(edges_data$ws_v))
+      ws_magnitude <- sqrt(ws_u^2 + ws_v^2)
+      unusual_speed <- unusual_speed | any(!is.na(ws_magnitude) & ws_magnitude >= 100)
+    }
+    if (unusual_speed) {
+      cli_alert_warning("We detected unusual speed for edges.")
+    }
+  }
 
   # Check that child foreign key values are present in parent resources.
   check_foreign_keys()
@@ -269,8 +310,7 @@ validate_gldp_core_coherence <- function(pkg) {
   ]
   if (length(res_missing) > 0) {
     cli::cli_alert_warning(
-      "{.pkg pkg} is missing {.val {res_missing}}. \\
-                      We could not check package coherence."
+      "{.pkg pkg} is missing {.val {res_missing}}. We could not check package coherence."
     )
     valid <- FALSE
     return(valid)
@@ -304,12 +344,10 @@ validate_gldp_core_coherence <- function(pkg) {
   midmissing <- unique(m$tag_id[!(m$tag_id %in% t$tag_id)])
   if (length(midmissing) > 1) {
     cli_alert_danger(
-      "{.field tags} is missing {.field tag_id}={.val {midmissing}} which are present in \\
-    {.field measurements}."
+      "{.field tags} is missing {.field tag_id}={.val {midmissing}} which are present in {.field measurements}."
     )
     cli_alert_info(
-      "All {.field tag_id} presents in the resource {.field measurements} need to also be present \\
-    in the resource {.field tags}."
+      "All {.field tag_id} presents in the resource {.field measurements} need to also be present in the resource {.field tags}."
     )
     valid <- FALSE
   }
@@ -319,8 +357,7 @@ validate_gldp_core_coherence <- function(pkg) {
   tringmissing <- unique(t$ring_number[!(t$ring_number %in% o$ring_number)])
   if (length(tringmissing) > 1) {
     cli_alert_danger(
-      "{.field observations} is missing {.field ring_number} {.val {tringmissing}} which are \\
-      present in {.field tags}."
+      "{.field observations} is missing {.field ring_number} {.val {tringmissing}} which are present in {.field tags}."
     )
     valid <- FALSE
   }
@@ -332,8 +369,7 @@ validate_gldp_core_coherence <- function(pkg) {
     anti_join(t, by = c("tag_id", "ring_number"))
   if (nrow(invalid_combinations) > 0) {
     cli_alert_danger(
-      "The following {.field tag_id} and {.field ring_number} combinations in \\
-      {.field observation} are not present in {.field tags}:"
+      "The following {.field tag_id} and {.field ring_number} combinations in {.field observation} are not present in {.field tags}:"
     )
     print(invalid_combinations)
     valid <- FALSE
@@ -358,8 +394,7 @@ validate_gldp_core_coherence <- function(pkg) {
   )
   if (length(tidmissingequip) > 0) {
     cli_alert_danger(
-      "No equipment found for {.val {tidmissingequip}} in in {.field observations} while \\
-      data present in {.field measurements}."
+      "No equipment found for {.val {tidmissingequip}} in in {.field observations} while data present in {.field measurements}."
     )
     valid <- FALSE
   }
@@ -369,8 +404,7 @@ validate_gldp_core_coherence <- function(pkg) {
   )
   if (length(tidmissingret) > 0) {
     cli_alert_danger(
-      "No retrieval found for {.val {tidmissingret}} in in {.field observations} while \\
-      data present in {.field measurements}."
+      "No retrieval found for {.val {tidmissingret}} in in {.field observations} while data present in {.field measurements}."
     )
     valid <- FALSE
   }
@@ -402,8 +436,7 @@ validate_gldp_observations <- function(o) {
 
   if (nrow(inconsistent_tag_ids) > 0) {
     cli_alert_danger(
-      "{nrow(inconsistent_tag_ids)} tag_id{?s} {?is/are} associated with multiple \\
-                     ring_numbers. Check: {.field {inconsistent_tag_ids$tag_id}}"
+      "{nrow(inconsistent_tag_ids)} tag_id{?s} {?is/are} associated with multiple ring_numbers. Check: {.field {inconsistent_tag_ids$tag_id}}"
     )
     valid <- FALSE
   }
@@ -419,8 +452,7 @@ validate_gldp_observations <- function(o) {
   if (nrow(missing_tag_id) > 0) {
     error_tag <- unique(missing_tag_id$tag_id)
     cli_alert_danger(
-      "{length(error_tag)} equipment or retrieval observation{?s} {?is/are} \\
-                          missing a tag_id. Check: {.field {error_tag}}"
+      "{length(error_tag)} equipment or retrieval observation{?s} {?is/are} missing a tag_id. Check: {.field {error_tag}}"
     )
     valid <- FALSE
   }
@@ -436,8 +468,7 @@ validate_gldp_observations <- function(o) {
   if (nrow(obs_equi_retrieval_without_present) > 0) {
     error_tag <- unique(obs_equi_retrieval_without_present$tag_id)
     cli_alert_danger(
-      "{length(error_tag)} equipment or retrieval observation{?s} don't have a  \\
-                    device status 'present'. Check: {.field {error_tag}}"
+      "{length(error_tag)} equipment or retrieval observation{?s} don't have a device status 'present'. Check: {.field {error_tag}}"
     )
     valid <- FALSE
   }
@@ -453,8 +484,7 @@ validate_gldp_observations <- function(o) {
   if (nrow(missing_tag_id) > 0) {
     error_ring_number <- unique(missing_tag_id$ring_number)
     cli_alert_danger(
-      "{length(error_ring_number)} {.var ring_number} with a device status {.val missing} or \\
-      {.val present} {?is/are} missing a {.var tag_id}. Check: {.field {error_ring_number}}"
+      "{length(error_ring_number)} {.var ring_number} with a device status {.val missing} or {.val present} {?is/are} missing a {.var tag_id}. Check: {.field {error_ring_number}}"
     )
     valid <- FALSE
   }
@@ -475,8 +505,7 @@ validate_gldp_observations <- function(o) {
   if (nrow(multiple_tags_without_retrieval) > 0) {
     error_ring_number <- unique(multiple_tags_without_retrieval$ring_number)
     cli_alert_danger(
-      "{length(error_ring_number)} ring{?s} where a second tag is attached without a prior \\
-    retrieval or capture-missing. Check: {.field {error_ring_number}}"
+      "{length(error_ring_number)} ring{?s} where a second tag is attached without a prior retrieval or capture-missing. Check: {.field {error_ring_number}}"
     )
     valid <- FALSE
   }
@@ -490,8 +519,43 @@ validate_gldp_observations <- function(o) {
   if (nrow(tag_without_equipment) > 0) {
     error_tag <- unique(tag_without_equipment$tag_id)
     cli_alert_danger(
-      "{length(error_tag)} tag{?s} {?was/were} recorded without a preceding equipment event. \\
-      Check: {.field {error_tag}}"
+      "{length(error_tag)} tag{?s} {?was/were} recorded without a preceding equipment event. Check: {.field {error_tag}}"
+    )
+    valid <- FALSE
+  }
+
+  # Check 7: Retrieval datetime must be equal to or after equipment datetime per tag_id.
+  equipment_dates <- o |>
+    filter(
+      !is.na(.data$tag_id),
+      .data$observation_type == "equipment"
+    ) |>
+    mutate(datetime = suppressWarnings(as.POSIXct(.data$datetime, tz = "UTC"))) |>
+    filter(!is.na(.data$datetime)) |>
+    group_by(.data$tag_id) |>
+    summarize(equipment_datetime = min(.data$datetime), .groups = "drop")
+
+  retrieval_dates <- o |>
+    filter(
+      !is.na(.data$tag_id),
+      .data$observation_type == "retrieval"
+    ) |>
+    mutate(datetime = suppressWarnings(as.POSIXct(.data$datetime, tz = "UTC"))) |>
+    filter(!is.na(.data$datetime)) |>
+    group_by(.data$tag_id) |>
+    summarize(retrieval_datetime = min(.data$datetime), .groups = "drop")
+
+  invalid_equipment_retrieval_order <- inner_join(
+    equipment_dates,
+    retrieval_dates,
+    by = "tag_id"
+  ) |>
+    filter(.data$retrieval_datetime < .data$equipment_datetime)
+
+  if (nrow(invalid_equipment_retrieval_order) > 0) {
+    error_tag <- invalid_equipment_retrieval_order$tag_id
+    cli_alert_danger(
+      "{length(error_tag)} tag{?s} {?has/have} retrieval before equipment: {.field {error_tag}}"
     )
     valid <- FALSE
   }
@@ -531,8 +595,7 @@ validate_gldp_observations <- function(o) {
   if (nrow(invalid_transitions) > 0) {
     error_ring_number <- unique(invalid_transitions$ring_number)
     cli_alert_danger(
-      "{length(error_ring_number)} invalid device_status transitions found. \\
-      Check: {.field {error_ring_number}}"
+      "{length(error_ring_number)} invalid device_status transitions found. Check: {.field {error_ring_number}}"
     )
     valid <- FALSE
   }
