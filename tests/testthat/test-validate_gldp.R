@@ -319,12 +319,15 @@ test_that("validate_gldp_geopressure_coherence accepts realistic values", {
   expect_true(suppressMessages(validate_gldp_geopressure_coherence(pkg)))
 })
 
-test_that("validate_gldp_geopressure_coherence rejects unrealistic ranges", {
+test_that("validate_gldp_geopressure_coherence warns on unusual distances", {
   pkg <- make_geopressure_test_pkg()
   edge_idx <- which(vapply(pkg$resources, \(r) identical(r$name, "edges"), logical(1)))
   pkg[["resources"]][[edge_idx[1]]]$data$distance[1] <- 4000
 
-  expect_false(suppressMessages(validate_gldp_geopressure_coherence(pkg)))
+  expect_message(
+    expect_true(validate_gldp_geopressure_coherence(pkg)),
+    "unusual distance"
+  )
 })
 
 test_that("validate_gldp_geopressure_coherence checks foreign keys", {
