@@ -8,7 +8,7 @@ message: 'To cite package "GeoLocatoR" in publications use:'
 type: software
 license: GPL-3.0-or-later
 title: 'GeoLocatoR: R package for GeoLocator Data Package'
-version: 1.0.0.9000
+version: 1.0.0
 identifiers:
 - type: url
   value: https://geopressure.org/GeoLocatoR/
@@ -126,7 +126,7 @@ references:
   title: GeoPressureR
   abstract: 'GeoPressureR: Global Positioning by Atmospheric Pressure'
   notes: Imports
-  url: https://raphaelnussbaumer.com/GeoPressureR/
+  url: https://geopressure.org/GeoPressureR/
   authors:
   - family-names: Nussbaumer
     given-names: Raphaël
