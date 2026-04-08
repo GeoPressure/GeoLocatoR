@@ -51,6 +51,35 @@ test_that("read_gldp schema version extraction supports short and explicit refs"
   expect_error(gldp_version(pkg("https://example.com/schema.json")))
 })
 
+test_that("read_gldp canonicalizes legacy schema owners", {
+  path <- file.path(withr::local_tempdir(), "datapackage.json")
+
+  jsonlite::write_json(
+    list(
+      `$schema` = "https://raw.githubusercontent.com/Rafnuss/GeoLocator-DP/v1.0/geolocator-dp-profile.json",
+      id = "unit-test",
+      resources = list(
+        list(
+          name = "tags",
+          path = "tags.csv",
+          `$schema` = "https://raw.githubusercontent.com/Rafnuss/GeoLocator-DP/v1.0/tags-table-schema.json"
+        )
+      )
+    ),
+    path,
+    auto_unbox = TRUE
+  )
+
+  writeLines("tag_id\nid-1", file.path(dirname(path), "tags.csv"))
+
+  pkg <- suppressWarnings(read_gldp(path, force_read = FALSE))
+
+  expect_equal(
+    pkg$`$schema`,
+    "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/v1.0/geolocator-dp-profile.json"
+  )
+})
+
 test_that("write_gldp writes a datapackage readable by read_gldp", {
   pkg <- pkg_shared
 

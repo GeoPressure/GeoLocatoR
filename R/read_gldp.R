@@ -32,6 +32,11 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
 
   # Add class
   class(pkg) <- c("geolocatordp", class(pkg))
+  pkg[["$schema"]] <- gsub("Rafnuss", "GeoPressure", pkg[["$schema"]], fixed = TRUE)
+  pkg[["resources"]] <- purrr::map(pkg[["resources"]] %||% list(), \(r) {
+    r[["$schema"]] <- gsub("Rafnuss", "GeoPressure", r[["$schema"]] %||% "", fixed = TRUE)
+    r
+  })
 
   # Drop measurements
   if (isTRUE(drop_measurements)) {
