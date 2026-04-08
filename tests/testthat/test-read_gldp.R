@@ -61,7 +61,13 @@ test_that("read_gldp canonicalizes legacy schema owners", {
       resources = list(
         list(
           name = "tags",
+          profile = "tabular-data-resource",
           path = "tags.csv",
+          schema = list(
+            fields = list(
+              list(name = "tag_id", type = "string")
+            )
+          ),
           `$schema` = "https://raw.githubusercontent.com/Rafnuss/GeoLocator-DP/v1.0/tags-table-schema.json"
         )
       )
