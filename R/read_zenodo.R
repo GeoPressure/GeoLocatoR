@@ -63,12 +63,15 @@ read_zenodo <- function(
   id,
   token = NULL,
   draft = FALSE,
-  sandbox = FALSE
+  sandbox = FALSE,
+  quiet = FALSE
 ) {
   token <- resolve_zenodo_token(token = token, sandbox = sandbox)
 
   # 1) Fetch Zenodo record
-  cli_progress_step("Retrieve Zenodo record {.field {parse_zenodo_id(id)}}")
+  if (!quiet) {
+    cli_progress_step("Retrieve Zenodo record {.field {parse_zenodo_id(id)}}")
+  }
   zenodo_record <- read_zenodo_fetch_record(
     id,
     token = token,
@@ -77,7 +80,9 @@ read_zenodo <- function(
   )
 
   # 2) Validate and download record files
-  cli_progress_step("Download files from Zenodo")
+  if (!quiet) {
+    cli_progress_step("Download files from Zenodo")
+  }
   download_dir <- read_zenodo_download_files(
     zenodo_record = zenodo_record,
     token = token,
@@ -86,17 +91,23 @@ read_zenodo <- function(
 
   # 3) Read downloaded datapackage
   if (!is.null(download_dir)) {
-    cli_progress_step("Read and upgrade GeoLocator-DP")
+    if (!quiet) {
+      cli_progress_step("Read and upgrade GeoLocator-DP")
+    }
     pkg <- read_gldp(file.path(download_dir, "datapackage.json"))
   } else {
     pkg <- create_gldp()
   }
 
-  # 4) Attach Zenodo metadata and update derived fields
-  cli_progress_step("Add metadata")
+  # 4) Attach Zenodo metadata and update derived properties
+  if (!quiet) {
+    cli_progress_step("Add metadata")
+  }
   pkg <- read_zenodo_attach_metadata(pkg = pkg, zenodo_record = zenodo_record)
   pkg <- update_gldp(pkg)
 
-  cli_progress_done()
+  if (!quiet) {
+    cli_progress_done()
+  }
   pkg
 }
