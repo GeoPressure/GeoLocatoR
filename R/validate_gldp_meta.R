@@ -1,7 +1,14 @@
 #' Validate GeoLocator Data Package metadata recommendations
 #'
 #' Internal helper function to report metadata recommendations for a GeoLocator
-#' Data Package. All checks are advisory.
+#' Data Package. All checks are advisory and do not affect the result returned
+#' by [validate_gldp()].
+#'
+#' The current recommendations cover title formatting, contributor roles,
+#' Zenodo `record_type`, related identifiers, community selection,
+#' `codeRepository`, expected manufacturer names in `tags$manufacturer`, and
+#' taxonomic names in `pkg$taxonomic`. Taxonomic validation relies on the eBird
+#' taxonomy API; lookup failures are reported as warnings.
 #'
 #' @param pkg A GeoLocator Data Package object
 #' @return Invisibly returns `TRUE` when all recommendations pass, `FALSE` otherwise.
@@ -16,7 +23,6 @@ validate_gldp_meta <- function(pkg) {
   # - related identifiers presence
   # - community selection
   # - GitHub codeRepository URL
-  # - embargo metadata quality (date, duration, justification text)
   # - allowed tag manufacturer names in tags metadata
   # - taxonomic names present in eBird taxonomy
   has_warnings <- FALSE
@@ -138,6 +144,16 @@ validate_gldp_meta <- function(pkg) {
   invisible(!has_warnings)
 }
 
+#' Validate taxonomic names against the eBird taxonomy
+#'
+#' Internal helper for metadata recommendations. It compares the unique
+#' scientific names listed in `pkg$taxonomic` against the eBird taxonomy API.
+#' Missing matches and API lookup failures are reported as warnings.
+#'
+#' @param pkg A GeoLocator Data Package object.
+#'
+#' @return Returns `TRUE` when a warning condition is detected, `FALSE` when no
+#'   issue is found or no taxonomic names are provided.
 #' @noRd
 validate_gldp_taxonomic <- function(pkg) {
   species <- pkg$taxonomic %||% character(0)

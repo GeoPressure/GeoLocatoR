@@ -10,6 +10,18 @@
 #'
 #' @return a plot, ggplotly or leaflet object.
 #'
+#' @examples
+#' pkg <- read_zenodo("17367319")
+#'
+#' # Plot data coverage
+#' plot(pkg, type = "coverage")
+#'
+#' # Plot observation history by ring
+#' plot(pkg, type = "ring")
+#'
+#' # Plot map view
+#' plot(pkg, type = "map")
+#'
 #' @export
 plot.geolocatordp <- function(x, type = NULL, ...) {
   if (is.null(type)) {

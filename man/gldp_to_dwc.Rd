@@ -77,3 +77,6 @@ the distance between each simulation and the aggregated center.
 }
 }
 
+\seealso{
+\code{\link[=gldp_to_eml]{gldp_to_eml()}} to create the matching \code{eml.xml} metadata file.
+}

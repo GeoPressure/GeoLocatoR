@@ -60,8 +60,8 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Read a GLDP from a file
-#' pkg <- read_gldp("path/to/datapackage.json")
+#' # Read a GLDP from Zenodo
+#' pkg <- read_zenodo("17367319", quiet = TRUE)
 #'
 #' # Convert all tags
 #' tags <- gldp_to_tag(pkg)

@@ -1,13 +1,19 @@
 #' Validate object against schema properties
 #'
 #' Internal helper function to validate an object against a set of required fields
-#' and property definitions from a schema.
+#' and property definitions from a schema. It resolves local schema references,
+#' validates scalar fields, and recurses into object and array properties when
+#' nested schemas are available.
 #'
 #' @param obj The object to validate
 #' @param required Vector of required field names
 #' @param properties List of property definitions from schema
 #' @param name Optional name prefix for error messages
-#' @return Logical indicating whether the object validation passed
+#' @param defs Optional schema definitions used to resolve local `"$ref"`
+#'   entries.
+#' @param ignore_fields Field names to skip during validation.
+#' @return Invisibly returns `TRUE` when the object validation passes, `FALSE`
+#'   otherwise.
 #' @noRd
 validate_gldp_object <- function(
   obj,
@@ -112,6 +118,16 @@ validate_gldp_object <- function(
   return(valid)
 }
 
+#' Resolve a local schema reference
+#'
+#' Internal helper that replaces a local `"$ref"` pointing to `#/$defs/...`
+#' with the corresponding schema definition, then merges any field-specific
+#' overrides.
+#'
+#' @param prop A schema property definition.
+#' @param defs Schema definitions used to resolve local references.
+#'
+#' @return A schema property with the local reference resolved when possible.
 #' @noRd
 resolve_local_ref <- function(prop, defs) {
   if (is.null(prop$`$ref`) || is.null(defs)) {
@@ -135,6 +151,14 @@ resolve_local_ref <- function(prop, defs) {
   utils::modifyList(base, prop_no_ref)
 }
 
+#' Infer a schema property type
+#'
+#' Internal helper that fills in an implicit schema type for object and array
+#' properties when `type` is omitted but structural fields are present.
+#'
+#' @param prop A schema property definition.
+#'
+#' @return The schema property with `type` added when it can be inferred.
 #' @noRd
 infer_type <- function(prop) {
   if (!is.null(prop$type)) {
@@ -150,6 +174,17 @@ infer_type <- function(prop) {
   prop
 }
 
+#' Resolve a `oneOf` schema branch
+#'
+#' Internal helper that selects the first `oneOf` alternative whose type matches
+#' the current value, then merges it with the shared base property definition.
+#'
+#' @param value The value being validated.
+#' @param prop A schema property definition containing `oneOf`.
+#' @param defs Schema definitions used to resolve local references.
+#' @param field Field name used in validation messages.
+#'
+#' @return A concrete schema property to use for validation.
 #' @noRd
 resolve_oneof <- function(value, prop, defs, field) {
   if (is.null(prop$oneOf)) {
@@ -183,6 +218,17 @@ resolve_oneof <- function(value, prop, defs, field) {
   utils::modifyList(chosen, base)
 }
 
+#' Resolve a schema property before validation
+#'
+#' Internal helper that resolves local references, selects a `oneOf` branch when
+#' needed, and infers a missing `type`.
+#'
+#' @param value The value being validated.
+#' @param prop A schema property definition.
+#' @param defs Schema definitions used to resolve local references.
+#' @param field Field name used in validation messages.
+#'
+#' @return A schema property ready to be passed to the validation helpers.
 #' @noRd
 resolve_prop <- function(value, prop, defs, field) {
   if (is.null(prop)) {
@@ -198,6 +244,17 @@ resolve_prop <- function(value, prop, defs, field) {
   infer_type(prop)
 }
 
+#' Validate a value against a schema property
+#'
+#' Internal helper that applies type checks, format checks, requiredness, and
+#' selected frictionless constraint keywords such as uniqueness, enumerations,
+#' patterns, length limits, item-count limits, and numeric bounds.
+#'
+#' @param item The value or vector of values to validate.
+#' @param prop A resolved schema property definition.
+#' @param field Field name used in validation messages.
+#'
+#' @return `TRUE` when the property checks pass, `FALSE` otherwise.
 #' @noRd
 validate_gldp_item <- function(item, prop, field) {
   valid <- TRUE
@@ -370,6 +427,17 @@ validate_gldp_item <- function(item, prop, field) {
 }
 
 
+#' Validate schema and data field matching
+#'
+#' Internal helper that applies the frictionless `fieldsMatch` rule to compare
+#' schema field names against data column names.
+#'
+#' @param schema_fields Field names declared in the schema.
+#' @param data_fields Field names present in the data.
+#' @param fields_match Matching mode from the schema.
+#'
+#' @return Invisibly returns `TRUE` when the field match rule passes, `FALSE`
+#'   otherwise.
 #' @noRd
 validate_gldp_fields_match <- function(
   schema_fields,
@@ -421,6 +489,16 @@ validate_gldp_fields_match <- function(
 }
 
 
+#' Validate a declared field format
+#'
+#' Internal helper that checks whether a value matches one of the supported
+#' frictionless format strings implemented in GeoLocatoR.
+#'
+#' @param value The value or vector of values to validate.
+#' @param format The expected format string.
+#' @param field Field name used in validation messages.
+#'
+#' @return `TRUE` when the format check passes, `FALSE` otherwise.
 #' @noRd
 check_format <- function(value, format, field) {
   if (is.null(format)) {
@@ -495,6 +573,12 @@ check_format <- function(value, format, field) {
   valid
 }
 
+#' Return the internal type validators
+#'
+#' Internal helper that maps supported schema types to predicate functions used
+#' during validation.
+#'
+#' @return A named list of type-checking functions.
 #' @noRd
 get_type_map <- function() {
   list(
@@ -631,6 +715,14 @@ get_type_map <- function() {
   )
 }
 
+#' Check a value type without emitting messages
+#'
+#' Internal helper used when selecting among alternative schema definitions.
+#'
+#' @param value The value to test.
+#' @param type The expected schema type.
+#'
+#' @return `TRUE` when the type matches, `FALSE` otherwise.
 #' @noRd
 check_type_silent <- function(value, type) {
   if (is.null(type)) {
@@ -645,6 +737,16 @@ check_type_silent <- function(value, type) {
   type_map[[type]](value)
 }
 
+#' Validate a declared field type
+#'
+#' Internal helper that checks whether a value matches the expected schema type
+#' and reports a validation error when it does not.
+#'
+#' @param value The value to test.
+#' @param type The expected schema type.
+#' @param field Field name used in validation messages.
+#'
+#' @return `TRUE` when the type check passes, `FALSE` otherwise.
 #' @noRd
 check_type <- function(value, type, field) {
   if (is.null(type)) {

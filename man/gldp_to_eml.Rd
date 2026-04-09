@@ -71,3 +71,6 @@ The following EML properties are not set:
 }
 }
 
+\seealso{
+\code{\link[=gldp_to_dwc]{gldp_to_dwc()}} to create the corresponding Darwin Core files.
+}

@@ -1,17 +1,20 @@
 #' Add a GeoLocator Data Resource
 #'
 #' @description
-#' This function adds a resource to a GeoLocator Data Package and ensures that the data conforms to
-#' the schema defined for that resource. It is a wrapper of [`frictionless::add_resource`
-#' ](https://docs.ropensci.org/frictionless/reference/add_resource.html) where it first validates
-#' against the schema and potentially modify the data frame `data` before adding it to the package.
+#' Add a standard GeoLocator-DP resource to a package. This essentially wraps
+#' [frictionless::add_resource()] but with prepartions steps of the data:
+#' - extending the schema with extra columns present in `data` when allowed by
+#'   `fieldsMatch`;
+#' - adding missing schema columns to `data` with typed `NA` values when
+#'   needed;
+#' - reordering `data` columns to match the schema, because
+#'   [frictionless::add_resource()] expects fields in schema order.
+#' - casting columns to schema types when `cast_type = TRUE`, for example
+#'   converting strings to dates, numbers, or integers when required by the
+#'   schema, so the stored resource is consistent with the declared schema.
 #'
-#' More specifically, the function adjusts the data frame according to the schema's
-#' [`fieldsMatch`](https://datapackage.org/standard/table-schema/#fieldsMatch) property and also
-#' cast the type/class of the columns provided according to. `cast_type`.
-#'
-#' Note that this function is generally not recommended to be used as all resources can be added or
-#' modified with their respective [accessors functions](https://bit.ly/41HruRs).
+#' For common package resources, the resource accessors are usually a more
+#' convenient user-facing interface.
 #'
 #' @param pkg A GeoLocator Data Package object to which the resource will be added.
 #' @param resource_name A character string specifying the name of the resource. This name is used
@@ -23,6 +26,9 @@
 #' @inheritParams frictionless::add_resource
 #'
 #' @return The updated GeoLocator Data Package object with the new resource added.
+#'
+#' @seealso [tags()], [observations()], and the other resource accessors for the
+#'   usual user-facing way to modify standard GeoLocator-DP resources.
 #'
 #' @export
 add_gldp_resource <- function(

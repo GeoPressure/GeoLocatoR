@@ -1,12 +1,10 @@
 #' Transform Tags to a Tidy Data Frame
 #'
 #' @description
-#' This function processes a list of tags, each containing sensor data, and transforms it into a
-#' tidy data frame. The tags are expected to have various sensor types and their corresponding
-#' measurements. The function reshapes and standardizes the data for further analysis.
+#' Convert a list of GeoPressureR `tag` objects into the long-format
+#' `measurements` table used by GeoLocator Data Packages.
 #'
-#' @param tags A list of tags, where each tag is a data frame containing sensor data. Each tag
-#' should include columns for sensor measurements and an identifier.
+#' @param tags A list of GeoPressureR `tag` objects.
 #'
 #' @return A [tibble::tibble()] data frame with columns:
 #' \describe{
@@ -20,13 +18,19 @@
 #' }
 #'
 #' @details
-#' The `tags_to_measurements()` function extracts and processes sensor data from a list of tags. It
-#' renames the `value` column to the corresponding sensor type if it exists, ensures the presence of
-#' a `label` column, and reshapes the data into a long format. The function handles various sensor
-#' types such as pressure, acceleration, light, temperature, and magnetic fields.
+#' The function extracts sensor tables from each tag, ensures a `label` column
+#' is present, reshapes supported sensors into long format, and drops rows with
+#' missing values.
+#'
+#' The current conversion supports pressure, light, acceleration/activity,
+#' temperature, and magnetic sensors.
 #'
 #' If no tags are provided, the function returns an empty tibble with the appropriate column names
 #'  and types.
+#'
+#' @seealso [params_to_tags()] and [params_to_observations()] for related
+#'   conversions used when building GeoLocator-DP resources from GeoPressureR
+#'   objects.
 #'
 #' @export
 tags_to_measurements <- function(tags) {

@@ -1,14 +1,22 @@
 #' Generate `tags` from GeoPressureR parameters
 #'
-#' This function converts a list of parameters into a single `tags` tibble according to the
-#' [GeoLocator Data Package specification](https://geopressure.org/GeoLocator-DP/core/tags/).
+#' @description
+#' Convert a list of GeoPressureR parameter objects into a `tags` tibble
+#' following the GeoLocator Data Package structure.
 #'
 #' @param params A list of GeoPressureR parameter objects. These parameters should have been
 #' generated during the GeoPressure workflow. See [`GeoPressureR::param_create()`
 #' ](https://geopressure.org/GeoPressureR/reference/param_create.html) for more information.
 #'
 #' @return A [tibble::tibble()] data frame with columns `tag_id`, `manufacturer`, `scientific_name`,
-#' `ring_number`, `model`, and `firmware` (if `soi_settings` is present).
+#' `ring_number`, and, when available, `model` and `firmware`.
+#'
+#' Manufacturer names are normalized for common GeoPressure sources, and SOI or
+#' Migrate-specific model metadata are propagated when present in the parameter
+#' objects.
+#'
+#' @seealso [params_to_observations()] and [tags_to_measurements()] for related
+#'   conversions from GeoPressureR objects to GeoLocator-DP resources.
 #'
 #' @export
 params_to_tags <- function(params) {

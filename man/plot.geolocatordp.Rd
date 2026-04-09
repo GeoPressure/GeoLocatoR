@@ -20,3 +20,16 @@ a plot, ggplotly or leaflet object.
 Creates visualizations for a GeoLocator Data Package, including coverage plots
 showing data availability across time for different sensors and tags.
 }
+\examples{
+pkg <- read_zenodo("17367319")
+
+# Plot data coverage
+plot(pkg, type = "coverage")
+
+# Plot observation history by ring
+plot(pkg, type = "ring")
+
+# Plot map view
+plot(pkg, type = "map")
+
+}

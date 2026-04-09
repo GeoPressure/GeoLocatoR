@@ -1,26 +1,35 @@
 #' Create a GeoPressureTemplate Project
+#'
 #' @description
-#' Initializes a geopressure template project by creating a specified directory structure and
-#' populating it with essential files, including a DESCRIPTION file, README, license, and data.
+#' Clone the GeoPressureTemplate project skeleton into `path` and optionally
+#' populate it from a GeoLocator Data Package. When `pkg` is supplied, the
+#' generated project metadata and data files are derived from the package.
 #'
-#' This function sets up the project directory and ensures that all necessary components are in
-#' place for a geopressure analysis project.
-#'
-#' @param path A character string specifying the destination directory where the project will
-#' be created. The last folder will give the name to the project.
-#' @param pkg A GeoLocatoR Datapackage object (optional)
+#' @param path Destination directory for the new project. The last path
+#'   component is used as the project name.
+#' @param pkg Optional `geolocatordp` object used to fill project metadata,
+#'   config, and data files.
 #' @param open If `TRUE`, the package is opened in a new RStudio session.
 #'
 #' @return The path to the created project directory.
 #'
-#' @details Upon execution, the function performs the following steps:
-#' \itemize{
-#'   \item Creates the project directory.
-#'   \item Generates the DESCRIPTION file using metadata from `pkg`.
-#'   \item Creates a README file that outlines project details.
-#'   \item Generates a LICENSE file based on the specified licenses.
-#'   \item Writes relevant data files into the project structure.
-#' }
+#' @details
+#' The destination directory must not already contain files. The template is
+#' cloned from the GeoPressureTemplate GitHub repository, so both `git` and
+#' network access are required.
+#'
+#' When `pkg` is provided, the function attempts to generate:
+#' - a `DESCRIPTION` file;
+#' - a project `README`;
+#' - license files;
+#' - data files under `data/`;
+#' - and `config.yml`.
+#'
+#' Failures in these optional generation steps are reported as warnings and do
+#' not abort the project creation.
+#'
+#' @seealso [read_geopressuretemplate()] to read a GeoPressureTemplate project
+#'   back into a GeoLocator Data Package.
 #'
 #' @export
 create_geopressuretemplate <- function(path, pkg = NULL, open = interactive()) {

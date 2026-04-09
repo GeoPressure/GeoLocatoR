@@ -7,7 +7,12 @@
 #' @param x A GeoLocator Data Package object, as returned by `read_gldp()`.
 #' @param ... Further arguments, they are ignored by this function.
 #'
-#' @return [print()] with a summary of the GeoLocator Data Package object.
+#' @return Invisibly returns `x`.
+#'
+#' @examples
+#' pkg <- read_zenodo("17367319", quiet = TRUE)
+#' print(pkg)
+#'
 #' @family print functions
 #' @export
 print.geolocatordp <- function(x, ...) {

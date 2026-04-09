@@ -10,24 +10,88 @@ validate_gldp(pkg)
 \item{pkg}{A GeoLocator Data Package object to be validated.}
 }
 \value{
-A silent logical value indicating whether the package validation was successful (\code{TRUE}) or
-failed (\code{FALSE}).
+An invisible logical value: \code{TRUE} when all profile, resource, and coherence checks
+pass, \code{FALSE} otherwise. Metadata recommendations are always reported but do not affect this
+return value.
 }
 \description{
-\code{validate_gldp()} runs the standard quality-control workflow for a GeoLocator Data Package.
-It provides an automated check that a package is structurally valid and internally coherent
-before publication or reuse.
+\code{validate_gldp()} runs the full validation workflow for a GeoLocator Data Package.
+It checks schema conformance, resource-level consistency, and cross-table coherence,
+then reports additional metadata recommendations.
 }
 \details{
-Validation is organized in two complementary layers:
+Validation runs in four steps:
 \enumerate{
-\item \strong{Technical conformance}: checks compliance with the GeoLocator Data Package specification,
-including required resources, schema conformity, required fields, and controlled vocabularies.
-\item \strong{Coherence and metadata quality}: checks consistency of identifiers and relationships across
-key tables (e.g. \code{tags}, \code{observations}, and \code{measurements}) and reports metadata best-practice
-mismatches that should be justified during curation.
+\item \strong{Package profile validation}
+The package metadata is checked against the GeoLocator-DP profile schema. This includes
+required package-level fields and schema-defined constraints such as type, format,
+uniqueness, enumerated values, regular-expression patterns, and minimum or maximum
+lengths, item counts, and numeric values.
+\item \strong{Resource validation}
+Resources are checked against their schema: columns must match the
+\code{fieldsMatch} rule, and each column must satisfy its declared constraints
+such as type, format, requiredness, uniqueness, allowed values, patterns,
+and numeric or length limits.
+\item \strong{Coherence validation}
+Cross-resource consistency checks are then applied.
+
+Core package coherence checks require the resources \code{tags}, \code{observations}, and
+\code{measurements}, and verify that:
+\itemize{
+\item one \code{ring_number} is not associated with multiple \code{scientific_name} values in \code{tags};
+\item every \code{measurements$tag_id} exists in \code{tags$tag_id};
+\item every \code{tags$ring_number} appears in \code{observations$ring_number};
+\item every \code{observations} \code{tag_id} / \code{ring_number} combination exists in \code{tags};
+\item every tag declared in \code{tags} has at least one observation (reported as a warning only);
+\item every tag with measurement data has both an \code{equipment} and a \code{retrieval} observation.
+}
+
+Observation-sequence checks verify that:
+\itemize{
+\item one \code{tag_id} is not associated with multiple \code{ring_number} values;
+\item \code{equipment} and \code{retrieval} observations always have a \code{tag_id};
+\item \code{equipment} and \code{retrieval} observations have \code{device_status == "present"};
+\item \code{capture} observations with \code{device_status} \code{"missing"} or \code{"present"} have a \code{tag_id};
+\item a second tag is not attached without a prior retrieval or \code{capture} with
+\code{device_status == "missing"};
+\item each \code{tag_id} has an \code{equipment} observation;
+\item retrieval does not precede equipment for the same \code{tag_id};
+\item duplicated observations are not present for the same \code{ring_number}, \code{datetime},
+and \code{observation_type};
+\item \code{device_status} transitions are plausible across the observation history.
+}
+
+GeoPressure-specific coherence checks are applied when the corresponding resources are
+present. These include:
+\itemize{
+\item realistic ranges for \code{staps$stap_id}, \code{paths$j}, \code{edges$n}, and
+\code{pressurepaths$altitude};
+\item realistic year windows for datetime fields in \code{staps}, \code{twilights},
+\code{pressurepaths}, and \code{edges};
+\item duration checks for \code{staps} and \code{edges};
+\item schema-declared foreign key consistency across resources;
+\item warnings for unusual \code{edges} distances, durations, or wind/ground-speed magnitudes.
+}
+\item \strong{Metadata recommendations}
+Additional metadata quality checks are reported without affecting the final validity.
+These recommendations cover:
+\itemize{
+\item the \code{title} is prefixed by "GeoLocator Data Package: ";
+\item presence of contributor roles;
+\item \code{record_type == "dataset"};
+\item expected manufacturer names in \code{tags$manufacturer};
+\item presence of \code{relatedIdentifiers};
+\item presence of a selected GeoLocator-DP Zenodo community;
+\item a GitHub repository URL in \code{codeRepository};
+\item scientific names in \code{pkg$taxonomic} against the eBird taxonomy API when available.
+}
 }
 
 See the \href{https://geopressure.org/GeoLocator-DP/curation/}{GeoLocator-DP curation guide} for
-more informations.
+more information.
+}
+\examples{
+pkg <- read_zenodo("17367319")
+validate_gldp(pkg)
+
 }

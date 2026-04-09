@@ -10,7 +10,7 @@
 \alias{update_gldp_taxonomic}
 \alias{update_gldp_number_tags}
 \alias{update_gldp_bibliographic_citation}
-\title{Update derived values of a GeoLocator Data Package}
+\title{Update derived properties of a GeoLocator Data Package}
 \usage{
 update_gldp_metadata(pkg)
 
@@ -31,22 +31,31 @@ update_gldp_number_tags(pkg)
 update_gldp_bibliographic_citation(pkg, ...)
 }
 \arguments{
-\item{pkg}{A GeoLocator Data Package object}
+\item{pkg}{A GeoLocator Data Package object.}
 
-\item{...}{overwrite parameters for \code{utils::bibentry()}}
+\item{...}{Overrides passed to \code{\link[utils:bibentry]{utils::bibentry()}} when computing
+\code{bibliographicCitation}.}
 }
 \value{
-An updated GeoLocator Data Package object with derived fields populated.
+An updated GeoLocator Data Package object with derived properties
+populated.
 }
 \description{
-Updates and stores derived package values directly on \code{pkg}.
+Updates and stores the following derived package properties:
 \itemize{
-\item \code{update_gldp_temporal()}: Date range from \code{measurements$datetime}.
-\item \code{update_gldp_taxonomic()}: Species vector from tags (optionally filtered by measured tag IDs).
-\item \code{update_gldp_number_tags()}: Counts by resource/sensor.
-\item \code{update_gldp_bibliographic_citation()}: Formatted citation from package metadata.
-\item \code{update_gldp_order_resources()}: Reorder resources following schema order.
+\item \code{update_gldp_temporal()}: date range from \code{measurements$datetime}.
+\item \code{update_gldp_taxonomic()}: species vector from \code{tags}, optionally filtered
+to tags present in \code{measurements}.
+\item \code{update_gldp_number_tags()}: counts by resource and sensor.
+\item \code{update_gldp_bibliographic_citation()}: formatted citation from package
+metadata.
+\item \code{update_gldp_order_resources()}: reorder resources following schema order.
 }
 
 \code{update_gldp()} runs all functions above.
+}
+\seealso{
+\code{\link[=read_gldp]{read_gldp()}} and \code{\link[=read_zenodo]{read_zenodo()}} call this function after reading,
+and the resource setters such as \code{\link[=tags]{tags()}} and \code{\link[=measurements]{measurements()}} update
+selected derived properties automatically.
 }

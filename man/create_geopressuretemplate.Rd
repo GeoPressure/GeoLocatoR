@@ -7,10 +7,11 @@
 create_geopressuretemplate(path, pkg = NULL, open = interactive())
 }
 \arguments{
-\item{path}{A character string specifying the destination directory where the project will
-be created. The last folder will give the name to the project.}
+\item{path}{Destination directory for the new project. The last path
+component is used as the project name.}
 
-\item{pkg}{A GeoLocatoR Datapackage object (optional)}
+\item{pkg}{Optional \code{geolocatordp} object used to fill project metadata,
+config, and data files.}
 
 \item{open}{If \code{TRUE}, the package is opened in a new RStudio session.}
 }
@@ -18,19 +19,28 @@ be created. The last folder will give the name to the project.}
 The path to the created project directory.
 }
 \description{
-Initializes a geopressure template project by creating a specified directory structure and
-populating it with essential files, including a DESCRIPTION file, README, license, and data.
-
-This function sets up the project directory and ensures that all necessary components are in
-place for a geopressure analysis project.
+Clone the GeoPressureTemplate project skeleton into \code{path} and optionally
+populate it from a GeoLocator Data Package. When \code{pkg} is supplied, the
+generated project metadata and data files are derived from the package.
 }
 \details{
-Upon execution, the function performs the following steps:
+The destination directory must not already contain files. The template is
+cloned from the GeoPressureTemplate GitHub repository, so both \code{git} and
+network access are required.
+
+When \code{pkg} is provided, the function attempts to generate:
 \itemize{
-\item Creates the project directory.
-\item Generates the DESCRIPTION file using metadata from \code{pkg}.
-\item Creates a README file that outlines project details.
-\item Generates a LICENSE file based on the specified licenses.
-\item Writes relevant data files into the project structure.
+\item a \code{DESCRIPTION} file;
+\item a project \code{README};
+\item license files;
+\item data files under \verb{data/};
+\item and \code{config.yml}.
 }
+
+Failures in these optional generation steps are reported as warnings and do
+not abort the project creation.
+}
+\seealso{
+\code{\link[=read_geopressuretemplate]{read_geopressuretemplate()}} to read a GeoPressureTemplate project
+back into a GeoLocator Data Package.
 }

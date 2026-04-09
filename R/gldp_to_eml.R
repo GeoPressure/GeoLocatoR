@@ -53,6 +53,8 @@
 #' - `citations`
 #' - `collection data`
 #'
+#' @seealso [gldp_to_dwc()] to create the corresponding Darwin Core files.
+#'
 #' @export
 gldp_to_eml <- function(pkg, directory) {
   check_gldp(pkg)

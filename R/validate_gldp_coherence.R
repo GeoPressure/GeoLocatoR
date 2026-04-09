@@ -1,3 +1,12 @@
+#' Validate cross-resource coherence
+#'
+#' Internal helper that runs the package-level coherence checks, observation
+#' sequence checks, and GeoPressure-specific consistency checks.
+#'
+#' @param pkg A GeoLocator Data Package object.
+#'
+#' @return Invisibly returns `TRUE` when all coherence checks pass, `FALSE`
+#'   otherwise.
 #' @noRd
 validate_gldp_coherence <- function(pkg) {
   cli_h3("Check Coherence")
@@ -16,6 +25,18 @@ validate_gldp_coherence <- function(pkg) {
   invisible(valid)
 }
 
+#' Validate GeoPressure-specific coherence checks
+#'
+#' Internal helper that applies additional checks for optional GeoPressure
+#' resources when they are present. These checks cover selected numeric ranges,
+#' datetime windows, duration windows, schema-declared foreign keys, and
+#' unusual-but-non-failing movement metrics in `edges`.
+#'
+#' @param pkg A GeoLocator Data Package object.
+#'
+#' @return Invisibly returns `TRUE` when all failing GeoPressure coherence
+#'   checks pass, `FALSE` otherwise. Some unusual values are reported only as
+#'   warnings.
 #' @noRd
 validate_gldp_geopressure_coherence <- function(pkg) {
   valid <- TRUE
@@ -300,6 +321,17 @@ validate_gldp_geopressure_coherence <- function(pkg) {
   invisible(valid)
 }
 
+#' Validate core package coherence
+#'
+#' Internal helper that checks consistency across the required `tags`,
+#' `observations`, and `measurements` resources. It verifies key identifier
+#' relationships, species consistency, and the presence of expected equipment
+#' and retrieval events.
+#'
+#' @param pkg A GeoLocator Data Package object.
+#'
+#' @return Invisibly returns `TRUE` when all failing core coherence checks pass,
+#'   `FALSE` otherwise. Missing observations for tags are reported as warnings.
 #' @noRd
 validate_gldp_core_coherence <- function(pkg) {
   valid <- TRUE
@@ -413,6 +445,17 @@ validate_gldp_core_coherence <- function(pkg) {
 }
 
 
+#' Validate observation histories
+#'
+#' Internal helper that validates ordering and state transitions in the
+#' `observations` table, including tag assignment consistency, required
+#' `tag_id` usage, equipment and retrieval ordering, duplicate events, and
+#' plausible `device_status` transitions.
+#'
+#' @param o The `observations` data frame.
+#'
+#' @return Invisibly returns `TRUE` when the observation checks pass, `FALSE`
+#'   otherwise.
 #' @noRd
 validate_gldp_observations <- function(o) {
   valid <- TRUE

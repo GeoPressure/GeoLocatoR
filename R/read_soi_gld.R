@@ -1,5 +1,6 @@
 #' Read Geolocator Data and Orders
 #'
+#' @description
 #' Read and combine Swiss Ornithological Institute GDL exports.
 #'
 #' `read_soi_gld()` is the high-level entry point. It can read from:
@@ -8,29 +9,25 @@
 #'
 #' The result is a joined table combining tag data with summarized order metadata.
 #'
-#' @param access_file A string specifying the path to an Access file containing both the GDL data
-#' and order information. If provided, it takes precedence over `data_file` and
-#' `order_file`. Defaults to `NA`.
-#' @param data_file A string specifying the path to the GDL data file. Required if `access_file`
-#' is not provided. Defaults to `NA`.
-#' @param order_file A string specifying the path to the GDL order file. Required if `access_file`
-#' is not provided. Defaults to `NA`.
-#' @param filter_col A logical value or a character vector. If `TRUE`, only a predefined set of
-#' columns is selected.
-#' If `FALSE`, all columns are included. Alternatively, a character vector can be passed to specify
-#' which columns to select. Defaults to `TRUE`.
+#' @param access_file Path to an Access file containing both GDL data and order
+#'   information. If provided, it takes precedence over `data_file` and
+#'   `order_file`.
+#' @param data_file Path to the GDL data file, or a data frame already loaded in
+#'   memory. Required when `access_file` is not provided.
+#' @param order_file Path to the GDL order file, or a data frame already loaded
+#'   in memory. Required when `access_file` is not provided.
+#' @param filter_col Logical. If `TRUE` (default), returns a predefined subset
+#'   of columns useful for package creation; if `FALSE`, returns all joined
+#'   columns.
 #'
 #' @return A data frame combining GDL tag rows and order-level information.
 #'
 #' @details
-#' Helper functions:
+#' Order metadata are aggregated by `OrderName` before joining to the GDL tag
+#' rows, so one order contributes a single summarized row to the output.
 #'
-#' - **`read_soi_gld()`**: Reads GDL and order data, either from an Access file or separate CSV files,
-#' and returns a combined data frame.
-#' - **`read_soi_gld_orders()`**: Reads order metadata from a CSV export.
-#' - **`read_soi_gld_data()`**: Reads GDL tag-level data from a CSV export.
-#' - **`read_soi_gld_access()`**: Extracts GDL data and order information from an Access database file
-#' and exports them to temporary CSV files.
+#' @seealso [read_soi()] to convert the returned SOI table into a
+#'   `geolocatordp` object.
 #'
 #' @export
 read_soi_gld <- function(

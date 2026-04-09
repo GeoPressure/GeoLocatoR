@@ -13,7 +13,11 @@
 #' @param tag_id A character vector of tag IDs to keep, or a negative character
 #'   selection to remove.
 #'
-#' @return A filtered GeoLocator Data Package object.
+#' @return A filtered GeoLocator Data Package object with derived properties
+#'   recomputed via [update_gldp()].
+#'
+#' @seealso [tags()] to inspect available tag IDs and [update_gldp()] for the
+#'   derived properties recomputed after filtering.
 #' @export
 select_gldp <- function(pkg, tag_id) {
   check_gldp(pkg)

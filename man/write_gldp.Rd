@@ -17,6 +17,12 @@ write_gldp(pkg, directory = ".", compress = FALSE)
 Invisibly returns \code{directory}.
 }
 \description{
-Wrapper around \code{\link[frictionless:write_package]{frictionless::write_package()}} so users can write a package
-without attaching frictionless.
+Write a GeoLocator Data Package to disk with
+\code{\link[frictionless:write_package]{frictionless::write_package()}}. Standard datapackage files are written from
+the package descriptor and resources, while \code{pkg$params} is serialized
+separately to \code{params.json} when present.
+}
+\seealso{
+\code{\link[=create_gldp]{create_gldp()}} to create a package and \code{\link[=read_gldp]{read_gldp()}} to read one
+back from disk.
 }

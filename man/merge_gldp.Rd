@@ -31,15 +31,13 @@ and resource data is combined based on their presence in either package.
 
 \strong{Resource merging logic:}
 \itemize{
-\item Resource names come from the union of resources present in all inputs.
+\item A resource is added even if only one input package contains it.
 \item For each resource, rows from available inputs are combined with \code{dplyr::bind_rows()}.
-\item A resource is added when at least one input package contains it.
 }
 
 \strong{Check for unique tag_id:}
 \itemize{
 \item The merge aborts if any \code{tag_id} is present in both packages.
-\item This prevents ambiguous joins across resources after merge.
 }
 
 \strong{datapackage_id in tags:}
@@ -47,19 +45,6 @@ and resource data is combined based on their presence in either package.
 \item For the \code{tags} resource, each row must have a \code{datapackage_id}.
 \item Missing \code{datapackage_id} values are filled with the package \code{id}.
 \item The merge aborts if \code{tags$datapackage_id} overlaps between the two inputs.
-}
-
-\strong{datapackages provenance table:}
-\itemize{
-\item \code{pkg$datapackages} is a one-row-per-source tibble keyed by \code{datapackage_id}
-(\code{pkg$id}) and accumulated across sequential merges.
-\item The merge aborts if two input provenance rows share the same
-\code{datapackage_id}.
-\item Metadata vectors/lists are flattened to plain text for easy comparison
-between source packages.
-\item It includes key source metadata fields (e.g. title/version/status/access),
-temporal coverage (\code{temporal_start}, \code{temporal_end}), taxonomic summary
-(\code{taxonomic}), and resource/sensor counts as \verb{numberTags_*} columns.
 }
 
 \strong{Metadata merging rules:}
@@ -78,4 +63,28 @@ non-empty \code{param$id}.
 \item \strong{created}: Set to the current timestamp at the time of merging.
 \item All others are dropped
 }
+
+\strong{datapackages provenance table:}
+\itemize{
+\item \code{pkg$datapackages} is a one-row-per-source tibble keyed by
+\code{datapackage_id} (\code{pkg$id}) and accumulated across sequential merges.
+\item It includes key source metadata fields (e.g. title/version/status/access),
+temporal coverage (\code{temporal_start}, \code{temporal_end}), taxonomic summary
+(\code{taxonomic}), and resource/sensor counts as \verb{numberTags_*} columns.
+}
+}
+\examples{
+pkg1 <- read_zenodo("17367319")
+pkg2 <- read_zenodo("17257520")
+
+merged <- merge_gldp(pkg1, pkg2)
+merged
+
+# List-style input is also supported
+merged <- merge_gldp(list(pkg1, pkg2))
+
+}
+\seealso{
+\code{\link[=create_gldp]{create_gldp()}} to create package shells and \code{\link[=update_gldp]{update_gldp()}} for the
+derived properties recomputed on the merged package.
 }

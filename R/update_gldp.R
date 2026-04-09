@@ -1,20 +1,28 @@
-#' Update derived values of a GeoLocator Data Package
+#' Update derived properties of a GeoLocator Data Package
 #'
 #' @description
-#' Updates and stores derived package values directly on `pkg`.
+#' Updates and stores the following derived package properties:
 #'
-#' - `update_gldp_temporal()`: Date range from `measurements$datetime`.
-#' - `update_gldp_taxonomic()`: Species vector from tags (optionally filtered by measured tag IDs).
-#' - `update_gldp_number_tags()`: Counts by resource/sensor.
-#' - `update_gldp_bibliographic_citation()`: Formatted citation from package metadata.
-#' - `update_gldp_order_resources()`: Reorder resources following schema order.
+#' - `update_gldp_temporal()`: date range from `measurements$datetime`.
+#' - `update_gldp_taxonomic()`: species vector from `tags`, optionally filtered
+#'   to tags present in `measurements`.
+#' - `update_gldp_number_tags()`: counts by resource and sensor.
+#' - `update_gldp_bibliographic_citation()`: formatted citation from package
+#'   metadata.
+#' - `update_gldp_order_resources()`: reorder resources following schema order.
 #'
 #' `update_gldp()` runs all functions above.
 #'
-#' @param pkg A GeoLocator Data Package object
-#' @param ... overwrite parameters for `utils::bibentry()`
+#' @param pkg A GeoLocator Data Package object.
+#' @param ... Overrides passed to [utils::bibentry()] when computing
+#'   `bibliographicCitation`.
 #'
-#' @return An updated GeoLocator Data Package object with derived fields populated.
+#' @return An updated GeoLocator Data Package object with derived properties
+#'   populated.
+#'
+#' @seealso [read_gldp()] and [read_zenodo()] call this function after reading,
+#'   and the resource setters such as [tags()] and [measurements()] update
+#'   selected derived properties automatically.
 #' @export
 update_gldp <- function(pkg, ...) {
   pkg <- pkg |>
@@ -27,6 +35,8 @@ update_gldp <- function(pkg, ...) {
   pkg
 }
 
+#' Reorder resources to schema order
+#'
 #' @rdname update_gldp
 #' @export
 update_gldp_order_resources <- function(pkg) {
@@ -59,6 +69,8 @@ update_gldp_order_resources <- function(pkg) {
 }
 
 
+#' Recompute package temporal coverage
+#'
 #' @rdname update_gldp
 #' @export
 update_gldp_temporal <- function(pkg) {
@@ -90,6 +102,8 @@ update_gldp_temporal <- function(pkg) {
   pkg
 }
 
+#' Recompute package taxonomic coverage
+#'
 #' @rdname update_gldp
 #' @export
 update_gldp_taxonomic <- function(pkg) {
@@ -129,6 +143,8 @@ update_gldp_taxonomic <- function(pkg) {
   pkg
 }
 
+#' Recompute tag counts by resource and sensor
+#'
 #' @rdname update_gldp
 #' @export
 update_gldp_number_tags <- function(pkg) {
@@ -174,6 +190,8 @@ update_gldp_number_tags <- function(pkg) {
   pkg
 }
 
+#' Recompute bibliographic citation text
+#'
 #' @rdname update_gldp
 #' @export
 update_gldp_bibliographic_citation <- function(pkg, ...) {

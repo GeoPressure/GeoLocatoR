@@ -8,25 +8,27 @@ template:
     in_header: pkgdown/analytics.html
 
 reference:
-  - title: Core Workflow
+  - title: Create and read packages
     contents:
       - create_gldp
       - read_gldp
-      - merge_gldp
-      - update_gldp
-      - add_gldp_resource
-      - write_gldp
-      - gldp_version
-  - title: Data Import
-    contents:
-      - read_soi
-      - read_soi_gld
-      - read_geopressuretemplate
       - read_zenodo
-  - title: GeoPressureTemplate
+      - gldp_version
+  - title: Edit and merge packages
     contents:
+      - update_gldp
+      - merge_gldp
+      - select_gldp
+      - add_gldp_resource
+  - title: Import from GeoPressureTemplate
+    contents:
+      - read_geopressuretemplate
       - create_geopressuretemplate
       - config_to_tibble
+  - title: Import from Swiss Ornithological Institute (SOI)
+    contents:
+      - read_soi_gld
+      - read_soi
   - title: Accessors
     contents:
       - tags
@@ -37,15 +39,15 @@ reference:
       - paths
       - edges
       - pressurepaths
-  - title: Transform
+  - title: Convert GeoPressure objects
     contents:
-      - select_gldp
       - params_to_tags
       - params_to_observations
       - tags_to_measurements
       - gldp_to_tag
-  - title: Export
+  - title: Export & Write
     contents:
+      - write_gldp
       - gldp_to_eml
       - gldp_to_dwc
   - title: Validation & Display
@@ -53,7 +55,7 @@ reference:
       - validate_gldp
       - print.geolocatordp
       - plot.geolocatordp
-  - title: Deprecated Compatibility
+  - title: Deprecated
     contents:
       - add_gldp_geopressuretemplate
       - create_gldp_geopressuretemplate
@@ -65,7 +67,7 @@ reference:
 
 navbar:
   structure:
-    left: [reference, geopressure-manual, geolocator-dp]
+    left: [ reference, geopressure-manual, geolocator-dp ]
   components:
     geopressure-manual:
       text: User Guide

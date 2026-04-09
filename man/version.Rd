@@ -13,5 +13,7 @@ version(x)
 A GLDP version string.
 }
 \description{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}}
+
 \code{version()} was renamed to \code{\link[=gldp_version]{gldp_version()}}.
 }

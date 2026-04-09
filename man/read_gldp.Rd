@@ -9,24 +9,50 @@ read_gldp(x = "datapackage.json", force_read = TRUE, drop_measurements = FALSE)
 \arguments{
 \item{x}{Path or URL to a GeoLocator-DP \code{datapackage.json} file.}
 
-\item{force_read}{If \code{TRUE} (default), loads resource data into memory for
-resources defined by path/URL.}
+\item{force_read}{If \code{TRUE} (default), loads resource data into memory so
+the returned object is self-contained in memory. This means that each
+resource is read immediately with \code{\link[frictionless:read_resource]{frictionless::read_resource()}}, cast to
+the schema types, stored in \code{resource$data}, and its \code{path} field is removed.}
 
 \item{drop_measurements}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}} If \code{TRUE},
 drops the \code{measurements} resource after reading \code{datapackage.json} and
-before loading resource data.}
+before the optional \code{force_read} step loads resource data into memory. Use
+this to save memory and avoid slowdowns when working mainly with derived
+GeoPressure resources such as \code{staps}, \code{paths}, \code{edges}, or
+\code{pressurepaths}.}
 }
 \value{
 A \code{geolocatordp} object.
 }
 \description{
-Reads a local or remote \code{datapackage.json}, validates that it uses the
-GeoLocator-DP profile schema, upgrades older versions when needed, and
-computes derived metadata.
+Read a local or remote \code{datapackage.json} and build a \code{geolocatordp} object.
+The function:
+\enumerate{
+\item reads the package descriptor with \code{\link[frictionless:read_package]{frictionless::read_package()}};
+\item checks that it uses the GeoLocator-DP profile schema;
+\item optionally loads resource tables into memory;
+\item reads \code{params.json} when present;
+\item upgrades older package versions when needed;
+\item recomputes derived package properties with \code{\link[=update_gldp]{update_gldp()}}.
+}
 }
 \examples{
 \dontrun{
+# Read a local package
 pkg <- read_gldp("datapackage.json")
+
+# Read a remote package
 pkg_remote <- read_gldp("https://example.org/datapackage.json")
+
+# Keep resource paths instead of loading all tables into memory
+pkg_lazy <- read_gldp("datapackage.json", force_read = FALSE)
+
+# Skip the measurements table to reduce memory use
+pkg_light <- read_gldp("datapackage.json", drop_measurements = TRUE)
 }
+
+}
+\seealso{
+\code{\link[=create_gldp]{create_gldp()}} to create a new package shell, \code{\link[=write_gldp]{write_gldp()}} to
+write a package to disk, and \code{\link[=read_zenodo]{read_zenodo()}} to read a package from Zenodo.
 }

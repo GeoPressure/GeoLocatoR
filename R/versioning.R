@@ -9,7 +9,10 @@
 #' Extract the GeoLocator-DP version from `x$schema`.
 #'
 #' @param x A GeoLocator Data Package object.
-#' @return Character string version (e.g. `"v1.0"`), or `NA` when not parseable.
+#' @return Character string version (e.g. `"v1.0"`).
+#'
+#' The function aborts if `$schema` is missing, cannot be parsed, or refers to
+#' an unsupported version.
 #' @family misc functions
 #' @export
 gldp_version <- function(x) {

@@ -11,41 +11,44 @@ read_geopressuretemplate(
 )
 }
 \arguments{
-\item{directory}{A character string specifying the geopressuretemplate directory.}
+\item{directory}{Path to the GeoPressureTemplate directory.}
 
-\item{from}{A character vector specifying the source of the data files. Either or both of
-\code{"raw-tag"} (for creating \code{tag} based on the data in \verb{data/raw-tag/}) and \code{"interim"} for data
-in \code{data/interim}.}
+\item{from}{Character vector specifying which sources to import. Supported
+values are \code{"raw-tag"} and/or \code{"interim"}.}
 
-\item{pkg}{(optional) A GeoLocator Data Package object. Default to a new one.}
+\item{pkg}{Optional GeoLocator Data Package object to update. Defaults to a
+new package created with \code{\link[=create_gldp]{create_gldp()}}.}
 }
 \value{
-The updated GLDP package object with new resources
+The updated \code{geolocatordp} object.
 }
 \description{
-This function adds all possible resources to a GeolocatoR Data Package by reading data from
-a \href{https://github.com/GeoPressure/GeoPressureTemplate}{GeoPressureTemplate} directories and files.
+Read a GeoPressureTemplate project and populate a GeoLocator Data Package
+with the resources that can be derived from it.
 
-The function performs the following steps:
+The import can combine two sources:
 \enumerate{
-\item If \code{"interim"} in \code{from},  reads all interim ".RData" files, extract all variables and add
-corresponding resources to the package (\code{measurements}, \code{twilights}, \code{staps}, \code{paths}, \code{edges},
-and \code{pressurepaths}). Generated automatically temporary \code{tags} and \code{observations} tables from
-the \code{param} in the interim file, and stores raw param objects in \code{pkg$params}.
-\item If \code{"raw-data"} in \code{from}, search for all tag_id in \verb{data/raw-data/} which were not included
-from \code{interim}. It will use at least \code{tag_create} and if possible \code{tag_label} and \code{tag_set_map}
-using \code{config.yml} .It will also generate or update \code{tags} and \code{observations} table from the the
-tag data and appends corresponding \code{params} into \code{pkg$params}.
-\item Reads the \code{tags.csv} (or \code{tags.xlsx} if present) and \code{observations.csv} (or
-\code{observations.xlsx} if present) from the \code{./data} directory if they exist and overwrite the
-previously generated \code{tags} and \code{observations}.
+\item \code{"interim"}: read \code{.RData} outputs from \verb{data/interim/}, convert them to
+package resources, and store raw parameter objects in \code{pkg$params}.
+\item \code{"raw-tag"}: create tag objects from \verb{data/raw-tag/} and \code{config.yml},
+then derive \code{measurements}, \code{tags}, \code{observations}, and \code{params}.
 }
 
-You can exclude interim file or raw-tag folder to be included in the package by starting the
-file name with an \code{"_"}.
+Manual data files take precedence over generated metadata:
+\itemize{
+\item \code{data/tags.csv} or \code{data/tags.xlsx} replaces generated \code{tags};
+\item \code{data/observations.csv} or \code{data/observations.xlsx} replaces generated
+\code{observations}.
+}
 
-It is possible to do a mix of some \code{tag} read from \code{"interim"} and other from \code{"raw-data"}
-simultaneously.
+Files or directories whose names start with \code{"_"} are ignored.
 
-You can find more information on the use of this function in the \href{https://geopressure.org/GeoPressureManual/geolocator-create.html}{GeoPressureManual }
+See the
+\href{https://geopressure.org/GeoPressureManual/geolocator-create.html}{GeoPressureManual}
+for a full workflow example.
+}
+\seealso{
+\code{\link[=create_geopressuretemplate]{create_geopressuretemplate()}} to create a project from a package,
+\code{\link[=params_to_tags]{params_to_tags()}}, \code{\link[=params_to_observations]{params_to_observations()}}, and
+\code{\link[=tags_to_measurements]{tags_to_measurements()}} for the underlying conversions.
 }

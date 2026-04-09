@@ -12,28 +12,26 @@ read_soi_gld(
 )
 }
 \arguments{
-\item{access_file}{A string specifying the path to an Access file containing both the GDL data
-and order information. If provided, it takes precedence over \code{data_file} and
-\code{order_file}. Defaults to \code{NA}.}
+\item{access_file}{Path to an Access file containing both GDL data and order
+information. If provided, it takes precedence over \code{data_file} and
+\code{order_file}.}
 
-\item{data_file}{A string specifying the path to the GDL data file. Required if \code{access_file}
-is not provided. Defaults to \code{NA}.}
+\item{data_file}{Path to the GDL data file, or a data frame already loaded in
+memory. Required when \code{access_file} is not provided.}
 
-\item{order_file}{A string specifying the path to the GDL order file. Required if \code{access_file}
-is not provided. Defaults to \code{NA}.}
+\item{order_file}{Path to the GDL order file, or a data frame already loaded
+in memory. Required when \code{access_file} is not provided.}
 
-\item{filter_col}{A logical value or a character vector. If \code{TRUE}, only a predefined set of
-columns is selected.
-If \code{FALSE}, all columns are included. Alternatively, a character vector can be passed to specify
-which columns to select. Defaults to \code{TRUE}.}
+\item{filter_col}{Logical. If \code{TRUE} (default), returns a predefined subset
+of columns useful for package creation; if \code{FALSE}, returns all joined
+columns.}
 }
 \value{
 A data frame combining GDL tag rows and order-level information.
 }
 \description{
 Read and combine Swiss Ornithological Institute GDL exports.
-}
-\details{
+
 \code{read_soi_gld()} is the high-level entry point. It can read from:
 \itemize{
 \item a single Access (\code{.accdb}) file, or
@@ -41,14 +39,12 @@ Read and combine Swiss Ornithological Institute GDL exports.
 }
 
 The result is a joined table combining tag data with summarized order metadata.
-
-Helper functions:
-\itemize{
-\item \strong{\code{read_soi_gld()}}: Reads GDL and order data, either from an Access file or separate CSV files,
-and returns a combined data frame.
-\item \strong{\code{read_soi_gld_orders()}}: Reads order metadata from a CSV export.
-\item \strong{\code{read_soi_gld_data()}}: Reads GDL tag-level data from a CSV export.
-\item \strong{\code{read_soi_gld_access()}}: Extracts GDL data and order information from an Access database file
-and exports them to temporary CSV files.
 }
+\details{
+Order metadata are aggregated by \code{OrderName} before joining to the GDL tag
+rows, so one order contributes a single summarized row to the output.
+}
+\seealso{
+\code{\link[=read_soi]{read_soi()}} to convert the returned SOI table into a
+\code{geolocatordp} object.
 }

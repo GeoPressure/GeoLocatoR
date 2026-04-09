@@ -1,18 +1,29 @@
 #' Create a GeoLocator Data Package
 #'
-#' Create a GeoLocator Data Package shell with a minimal descriptor.
+#' @description
+#' Create a new GeoLocator Data Package shell with the GeoLocator-DP profile
+#' schema.
 #'
-#' @param version (optional) Version of GeoLocator Data Package to use. Defaults to the
-#' GeoLocatoR default (latest).
-#' @param ... Additional descriptor fields to include
+#' @param version Optional GeoLocator-DP version. Use `NULL` for the latest
+#'   version, or set it explicitly when creating a package for an older schema
+#'   such as `"v0.3"` or `"v1.0"`.
+#' @param ... Additional top-level descriptor fields, such as `title`, `id`,
+#'   `contributors`, or `licenses`, used to initialize package metadata.
 #'
-#' @return A GeoLocator Data Package object.
+#' @return A `geolocatordp` object with the requested schema URL and no
+#'   resources.
 #'
 #' @examples
 #' pkg <- create_gldp()
+#' pkg
 #'
 #' # Previous version
 #' pkg <- create_gldp(version = "v0.2")
+#' pkg
+#'
+#' @seealso [read_gldp()] to read an existing package, [write_gldp()] to write
+#'   a package to disk, and [gldp_version()] to inspect the package schema
+#'   version.
 #'
 #' @export
 create_gldp <- function(version = NULL, ...) {

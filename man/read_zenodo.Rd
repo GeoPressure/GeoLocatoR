@@ -4,51 +4,45 @@
 \alias{read_zenodo}
 \title{Read a GeoLocator Data Package from Zenodo}
 \usage{
-read_zenodo(id, token = NULL, draft = FALSE, sandbox = FALSE)
+read_zenodo(id, token = NULL, draft = FALSE, sandbox = FALSE, quiet = FALSE)
 }
 \arguments{
 \item{id}{Zenodo identifier. Can be a record id, DOI, DOI URL, or Zenodo
 record URL. Supported examples include \code{"18467383"},
 \code{"10.5281/zenodo.18467383"}, \code{"https://doi.org/10.5281/zenodo.18467383"},
-\code{"10.5072/zenodo.470406"}, \code{"https://doi.org/10.5072/zenodo.470406"},
-\code{"https://zenodo.org/records/18467383"}, and sandbox record URLs when
-\code{sandbox = TRUE}.}
+and \code{"https://zenodo.org/records/18467383"}. For Zenodo Sandbox records,
+set \code{sandbox = TRUE}.}
 
-\item{token}{Optional Zenodo token. If \code{NULL}, token resolution follows the
-same logic as Zenodo request helpers: explicit argument, then environment
-variable \code{ZENODO_TOKEN_SANDBOX} when \code{sandbox = TRUE} (then
-\code{ZENODO_TOKEN} as fallback), then keyring secret services
-\code{"ZENODO_TOKEN_SANDBOX"} / \code{"ZENODO_TOKEN"} when available (for example
-\code{keyring::key_set(service = "ZENODO_TOKEN_SANDBOX")}).}
+\item{token}{Optional Zenodo access token for authenticated requests. Supply
+it explicitly, or leave \code{NULL} to resolve it from environment variables or
+the system keyring. Draft access usually requires a token.}
 
-\item{draft}{Logical. If \code{TRUE}, query the draft record endpoint
-(\verb{/api/records/\{id\}/draft}). Draft access usually requires authentication
-and sufficient permissions.}
+\item{draft}{Logical. If \code{TRUE}, read the draft version of the record instead
+of the public record. This queries the draft endpoint
+(\verb{/api/records/\{id\}/draft}), which requires a token and permission
+to access the deposition. Use this for unpublished records or when draft
+files or metadata differ from the published record.}
 
-\item{sandbox}{Logical. If \code{TRUE}, query
-\code{"https://sandbox.zenodo.org"}; otherwise query \code{"https://zenodo.org"}.}
+\item{sandbox}{Logical. If \code{TRUE}, query Zenodo Sandbox instead of the main
+Zenodo service. This also switches token lookup to sandbox-first sources.}
+
+\item{quiet}{Logical. If \code{TRUE}, suppress progress messages from
+\code{read_zenodo()}.}
 }
 \value{
-A \code{geolocatordp} object.
-When downloads succeed, resources are loaded from the Zenodo
-\code{datapackage.json}. When downloads are unavailable, an empty package shell
-is returned with Zenodo metadata fields attached.
+A \code{geolocatordp} object from the Zenodo record.
 }
 \description{
-Retrieve a GeoLocator Data Package from a Zenodo record identifier.
-}
-\details{
-Workflow:
+Retrieve a GeoLocator Data Package from a Zenodo record identifier:
 \enumerate{
 \item Resolve and fetch Zenodo record metadata from the REST API.
 \item Validate record files and download them to a temporary directory.
-\item Read \code{datapackage.json} with \code{\link[=read_gldp]{read_gldp()}} (or create an empty shell when
-files are not accessible).
-\item Attach Zenodo metadata and recompute derived package fields with
+\item Read \code{datapackage.json} with \code{\link[=read_gldp]{read_gldp()}}.
+\item Attach Zenodo metadata and recompute derived package properties with
 \code{\link[=update_gldp]{update_gldp()}}.
 }
-
-Behavior notes:
+}
+\details{
 \itemize{
 \item If files are not visible/downloadable (for example restricted record access),
 the function returns a metadata-only package created with \code{\link[=create_gldp]{create_gldp()}}
@@ -61,15 +55,48 @@ details.
 Downloaded files are written under \code{tempdir()} in a run-specific folder. This
 directory is temporary and may be removed by the operating system after the
 R session.
+
+To read a draft:
+\enumerate{
+\item Create or identify the Zenodo deposition and note its record id.
+\item Obtain a Zenodo access token with permission to view that draft.
+\item Provide the token directly with \verb{token =}, or make it available as
+\code{ZENODO_TOKEN} (main Zenodo) or \code{ZENODO_TOKEN_SANDBOX} (Zenodo Sandbox).
+The same names are also checked in the system keyring.
+\item Call \code{read_zenodo(id, draft = TRUE)}, and set \code{sandbox = TRUE} when the
+draft is hosted on Zenodo Sandbox.
+}
+
+If \code{token = NULL}, token lookup is attempted in this order:
+\itemize{
+\item for main Zenodo: \code{ZENODO_TOKEN}, then keyring service \code{ZENODO_TOKEN};
+\item for Zenodo Sandbox: \code{ZENODO_TOKEN_SANDBOX}, \code{ZENODO_TOKEN}, then keyring
+services \code{ZENODO_TOKEN_SANDBOX} and \code{ZENODO_TOKEN}.
+}
 }
 \examples{
 \dontrun{
-pkg <- read_zenodo("18467383")
+pkg <- read_zenodo("18467383", quiet = TRUE)
 
 # Resolve from DOI URL
-pkg <- read_zenodo("https://doi.org/10.5281/zenodo.18467383")
+pkg <- read_zenodo("https://doi.org/10.5281/zenodo.18467383", quiet = TRUE)
 
-# Access a draft in Zenodo Sandbox (token usually required)
-pkg <- read_zenodo("470406", sandbox = TRUE, draft = TRUE, token = "<TOKEN>")
+# Access a draft in Zenodo Sandbox using a token from the environment/keyring
+pkg <- read_zenodo("470406", sandbox = TRUE, draft = TRUE, quiet = TRUE)
+
+# Or provide the token explicitly
+pkg <- read_zenodo(
+  "470406",
+  sandbox = TRUE,
+  draft = TRUE,
+  token = "<TOKEN>",
+  quiet = TRUE
+)
 }
+
+}
+\seealso{
+\code{\link[=read_gldp]{read_gldp()}} to read a local or remote \code{datapackage.json}, and
+\code{\link[=create_gldp]{create_gldp()}} for the empty package shell used when record files are not
+accessible.
 }

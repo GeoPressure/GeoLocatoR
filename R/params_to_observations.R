@@ -1,15 +1,22 @@
 #' Generate `observations` from GeoPressureR parameters
 #'
-#' This function converts a list of parameters into a single `observations` tibble according to the
-#' [GeoLocator Data Package specification
-#' ](https://geopressure.org/GeoLocator-DP/core/observations/).
+#' @description
+#' Convert a list of GeoPressureR parameter objects into a minimal
+#' `observations` tibble following the GeoLocator Data Package structure.
+#'
+#' One `equipment` row and one `retrieval` row are generated per parameter
+#' object. When available, crop dates are used as observation datetimes and
+#' known stationary locations are used to populate the first and last locations.
 #'
 #' @param params A list of GeoPressureR parameter objects. These parameters should have been
 #' generated during the GeoPressure workflow. See [`GeoPressureR::param_create()`
 #' ](https://geopressure.org/GeoPressureR/reference/param_create.html) for more information.
 #'
-#' @return A [tibble::tibble()] data frame with columns `ring_number`, `tag_id`,
-#' `observation_type`, `datetime`, `longitude`, `latitude`, and `comments`.
+#' @return A [tibble::tibble()] with one equipment and one retrieval observation
+#'   per parameter object.
+#'
+#' @seealso [params_to_tags()] and [tags_to_measurements()] for related
+#'   conversions from GeoPressureR objects to GeoLocator-DP resources.
 #'
 #' @export
 params_to_observations <- function(params) {

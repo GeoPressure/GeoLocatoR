@@ -37,14 +37,24 @@ Will be set as \code{delimiter} in the resource Table Dialect, so read functions
 The updated GeoLocator Data Package object with the new resource added.
 }
 \description{
-This function adds a resource to a GeoLocator Data Package and ensures that the data conforms to
-the schema defined for that resource. It is a wrapper of \href{https://docs.ropensci.org/frictionless/reference/add_resource.html}{\code{frictionless::add_resource} } where it first validates
-against the schema and potentially modify the data frame \code{data} before adding it to the package.
+Add a standard GeoLocator-DP resource to a package. This essentially wraps
+\code{\link[frictionless:add_resource]{frictionless::add_resource()}} but with prepartions steps of the data:
+\itemize{
+\item extending the schema with extra columns present in \code{data} when allowed by
+\code{fieldsMatch};
+\item adding missing schema columns to \code{data} with typed \code{NA} values when
+needed;
+\item reordering \code{data} columns to match the schema, because
+\code{\link[frictionless:add_resource]{frictionless::add_resource()}} expects fields in schema order.
+\item casting columns to schema types when \code{cast_type = TRUE}, for example
+converting strings to dates, numbers, or integers when required by the
+schema, so the stored resource is consistent with the declared schema.
+}
 
-More specifically, the function adjusts the data frame according to the schema's
-\href{https://datapackage.org/standard/table-schema/#fieldsMatch}{\code{fieldsMatch}} property and also
-cast the type/class of the columns provided according to. \code{cast_type}.
-
-Note that this function is generally not recommended to be used as all resources can be added or
-modified with their respective \href{https://bit.ly/41HruRs}{accessors functions}.
+For common package resources, the resource accessors are usually a more
+convenient user-facing interface.
+}
+\seealso{
+\code{\link[=tags]{tags()}}, \code{\link[=observations]{observations()}}, and the other resource accessors for the
+usual user-facing way to modify standard GeoLocator-DP resources.
 }

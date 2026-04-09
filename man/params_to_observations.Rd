@@ -11,10 +11,18 @@ params_to_observations(params)
 generated during the GeoPressure workflow. See \href{https://geopressure.org/GeoPressureR/reference/param_create.html}{\code{GeoPressureR::param_create()} } for more information.}
 }
 \value{
-A \code{\link[tibble:tibble]{tibble::tibble()}} data frame with columns \code{ring_number}, \code{tag_id},
-\code{observation_type}, \code{datetime}, \code{longitude}, \code{latitude}, and \code{comments}.
+A \code{\link[tibble:tibble]{tibble::tibble()}} with one equipment and one retrieval observation
+per parameter object.
 }
 \description{
-This function converts a list of parameters into a single \code{observations} tibble according to the
-\href{https://geopressure.org/GeoLocator-DP/core/observations/}{GeoLocator Data Package specification }.
+Convert a list of GeoPressureR parameter objects into a minimal
+\code{observations} tibble following the GeoLocator Data Package structure.
+
+One \code{equipment} row and one \code{retrieval} row are generated per parameter
+object. When available, crop dates are used as observation datetimes and
+known stationary locations are used to populate the first and last locations.
+}
+\seealso{
+\code{\link[=params_to_tags]{params_to_tags()}} and \code{\link[=tags_to_measurements]{tags_to_measurements()}} for related
+conversions from GeoPressureR objects to GeoLocator-DP resources.
 }

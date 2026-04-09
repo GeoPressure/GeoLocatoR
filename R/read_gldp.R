@@ -1,24 +1,47 @@
 #' Read a GeoLocator Data Package
 #'
-#' Reads a local or remote `datapackage.json`, validates that it uses the
-#' GeoLocator-DP profile schema, upgrades older versions when needed, and
-#' computes derived metadata.
-#'
+#' @description
+#' Read a local or remote `datapackage.json` and build a `geolocatordp` object.
+#' The function:
+#' 1. reads the package descriptor with [frictionless::read_package()];
+#' 2. checks that it uses the GeoLocator-DP profile schema;
+#' 3. optionally loads resource tables into memory;
+#' 4. reads `params.json` when present;
+#' 5. upgrades older package versions when needed;
+#' 6. recomputes derived package properties with [update_gldp()].
 #'
 #' @param x Path or URL to a GeoLocator-DP `datapackage.json` file.
-#' @param force_read If `TRUE` (default), loads resource data into memory for
-#'   resources defined by path/URL.
+#' @param force_read If `TRUE` (default), loads resource data into memory so
+#'   the returned object is self-contained in memory. This means that each
+#' resource is read immediately with [frictionless::read_resource()], cast to
+#' the schema types, stored in `resource$data`, and its `path` field is removed.
 #' @param drop_measurements `r lifecycle::badge("experimental")` If `TRUE`,
 #'   drops the `measurements` resource after reading `datapackage.json` and
-#'   before loading resource data.
+#'   before the optional `force_read` step loads resource data into memory. Use
+#'   this to save memory and avoid slowdowns when working mainly with derived
+#'   GeoPressure resources such as `staps`, `paths`, `edges`, or
+#'   `pressurepaths`.
 #'
 #' @return A `geolocatordp` object.
 #'
 #' @examples
 #' \dontrun{
+#' # Read a local package
 #' pkg <- read_gldp("datapackage.json")
+#'
+#' # Read a remote package
 #' pkg_remote <- read_gldp("https://example.org/datapackage.json")
+#'
+#' # Keep resource paths instead of loading all tables into memory
+#' pkg_lazy <- read_gldp("datapackage.json", force_read = FALSE)
+#'
+#' # Skip the measurements table to reduce memory use
+#' pkg_light <- read_gldp("datapackage.json", drop_measurements = TRUE)
 #' }
+#'
+#' @seealso [create_gldp()] to create a new package shell, [write_gldp()] to
+#'   write a package to disk, and [read_zenodo()] to read a package from Zenodo.
+#'
 #' @export
 read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measurements = FALSE) {
   pkg <- frictionless::read_package(x)

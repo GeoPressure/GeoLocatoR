@@ -2,6 +2,8 @@
 #' Deprecated: `read_gdl()`
 #'
 #' @description
+#' `r lifecycle::badge("deprecated")`
+#'
 #' `read_gdl()` is kept for backward compatibility in the SOI import workflow.
 #'
 #' @param access_file A path to an Access file containing both GDL data and
@@ -37,6 +39,8 @@ read_gdl <- function(
 #' Deprecated: `version()`
 #'
 #' @description
+#' `r lifecycle::badge("deprecated")`
+#'
 #' `version()` was renamed to [gldp_version()].
 #'
 #' @param x A GeoLocator Data Package object.
@@ -53,11 +57,14 @@ version <- function(x) {
 #' Deprecated: `config2tibble()`
 #'
 #' @description
+#' `r lifecycle::badge("deprecated")`
+#'
 #' `config2tibble()` was renamed to [config_to_tibble()].
 #'
 #' @param file Character string specifying the path to the `config.yml` file.
 #' @param filter_return Logical. If `TRUE`, only columns that vary across tags are returned.
-#' @rdname config_to_tibble
+#' @return Same as [config_to_tibble()].
+#' @seealso [config_to_tibble()].
 #' @export
 config2tibble <- function(
   file = Sys.getenv("R_CONFIG_FILE", "config.yml"),
@@ -107,6 +114,8 @@ update_gldp_reference_location <- function(pkg) {
 #' Deprecated: `add_gldp_geopressuretemplate()`
 #'
 #' @description
+#' `r lifecycle::badge("deprecated")`
+#'
 #' `add_gldp_geopressuretemplate()` was renamed to [read_geopressuretemplate()].
 #'
 #' @param pkg A GeoLocator Data Package object.
@@ -134,6 +143,8 @@ add_gldp_geopressuretemplate <- function(
 #' Deprecated: `create_gldp_geopressuretemplate()`
 #'
 #' @description
+#' `r lifecycle::badge("deprecated")`
+#'
 #' `create_gldp_geopressuretemplate()` was superseded by [read_geopressuretemplate()].
 #' This compatibility helper initializes `pkg = create_gldp()` and forwards the call.
 #'
@@ -152,6 +163,8 @@ create_gldp_geopressuretemplate <- function(directory = ".") {
 #' Deprecated: `zenodo_to_gldp()`
 #'
 #' @description
+#' `r lifecycle::badge("deprecated")`
+#'
 #' `zenodo_to_gldp()` was removed. Use [read_zenodo()] after adapting arguments,
 #' because it is not a strict drop-in replacement.
 #'
@@ -174,6 +187,8 @@ zenodo_to_gldp <- function(id, ...) {
 #' Deprecated: `gldp_to_zenodo()`
 #'
 #' @description
+#' `r lifecycle::badge("deprecated")`
+#'
 #' `gldp_to_zenodo()` was removed with no replacement.
 #'
 #' @param ... Unused.

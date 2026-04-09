@@ -7,21 +7,32 @@
 create_gldp(version = NULL, ...)
 }
 \arguments{
-\item{version}{(optional) Version of GeoLocator Data Package to use. Defaults to the
-GeoLocatoR default (latest).}
+\item{version}{Optional GeoLocator-DP version. Use \code{NULL} for the latest
+version, or set it explicitly when creating a package for an older schema
+such as \code{"v0.3"} or \code{"v1.0"}.}
 
-\item{...}{Additional descriptor fields to include}
+\item{...}{Additional top-level descriptor fields, such as \code{title}, \code{id},
+\code{contributors}, or \code{licenses}, used to initialize package metadata.}
 }
 \value{
-A GeoLocator Data Package object.
+A \code{geolocatordp} object with the requested schema URL and no
+resources.
 }
 \description{
-Create a GeoLocator Data Package shell with a minimal descriptor.
+Create a new GeoLocator Data Package shell with the GeoLocator-DP profile
+schema.
 }
 \examples{
 pkg <- create_gldp()
+pkg
 
 # Previous version
 pkg <- create_gldp(version = "v0.2")
+pkg
 
+}
+\seealso{
+\code{\link[=read_gldp]{read_gldp()}} to read an existing package, \code{\link[=write_gldp]{write_gldp()}} to write
+a package to disk, and \code{\link[=gldp_version]{gldp_version()}} to inspect the package schema
+version.
 }

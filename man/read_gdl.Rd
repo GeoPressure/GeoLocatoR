@@ -24,5 +24,7 @@ columns.}
 Same as \code{read_soi_gld()}.
 }
 \description{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}}
+
 \code{read_gdl()} is kept for backward compatibility in the SOI import workflow.
 }

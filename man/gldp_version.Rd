@@ -10,7 +10,10 @@ gldp_version(x)
 \item{x}{A GeoLocator Data Package object.}
 }
 \value{
-Character string version (e.g. \code{"v1.0"}), or \code{NA} when not parseable.
+Character string version (e.g. \code{"v1.0"}).
+
+The function aborts if \verb{$schema} is missing, cannot be parsed, or refers to
+an unsupported version.
 }
 \description{
 Extract the GeoLocator-DP version from \code{x$schema}.

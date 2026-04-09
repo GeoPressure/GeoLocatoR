@@ -13,6 +13,8 @@ create_gldp_geopressuretemplate(directory = ".")
 A \code{geolocatordp} object.
 }
 \description{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}}
+
 \code{create_gldp_geopressuretemplate()} was superseded by \code{\link[=read_geopressuretemplate]{read_geopressuretemplate()}}.
 This compatibility helper initializes \code{pkg = create_gldp()} and forwards the call.
 }

@@ -1,38 +1,37 @@
 #' Add Geolocator DP resources from a GeoPressureTemplate
 #'
 #' @description
-#' This function adds all possible resources to a GeolocatoR Data Package by reading data from
-#' a [GeoPressureTemplate](https://github.com/GeoPressure/GeoPressureTemplate) directories and files.
+#' Read a GeoPressureTemplate project and populate a GeoLocator Data Package
+#' with the resources that can be derived from it.
 #'
-#' The function performs the following steps:
-#' 1. If `"interim"` in `from`,  reads all interim ".RData" files, extract all variables and add
-#' corresponding resources to the package (`measurements`, `twilights`, `staps`, `paths`, `edges`,
-#' and `pressurepaths`). Generated automatically temporary `tags` and `observations` tables from
-#' the `param` in the interim file, and stores raw param objects in `pkg$params`.
-#' 2. If `"raw-data"` in `from`, search for all tag_id in `data/raw-data/` which were not included
-#' from `interim`. It will use at least `tag_create` and if possible `tag_label` and `tag_set_map`
-#' using `config.yml` .It will also generate or update `tags` and `observations` table from the the
-#' tag data and appends corresponding `params` into `pkg$params`.
-#' 3. Reads the `tags.csv` (or `tags.xlsx` if present) and `observations.csv` (or
-#' `observations.xlsx` if present) from the `./data` directory if they exist and overwrite the
-#' previously generated `tags` and `observations`.
+#' The import can combine two sources:
+#' 1. `"interim"`: read `.RData` outputs from `data/interim/`, convert them to
+#'    package resources, and store raw parameter objects in `pkg$params`.
+#' 2. `"raw-tag"`: create tag objects from `data/raw-tag/` and `config.yml`,
+#'    then derive `measurements`, `tags`, `observations`, and `params`.
 #'
-#' You can exclude interim file or raw-tag folder to be included in the package by starting the
-#' file name with an `"_"`.
+#' Manual data files take precedence over generated metadata:
+#' - `data/tags.csv` or `data/tags.xlsx` replaces generated `tags`;
+#' - `data/observations.csv` or `data/observations.xlsx` replaces generated
+#'   `observations`.
 #'
-#' It is possible to do a mix of some `tag` read from `"interim"` and other from `"raw-data"`
-#' simultaneously.
+#' Files or directories whose names start with `"_"` are ignored.
 #'
-#' You can find more information on the use of this function in the [GeoPressureManual
-#' ](https://geopressure.org/GeoPressureManual/geolocator-create.html)
+#' See the
+#' [GeoPressureManual](https://geopressure.org/GeoPressureManual/geolocator-create.html)
+#' for a full workflow example.
 #'
-#' @param directory A character string specifying the geopressuretemplate directory.
-#' @param from A character vector specifying the source of the data files. Either or both of
-#' `"raw-tag"` (for creating `tag` based on the data in `data/raw-tag/`) and `"interim"` for data
-#' in `data/interim`.
-#' @param pkg (optional) A GeoLocator Data Package object. Default to a new one.
+#' @param directory Path to the GeoPressureTemplate directory.
+#' @param from Character vector specifying which sources to import. Supported
+#'   values are `"raw-tag"` and/or `"interim"`.
+#' @param pkg Optional GeoLocator Data Package object to update. Defaults to a
+#'   new package created with [create_gldp()].
 #'
-#' @return The updated GLDP package object with new resources
+#' @return The updated `geolocatordp` object.
+#'
+#' @seealso [create_geopressuretemplate()] to create a project from a package,
+#'   [params_to_tags()], [params_to_observations()], and
+#'   [tags_to_measurements()] for the underlying conversions.
 #' @export
 read_geopressuretemplate <- function(
   directory = ".",

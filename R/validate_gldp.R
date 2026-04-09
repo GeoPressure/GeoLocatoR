@@ -1,25 +1,84 @@
 #' Validate a GeoLocator Data Package
 #'
 #' @description
-#' `validate_gldp()` runs the standard quality-control workflow for a GeoLocator Data Package.
-#' It provides an automated check that a package is structurally valid and internally coherent
-#' before publication or reuse.
+#' `validate_gldp()` runs the full validation workflow for a GeoLocator Data Package.
+#' It checks schema conformance, resource-level consistency, and cross-table coherence,
+#' then reports additional metadata recommendations.
 #'
 #' @details
-#' Validation is organized in two complementary layers:
-#' 1. **Technical conformance**: checks compliance with the GeoLocator Data Package specification,
-#'    including required resources, schema conformity, required fields, and controlled vocabularies.
-#' 2. **Coherence and metadata quality**: checks consistency of identifiers and relationships across
-#'    key tables (e.g. `tags`, `observations`, and `measurements`) and reports metadata best-practice
-#'    mismatches that should be justified during curation.
+#' Validation runs in four steps:
+#'
+#' 1. **Package profile validation**
+#'    The package metadata is checked against the GeoLocator-DP profile schema. This includes
+#'    required package-level fields and schema-defined constraints such as type, format,
+#'    uniqueness, enumerated values, regular-expression patterns, and minimum or maximum
+#'    lengths, item counts, and numeric values.
+#'
+#' 2. **Resource validation**
+#'    Resources are checked against their schema: columns must match the
+#'    `fieldsMatch` rule, and each column must satisfy its declared constraints
+#'    such as type, format, requiredness, uniqueness, allowed values, patterns,
+#'    and numeric or length limits.
+#'
+#' 3. **Coherence validation**
+#'    Cross-resource consistency checks are then applied.
+#'
+#'    Core package coherence checks require the resources `tags`, `observations`, and
+#'    `measurements`, and verify that:
+#'    - one `ring_number` is not associated with multiple `scientific_name` values in `tags`;
+#'    - every `measurements$tag_id` exists in `tags$tag_id`;
+#'    - every `tags$ring_number` appears in `observations$ring_number`;
+#'    - every `observations` `tag_id` / `ring_number` combination exists in `tags`;
+#'    - every tag declared in `tags` has at least one observation (reported as a warning only);
+#'    - every tag with measurement data has both an `equipment` and a `retrieval` observation.
+#'
+#'    Observation-sequence checks verify that:
+#'    - one `tag_id` is not associated with multiple `ring_number` values;
+#'    - `equipment` and `retrieval` observations always have a `tag_id`;
+#'    - `equipment` and `retrieval` observations have `device_status == "present"`;
+#'    - `capture` observations with `device_status` `"missing"` or `"present"` have a `tag_id`;
+#'    - a second tag is not attached without a prior retrieval or `capture` with
+#'      `device_status == "missing"`;
+#'    - each `tag_id` has an `equipment` observation;
+#'    - retrieval does not precede equipment for the same `tag_id`;
+#'    - duplicated observations are not present for the same `ring_number`, `datetime`,
+#'      and `observation_type`;
+#'    - `device_status` transitions are plausible across the observation history.
+#'
+#'    GeoPressure-specific coherence checks are applied when the corresponding resources are
+#'    present. These include:
+#'    - realistic ranges for `staps$stap_id`, `paths$j`, `edges$n`, and
+#'      `pressurepaths$altitude`;
+#'    - realistic year windows for datetime fields in `staps`, `twilights`,
+#'      `pressurepaths`, and `edges`;
+#'    - duration checks for `staps` and `edges`;
+#'    - schema-declared foreign key consistency across resources;
+#'    - warnings for unusual `edges` distances, durations, or wind/ground-speed magnitudes.
+#'
+#' 4. **Metadata recommendations**
+#'    Additional metadata quality checks are reported without affecting the final validity.
+#'    These recommendations cover:
+#'    - the `title` is prefixed by "GeoLocator Data Package: ";
+#'    - presence of contributor roles;
+#'    - `record_type == "dataset"`;
+#'    - expected manufacturer names in `tags$manufacturer`;
+#'    - presence of `relatedIdentifiers`;
+#'    - presence of a selected GeoLocator-DP Zenodo community;
+#'    - a GitHub repository URL in `codeRepository`;
+#'    - scientific names in `pkg$taxonomic` against the eBird taxonomy API when available.
 #'
 #' See the [GeoLocator-DP curation guide](https://geopressure.org/GeoLocator-DP/curation/) for
-#' more informations.
+#' more information.
 #'
 #' @param pkg A GeoLocator Data Package object to be validated.
 #'
-#' @return A silent logical value indicating whether the package validation was successful (`TRUE`) or
-#' failed (`FALSE`).
+#' @return An invisible logical value: `TRUE` when all profile, resource, and coherence checks
+#' pass, `FALSE` otherwise. Metadata recommendations are always reported but do not affect this
+#' return value.
+#'
+#' @examples
+#' pkg <- read_zenodo("17367319", quiet = TRUE)
+#' validate_gldp(pkg)
 #'
 #' @export
 validate_gldp <- function(pkg) {
@@ -46,11 +105,12 @@ validate_gldp <- function(pkg) {
 
 #' Validate GeoLocator Data Package profile
 #'
-#' Internal helper function to validate that a GeoLocator Data Package conforms
-#' to the expected profile schema.
+#' Internal helper that validates package-level metadata against the GeoLocator-DP
+#' profile schema. Resource definitions are excluded here and validated separately.
 #'
 #' @param pkg A GeoLocator Data Package object
-#' @return Logical indicating whether the profile validation passed
+#' @return Invisibly returns `TRUE` when the package-level profile validation passes,
+#'   `FALSE` otherwise.
 #' @noRd
 validate_gldp_profile <- function(pkg) {
   cli_h3("Check Profile")
@@ -81,11 +141,13 @@ validate_gldp_profile <- function(pkg) {
 
 #' Validate GeoLocator Data Package resources
 #'
-#' Internal helper function to validate all resources within a GeoLocator Data Package
-#' against their respective schemas.
+#' Internal helper that validates each package resource against its own resource
+#' schema. Resources must be tabular data resources with a declared schema and
+#' in-memory data.
 #'
 #' @param pkg A GeoLocator Data Package object
-#' @return Logical indicating whether all resource validations passed
+#' @return Invisibly returns `TRUE` when all resources can be validated and pass
+#'   their schema checks, `FALSE` otherwise.
 #' @noRd
 validate_gldp_resources <- function(pkg) {
   pkg <- update_gldp_order_resources(pkg)
@@ -116,6 +178,17 @@ validate_gldp_resources <- function(pkg) {
   invisible(valid)
 }
 
+#' Validate a tabular resource against its schema
+#'
+#' Internal helper that checks a single resource table against its field
+#' definitions. It validates data availability, column matching through the
+#' schema `fieldsMatch` rule, and per-field constraints.
+#'
+#' @param data A data frame stored in the resource.
+#' @param schema The frictionless schema describing the resource.
+#'
+#' @return Invisibly returns `TRUE` when the table is consistent with the schema,
+#'   `FALSE` otherwise.
 #' @noRd
 validate_gldp_table <- function(data, schema) {
   cli_h3("Check Resources {.field {schema$name}}")

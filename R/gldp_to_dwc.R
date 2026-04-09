@@ -59,6 +59,8 @@
 #'   (`"mean_simulation"` or `"median_simulation"`) as the 95th percentile of
 #'   the distance between each simulation and the aggregated center.
 #'
+#' @seealso [gldp_to_eml()] to create the matching `eml.xml` metadata file.
+#'
 #' @export
 gldp_to_dwc <- function(pkg, directory, path_type = "most_likely") {
   check_gldp(pkg)

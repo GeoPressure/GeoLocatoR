@@ -13,7 +13,8 @@ select_gldp(pkg, tag_id)
 selection to remove.}
 }
 \value{
-A filtered GeoLocator Data Package object.
+A filtered GeoLocator Data Package object with derived properties
+recomputed via \code{\link[=update_gldp]{update_gldp()}}.
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
@@ -23,4 +24,8 @@ a \code{tag_id} column.
 
 Use a negative selection to drop tags:
 \code{select_gldp(pkg, -"14AC")} or \code{select_gldp(pkg, -c("14AC", "15BC"))}.
+}
+\seealso{
+\code{\link[=tags]{tags()}} to inspect available tag IDs and \code{\link[=update_gldp]{update_gldp()}} for the
+derived properties recomputed after filtering.
 }

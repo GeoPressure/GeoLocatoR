@@ -1,32 +1,35 @@
 #' Read SOI data into a GeoLocator Data Package
 #'
 #' @description
-#' This function reads data from the Swiss Ornithological Institute (SOI) into
-#' a new package created with [create_gldp()]. It includes
-#' tags, measurements, and observations based on the provided data frame and directory of data. The
-#' function also handles missing directories and updates the package accordingly.
+#' Import Swiss Ornithological Institute (SOI) geolocator exports into a new
+#' GeoLocator Data Package. The function reads available raw tag data from
+#' `directory_data`, derives measurements, and builds `tags` and optionally
+#' prefilled `observations` from the supplied SOI summary table.
 #'
 #' See an example of use [with this tutorial](https://rpubs.com/GeoPressure/Geolocator_create_from_soi).
 #'
-#' @param gdl A data frame containing the SOI data. Must include columns like `OrderName`,
-#' `GDL_ID`, and other relevant fields for tags, measurements, and observations. See `read_soi_gld()`
-#' for more information.
-#' @param directory_data A character string specifying the path to the directory where data files
-#' are located. This directory is used to locate and match GDL_IDs to their corresponding
-#' directories.
+#' @param gdl A data frame of SOI export metadata, typically returned by
+#'   [read_soi_gld()]. It must contain at least `GDL_ID` and the fields needed
+#'   to derive package metadata.
+#' @param directory_data Path to the directory containing SOI raw tag files or
+#'   folders.
 #' @param generate_observations A logical value indicating whether to create pre-filled
-#' observations with missing values (date, locations, etc... assuming equipment and retrieval.
+#'   `observations` rows for equipment and retrieval events.
 #'
 #' @details
 #' The function performs the following steps:
 #' \itemize{
-#'   \item Checks and retrieves the directory information for each GDL_ID/tag_id.
-#'   \item Creates GeoPressureR tag data for each of them when possible
-#'   \item Extract measurements and add them as resources to pkg
-#'   \item Compute tags.csv and observations.csv from `gdl` and add them as resources too.
+#'   \item Retrieves the data directory for each `GDL_ID` when not already present.
+#'   \item Creates GeoPressureR tag objects for tags with available data.
+#'   \item Extracts measurements and adds them as a package resource.
+#'   \item Derives `tags` and `observations` from `gdl` and adds them as resources.
 #' }
 #'
 #' @return A `geolocatordp` object.
+#'
+#' @seealso [read_soi_gld()] to prepare the SOI input table and
+#'   [tags_to_measurements()] for the underlying conversion of raw tag objects
+#'   to the `measurements` resource.
 #'
 #' @export
 # nocov start

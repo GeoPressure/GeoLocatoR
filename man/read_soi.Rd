@@ -7,34 +7,38 @@
 read_soi(gdl, directory_data, generate_observations = TRUE)
 }
 \arguments{
-\item{gdl}{A data frame containing the SOI data. Must include columns like \code{OrderName},
-\code{GDL_ID}, and other relevant fields for tags, measurements, and observations. See \code{read_soi_gld()}
-for more information.}
+\item{gdl}{A data frame of SOI export metadata, typically returned by
+\code{\link[=read_soi_gld]{read_soi_gld()}}. It must contain at least \code{GDL_ID} and the fields needed
+to derive package metadata.}
 
-\item{directory_data}{A character string specifying the path to the directory where data files
-are located. This directory is used to locate and match GDL_IDs to their corresponding
-directories.}
+\item{directory_data}{Path to the directory containing SOI raw tag files or
+folders.}
 
 \item{generate_observations}{A logical value indicating whether to create pre-filled
-observations with missing values (date, locations, etc... assuming equipment and retrieval.}
+\code{observations} rows for equipment and retrieval events.}
 }
 \value{
 A \code{geolocatordp} object.
 }
 \description{
-This function reads data from the Swiss Ornithological Institute (SOI) into
-a new package created with \code{\link[=create_gldp]{create_gldp()}}. It includes
-tags, measurements, and observations based on the provided data frame and directory of data. The
-function also handles missing directories and updates the package accordingly.
+Import Swiss Ornithological Institute (SOI) geolocator exports into a new
+GeoLocator Data Package. The function reads available raw tag data from
+\code{directory_data}, derives measurements, and builds \code{tags} and optionally
+prefilled \code{observations} from the supplied SOI summary table.
 
 See an example of use \href{https://rpubs.com/GeoPressure/Geolocator_create_from_soi}{with this tutorial}.
 }
 \details{
 The function performs the following steps:
 \itemize{
-\item Checks and retrieves the directory information for each GDL_ID/tag_id.
-\item Creates GeoPressureR tag data for each of them when possible
-\item Extract measurements and add them as resources to pkg
-\item Compute tags.csv and observations.csv from \code{gdl} and add them as resources too.
+\item Retrieves the data directory for each \code{GDL_ID} when not already present.
+\item Creates GeoPressureR tag objects for tags with available data.
+\item Extracts measurements and adds them as a package resource.
+\item Derives \code{tags} and \code{observations} from \code{gdl} and adds them as resources.
 }
+}
+\seealso{
+\code{\link[=read_soi_gld]{read_soi_gld()}} to prepare the SOI input table and
+\code{\link[=tags_to_measurements]{tags_to_measurements()}} for the underlying conversion of raw tag objects
+to the \code{measurements} resource.
 }

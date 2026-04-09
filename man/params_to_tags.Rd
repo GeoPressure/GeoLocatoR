@@ -12,9 +12,17 @@ generated during the GeoPressure workflow. See \href{https://geopressure.org/Geo
 }
 \value{
 A \code{\link[tibble:tibble]{tibble::tibble()}} data frame with columns \code{tag_id}, \code{manufacturer}, \code{scientific_name},
-\code{ring_number}, \code{model}, and \code{firmware} (if \code{soi_settings} is present).
+\code{ring_number}, and, when available, \code{model} and \code{firmware}.
+
+Manufacturer names are normalized for common GeoPressure sources, and SOI or
+Migrate-specific model metadata are propagated when present in the parameter
+objects.
 }
 \description{
-This function converts a list of parameters into a single \code{tags} tibble according to the
-\href{https://geopressure.org/GeoLocator-DP/core/tags/}{GeoLocator Data Package specification}.
+Convert a list of GeoPressureR parameter objects into a \code{tags} tibble
+following the GeoLocator Data Package structure.
+}
+\seealso{
+\code{\link[=params_to_observations]{params_to_observations()}} and \code{\link[=tags_to_measurements]{tags_to_measurements()}} for related
+conversions from GeoPressureR objects to GeoLocator-DP resources.
 }

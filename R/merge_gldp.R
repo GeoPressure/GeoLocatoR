@@ -11,29 +11,16 @@
 #' - `merge_gldp(x, list(y, ...))`
 #'
 #' **Resource merging logic:**
-#' - Resource names come from the union of resources present in all inputs.
+#' - A resource is added even if only one input package contains it.
 #' - For each resource, rows from available inputs are combined with `dplyr::bind_rows()`.
-#' - A resource is added when at least one input package contains it.
 #'
 #' **Check for unique tag_id:**
 #' - The merge aborts if any `tag_id` is present in both packages.
-#' - This prevents ambiguous joins across resources after merge.
 #'
 #' **datapackage_id in tags:**
 #' - For the `tags` resource, each row must have a `datapackage_id`.
 #' - Missing `datapackage_id` values are filled with the package `id`.
 #' - The merge aborts if `tags$datapackage_id` overlaps between the two inputs.
-#'
-#' **datapackages provenance table:**
-#' - `pkg$datapackages` is a one-row-per-source tibble keyed by `datapackage_id`
-#'   (`pkg$id`) and accumulated across sequential merges.
-#' - The merge aborts if two input provenance rows share the same
-#'   `datapackage_id`.
-#' - Metadata vectors/lists are flattened to plain text for easy comparison
-#'   between source packages.
-#' - It includes key source metadata fields (e.g. title/version/status/access),
-#'   temporal coverage (`temporal_start`, `temporal_end`), taxonomic summary
-#'   (`taxonomic`), and resource/sensor counts as `numberTags_*` columns.
 #'
 #' **Metadata merging rules:**
 #' - **version**: Uses the package default version from `create_gldp()`.
@@ -50,10 +37,30 @@
 #' - **created**: Set to the current timestamp at the time of merging.
 #' - All others are dropped
 #'
+#' **datapackages provenance table:**
+#' - `pkg$datapackages` is a one-row-per-source tibble keyed by
+#'   `datapackage_id` (`pkg$id`) and accumulated across sequential merges.
+#' - It includes key source metadata fields (e.g. title/version/status/access),
+#'   temporal coverage (`temporal_start`, `temporal_end`), taxonomic summary
+#'   (`taxonomic`), and resource/sensor counts as `numberTags_*` columns.
+#'
 #' @param x A GeoLocator Data Package object, or a list of them.
 #' @param y A GeoLocator Data Package object.
 #' @param ... Additional GeoLocator Data Package objects, or lists of them.
 #' @return A GeoLocator Data Package object containing the merged data from all inputs.
+#'
+#' @examples
+#' pkg1 <- read_zenodo("17367319", quiet = TRUE)
+#' pkg2 <- read_zenodo("17257520", quiet = TRUE)
+#'
+#' merged <- merge_gldp(pkg1, pkg2)
+#' merged
+#'
+#' # List-style input is also supported
+#' merged <- merge_gldp(list(pkg1, pkg2))
+#'
+#' @seealso [create_gldp()] to create package shells and [update_gldp()] for the
+#'   derived properties recomputed on the merged package.
 #'
 #' @export
 merge_gldp <- function(x, y = NULL, ...) {
