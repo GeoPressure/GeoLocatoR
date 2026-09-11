@@ -340,8 +340,6 @@ create_geopressuretemplate_data <- function(pkg) {
   readr::write_csv(tags(pkg), "./data/tags.csv")
   readr::write_csv(observations(pkg), "./data/observations.csv")
 
-  m <- measurements(pkg)
-
   tag_ids <- unique(tags(pkg)$tag_id)
   tags_export <- gldp_to_tag(pkg, tag_id = tag_ids)
   if (inherits(tags_export, "tag")) {
@@ -379,48 +377,12 @@ create_geopressuretemplate_data <- function(pkg) {
         if (!sensor %in% names(tag)) {
           return(invisible(NULL))
         }
+        # Label and stap state are stored in the tag-label sidecar, not raw sensor files.
         tag[[sensor]] |>
+          dplyr::select(-dplyr::any_of(c("label", "stap_id"))) |>
           dplyr::rename(datetime = "date") |>
           readr::write_csv(file = glue::glue("{dir_path}/{sensor}.csv"))
       })
-
-      labels_pressure <- m |>
-        dplyr::filter(.data$tag_id == !!tag_id, .data$sensor == "pressure") |>
-        dplyr::transmute(
-          date = .data$datetime,
-          label = ifelse(is.na(.data$label), "", .data$label)
-        ) |>
-        dplyr::group_by(.data$date) |>
-        dplyr::summarize(
-          label = dplyr::first(.data$label[.data$label != ""], default = ""),
-          .groups = "drop"
-        )
-
-      labels_acceleration <- m |>
-        dplyr::filter(
-          .data$tag_id == !!tag_id,
-          .data$sensor %in% c("acceleration", "activity")
-        ) |>
-        dplyr::transmute(
-          date = .data$datetime,
-          label = ifelse(is.na(.data$label), "", .data$label)
-        ) |>
-        dplyr::group_by(.data$date) |>
-        dplyr::summarize(
-          label = dplyr::first(.data$label[.data$label != ""], default = ""),
-          .groups = "drop"
-        )
-
-      if ("pressure" %in% names(tag)) {
-        tag$pressure <- tag$pressure |>
-          dplyr::left_join(labels_pressure, by = "date") |>
-          dplyr::mutate(label = dplyr::coalesce(.data$label, ""))
-      }
-      if ("acceleration" %in% names(tag)) {
-        tag$acceleration <- tag$acceleration |>
-          dplyr::left_join(labels_acceleration, by = "date") |>
-          dplyr::mutate(label = dplyr::coalesce(.data$label, ""))
-      }
 
       if ("pressure" %in% names(tag)) {
         GeoPressureR::tag_label_write(

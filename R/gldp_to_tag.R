@@ -17,10 +17,11 @@
 #'
 #' A GeoPressureR `tag` object contains:
 #' - `param`: parameter object (see [`GeoPressureR::param_create()`])
-#' - `pressure`: data.frame with columns `date` and `value` (if pressure data available)
+#' - `pressure`: data.frame with columns `date` and `value`, plus `label` and `stap_id` when
+#'   labels are available
 #' - `light`: data.frame with columns `date` and `value` (if light data available)
 #' - `acceleration`: data.frame with columns `date`, `value` (activity measure), and optionally
-#'   `mean_acceleration_z` (if available)
+#'   `mean_acceleration_z`, `label`, and `stap_id` (when labels are available)
 #' - `temperature_external`: data.frame with columns `date` and `value`
 #'   (if external temperature data available)
 #' - `temperature_internal`: data.frame with columns `date` and `value`
@@ -44,9 +45,9 @@
 #' - Setting appropriate parameter values from GLDP metadata
 #'
 #' **Sensor mapping from GLDP to GeoPressureR:**
-#' - `pressure` → `pressure` (date, value)
+#' - `pressure` → `pressure` (date, value, label)
 #' - `light` → `light` (date, value)
-#' - `activity` + `mean_acceleration_z` → `acceleration` (date, value, mean_acceleration_z) where value = activity
+#' - `activity` + `mean_acceleration_z` → `acceleration` (date, value, mean_acceleration_z, label) where value = activity
 #' - `temperature-external` → `temperature_external` (date, value)
 #' - `temperature-internal` → `temperature_internal` (date, value)
 #' - `magnetic_x/y/z` → `magnetic` (date, magnetic_x, magnetic_y, magnetic_z)
@@ -171,10 +172,21 @@ gldp_to_tag_single <- function(pkg, tid) {
       dplyr::filter(.data$sensor == sensor_gldp)
 
     if (nrow(sensor_data) > 0) {
+      columns <- if (sensor_gldp == "pressure") {
+        c("datetime", "value", "label")
+      } else {
+        c("datetime", "value")
+      }
       df <- sensor_data |>
-        dplyr::select("datetime", "value") |>
+        dplyr::select(dplyr::all_of(columns)) |>
         dplyr::rename(date = "datetime") |>
         dplyr::arrange(.data$date)
+      if (sensor_gldp == "pressure") {
+        df <- df |> dplyr::mutate(label = dplyr::coalesce(.data$label, ""))
+        if (all(df$label == "")) {
+          df <- df |> dplyr::select(-"label")
+        }
+      }
 
       # Ensure UTC timezone
       attr(df$date, "tzone") <- "UTC"
@@ -194,23 +206,38 @@ gldp_to_tag_single <- function(pkg, tid) {
     # Start with activity data (renamed to "value")
     if (nrow(activity_data) > 0) {
       acc_df <- activity_data |>
-        dplyr::select("datetime", "value") |>
+        dplyr::select("datetime", "value", "label") |>
         dplyr::rename(date = "datetime")
     } else {
       # Create empty data frame if no activity data
       acc_df <- tibble::tibble(
         date = as.POSIXct(character(), tz = "UTC"),
-        value = numeric()
+        value = numeric(),
+        label = character()
       )
     }
 
     # Merge with mean_acceleration_z data if available
     if (nrow(mean_acc_data) > 0) {
       mean_acc_df <- mean_acc_data |>
-        dplyr::select("datetime", "value") |>
-        dplyr::rename(date = "datetime", mean_acceleration_z = "value")
+        dplyr::select("datetime", "value", "label") |>
+        dplyr::rename(
+          date = "datetime",
+          mean_acceleration_z = "value",
+          mean_acceleration_z_label = "label"
+        )
 
-      acc_df <- dplyr::full_join(acc_df, mean_acc_df, by = "date")
+      acc_df <- acc_df |>
+        dplyr::full_join(mean_acc_df, by = "date") |>
+        dplyr::mutate(
+          label = dplyr::coalesce(.data$label, .data$mean_acceleration_z_label, "")
+        ) |>
+        dplyr::select(-"mean_acceleration_z_label")
+    }
+
+    acc_df <- acc_df |> dplyr::mutate(label = dplyr::coalesce(.data$label, ""))
+    if (all(acc_df$label == "")) {
+      acc_df <- acc_df |> dplyr::select(-"label")
     }
 
     # Arrange and set timezone
@@ -299,6 +326,21 @@ gldp_to_tag_single <- function(pkg, tid) {
       }
 
       tag[["twilight"]] <- as.data.frame(twilight_data)
+    }
+  }
+
+  # Match the derived label state created by GeoPressureR::tag_label().
+  has_label <- ("pressure" %in% names(tag) && "label" %in% names(tag$pressure)) ||
+    ("acceleration" %in% names(tag) && "label" %in% names(tag$acceleration))
+  if ("pressure" %in% names(tag) && has_label) {
+    stap_data <- tag$stap
+    tag <- GeoPressureR::tag_label_stap(tag, quiet = TRUE)
+    if (!is.null(stap_data)) {
+      tag[["stap"]] <- tag$stap |>
+        dplyr::left_join(
+          stap_data |> dplyr::select(-dplyr::any_of(c("start", "end"))),
+          by = "stap_id"
+        )
     }
   }
 
