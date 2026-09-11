@@ -247,45 +247,21 @@ gldp_to_tag_single <- function(pkg, tid) {
     tag[["acceleration"]] <- as.data.frame(acc_df)
   }
 
-  # Handle magnetic sensor (combines x, y, z components)
-  # In GLDP: magnetic_x, magnetic_y, magnetic_z are separate sensors
-  # In GeoPressureR: "magnetic" data.frame with columns: date, magnetic_x, magnetic_y, magnetic_z
-  mag_x <- meas |> dplyr::filter(.data$sensor == "magnetic_x")
-  mag_y <- meas |> dplyr::filter(.data$sensor == "magnetic_y")
-  mag_z <- meas |> dplyr::filter(.data$sensor == "magnetic_z")
+  # GeoPressureR reads magnetic and acceleration axes from the same sensor table.
+  magnetic_sensors <- c(
+    "magnetic_x", "magnetic_y", "magnetic_z",
+    "acceleration_x", "acceleration_y", "acceleration_z"
+  )
+  mag_df <- meas |>
+    dplyr::filter(.data$sensor %in% magnetic_sensors) |>
+    dplyr::select(.data$datetime, .data$sensor, .data$value) |>
+    tidyr::pivot_wider(names_from = "sensor", values_from = "value") |>
+    dplyr::rename(date = "datetime")
 
-  if (nrow(mag_x) > 0 || nrow(mag_y) > 0 || nrow(mag_z) > 0) {
-    mag_df <- NULL
-
-    if (nrow(mag_x) > 0) {
-      mag_df <- mag_x |>
-        dplyr::select("datetime", "value") |>
-        dplyr::rename(date = "datetime", magnetic_x = "value")
-    }
-
-    if (nrow(mag_y) > 0) {
-      mag_y_df <- mag_y |>
-        dplyr::select("datetime", "value") |>
-        dplyr::rename(date = "datetime", magnetic_y = "value")
-
-      if (is.null(mag_df)) {
-        mag_df <- mag_y_df
-      } else {
-        mag_df <- dplyr::full_join(mag_df, mag_y_df, by = "date")
-      }
-    }
-
-    if (nrow(mag_z) > 0) {
-      mag_z_df <- mag_z |>
-        dplyr::select("datetime", "value") |>
-        dplyr::rename(date = "datetime", magnetic_z = "value")
-
-      if (is.null(mag_df)) {
-        mag_df <- mag_z_df
-      } else {
-        mag_df <- dplyr::full_join(mag_df, mag_z_df, by = "date")
-      }
-    }
+  if (nrow(mag_df) > 0) {
+    missing_sensors <- setdiff(magnetic_sensors, names(mag_df))
+    mag_df[missing_sensors] <- NA_real_
+    mag_df <- mag_df |> dplyr::select(.data$date, dplyr::all_of(magnetic_sensors))
 
     # Arrange and set timezone
     mag_df <- mag_df |> dplyr::arrange(.data$date)
