@@ -4,7 +4,14 @@
 \alias{read_zenodo}
 \title{Read a GeoLocator Data Package from Zenodo}
 \usage{
-read_zenodo(id, token = NULL, draft = FALSE, sandbox = FALSE, quiet = FALSE)
+read_zenodo(
+  id,
+  token = NULL,
+  draft = FALSE,
+  sandbox = FALSE,
+  quiet = FALSE,
+  timeout = 600
+)
 }
 \arguments{
 \item{id}{Zenodo identifier. Can be a record id, DOI, DOI URL, or Zenodo
@@ -28,6 +35,8 @@ Zenodo service. This also switches token lookup to sandbox-first sources.}
 
 \item{quiet}{Logical. If \code{TRUE}, suppress progress messages from
 \code{read_zenodo()}.}
+
+\item{timeout}{Maximum time in seconds allowed to download each file.}
 }
 \value{
 A \code{geolocatordp} object from the Zenodo record.
