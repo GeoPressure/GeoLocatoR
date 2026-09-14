@@ -8,7 +8,7 @@ message: 'To cite package "GeoLocatoR" in publications use:'
 type: software
 license: GPL-3.0-or-later
 title: 'GeoLocatoR: R package for GeoLocator Data Package'
-version: 1.1.0
+version: 1.1.1
 identifiers:
 - type: url
   value: https://geopressure.org/GeoLocatoR/
@@ -666,4 +666,3 @@ references:
     email: tytso@thunk.org
   year: '2026'
   doi: 10.32614/CRAN.package.uuid
-

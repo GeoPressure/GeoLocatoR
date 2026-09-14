@@ -1,10 +1,15 @@
-# GeoLocatoR 1.1.1
+# GeoLocatoR v1.1.1
 
-[Full changelog](https://github.com/GeoPressure/GeoLocatoR/compare/v1.1.0...v1.1.1) · [PR #36](https://github.com/GeoPressure/GeoLocatoR/pull/36)
+## Main
 
-- [Added a configurable timeout for Zenodo downloads](https://github.com/GeoPressure/GeoLocatoR/commit/6abb643) and [excluded discarded pressure-path altitudes from exported paths](https://github.com/GeoPressure/GeoLocatoR/commit/d8c8fd2).
 - [Preserved measurement labels](https://github.com/GeoPressure/GeoLocatoR/commit/811c771), [magnetic acceleration axes](https://github.com/GeoPressure/GeoLocatoR/commit/a26ba4b), and [saved GeoPressureR parameters](https://github.com/GeoPressure/GeoLocatoR/commit/fb93f91) when converting a data package to a tag.
 - [Improved GeoPressureTemplate exports](https://github.com/GeoPressure/GeoLocatoR/commit/4b03e6e) by writing tabular sensor data, preserving supported saved parameters, omitting derived defaults, and using compact YAML vectors.
+
+## Minor
+
+- [Added a configurable timeout for Zenodo downloads](https://github.com/GeoPressure/GeoLocatoR/commit/6abb643) and [excluded discarded pressure-path altitudes from exported paths](https://github.com/GeoPressure/GeoLocatoR/commit/d8c8fd2).
+
+**Full Changelog**: <https://github.com/GeoPressure/GeoLocatoR/compare/v1.1.0...v1.1.1>
 
 # GeoLocatoR 1.1.0
 
