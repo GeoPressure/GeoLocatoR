@@ -260,7 +260,14 @@ test_that("gldp_to_tag combines magnetic and acceleration axes", {
   m <- pkg$resources[[resource_idx[1]]]$data
   tag_id <- unique(tags(pkg)$tag_id)[1]
   datetime <- as.POSIXct("2000-01-01 00:00:00", tz = "UTC")
-  axes <- c("magnetic_x", "magnetic_y", "magnetic_z", "acceleration_x", "acceleration_y", "acceleration_z")
+  axes <- c(
+    "magnetic_x",
+    "magnetic_y",
+    "magnetic_z",
+    "acceleration_x",
+    "acceleration_y",
+    "acceleration_z"
+  )
   template <- m[1, , drop = FALSE]
 
   axis_data <- purrr::imap_dfr(axes, \(sensor, i) {
@@ -269,7 +276,9 @@ test_that("gldp_to_tag combines magnetic and acceleration axes", {
     row$sensor <- sensor
     row$datetime <- datetime
     row$value <- i
-    if ("label" %in% names(row)) row$label <- NA_character_
+    if ("label" %in% names(row)) {
+      row$label <- NA_character_
+    }
     row
   })
   pkg$resources[[resource_idx[1]]]$data <- dplyr::bind_rows(m, axis_data)

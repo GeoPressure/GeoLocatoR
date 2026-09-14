@@ -252,8 +252,12 @@ gldp_to_tag_single <- function(pkg, tid) {
 
   # GeoPressureR reads magnetic and acceleration axes from the same sensor table.
   magnetic_sensors <- c(
-    "magnetic_x", "magnetic_y", "magnetic_z",
-    "acceleration_x", "acceleration_y", "acceleration_z"
+    "magnetic_x",
+    "magnetic_y",
+    "magnetic_z",
+    "acceleration_x",
+    "acceleration_y",
+    "acceleration_z"
   )
   mag_df <- meas |>
     dplyr::filter(.data$sensor %in% magnetic_sensors) |>

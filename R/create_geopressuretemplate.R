@@ -557,10 +557,19 @@ create_geopressuretemplate_config <- function(pkg) {
           } else {
             NULL
           },
-          magnetic_file = if (any(sensor %in% c(
-            "magnetic_x", "magnetic_y", "magnetic_z",
-            "acceleration_x", "acceleration_y", "acceleration_z"
-          ))) {
+          magnetic_file = if (
+            any(
+              sensor %in%
+                c(
+                  "magnetic_x",
+                  "magnetic_y",
+                  "magnetic_z",
+                  "acceleration_x",
+                  "acceleration_y",
+                  "acceleration_z"
+                )
+            )
+          ) {
             "magnetic.csv"
           } else {
             NULL
@@ -617,9 +626,13 @@ create_geopressuretemplate_config <- function(pkg) {
 
   inline_vectors <- function(x) {
     if (is.atomic(x) && length(x) > 1) {
-      values <- vapply(x, \(value) {
-        trimws(sub("^value: ", "", yaml::as.yaml(list(value = value))))
-      }, character(1))
+      values <- vapply(
+        x,
+        \(value) {
+          trimws(sub("^value: ", "", yaml::as.yaml(list(value = value))))
+        },
+        character(1)
+      )
       return(glue::glue("__YAML_INLINE_VECTOR__[{glue::glue_collapse(values, sep = ', ')}]"))
     }
     if (is.list(x) && !is.data.frame(x)) {

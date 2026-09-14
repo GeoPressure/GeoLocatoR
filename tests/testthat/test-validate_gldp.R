@@ -321,7 +321,11 @@ test_that("validate_gldp_geopressure_coherence accepts realistic values", {
 
 test_that("validate_gldp_geopressure_coherence ignores discarded pressurepath altitudes", {
   pkg <- make_geopressure_test_pkg()
-  pressurepath_idx <- which(vapply(pkg$resources, \(r) identical(r$name, "pressurepaths"), logical(1)))
+  pressurepath_idx <- which(vapply(
+    pkg$resources,
+    \(r) identical(r$name, "pressurepaths"),
+    logical(1)
+  ))
   pkg[["resources"]][[pressurepath_idx[1]]]$data$altitude[1] <- 8000
   pkg[["resources"]][[pressurepath_idx[1]]]$data$label <- "discard"
 
