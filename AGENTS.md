@@ -40,6 +40,51 @@ Comments
 - Edit `README.Rmd`, not `README.md`.
 - Do not manually edit generated files (`NAMESPACE`, `man/*.Rd`).
 
+## Development, PR, and release workflow
+- Develop on `dev`: make focused commits, run the mandatory checks, and push to
+  `origin/dev`.
+- Open pull requests from `dev` to `main`. Merge `main` into `dev` and resolve
+  conflicts before merging the pull request.
+- Use a draft pull request while release metadata or release checks are
+  incomplete. Mark it ready only when the final version, NEWS entry, and
+  required GitHub checks are complete.
+
+### Canonical release block
+- For every release, write one Markdown release block first. It is the source
+  of truth and must be copied verbatim to the new top section of `NEWS.md`, the
+  pull-request body, and the GitHub Release body for the version tag.
+- Do not shorten, paraphrase, reorder, or add items independently in any of
+  those three places.
+- Use `vX.Y.Z` as the pull-request title and `# GeoLocatoR vX.Y.Z` as the top
+  NEWS heading. Keep headings, subsection headings, bullets, Markdown links,
+  and the full-changelog link identical in all copies.
+- Link every release-note bullet to the specific commit or commits that support
+  it. Use multiple inline links when one bullet summarises several changes.
+
+```md
+# GeoLocatoR vX.Y.Z
+
+## Main
+
+- [Describe the principal user-facing change](https://github.com/GeoPressure/GeoLocatoR/commit/<sha>).
+
+## Minor
+
+- [Describe a smaller change or fix](https://github.com/GeoPressure/GeoLocatoR/commit/<sha>).
+
+**Full Changelog**: <https://github.com/GeoPressure/GeoLocatoR/compare/vX.Y.(Z-1)...vX.Y.Z>
+```
+
+### Release checklist
+- Set `DESCRIPTION` and `CITATION.cff` to the final `X.Y.Z` version; do not
+  merge a release with `.9000`.
+- Add the canonical release block to `NEWS.md` before opening the pull request,
+  then paste that exact block into the pull-request body.
+- Resolve all `R CMD check` warnings and release-relevant notes, and confirm
+  the pull request's GitHub Actions matrix is green.
+- After merging to `main`, create tag `vX.Y.Z` and paste the unchanged
+  canonical release block into the GitHub Release description.
+
 ## Checks and format
 - Format code with `air format . --check`
 - Check lint with: `jarl check .`

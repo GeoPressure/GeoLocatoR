@@ -8,7 +8,7 @@ message: 'To cite package "GeoLocatoR" in publications use:'
 type: software
 license: GPL-3.0-or-later
 title: 'GeoLocatoR: R package for GeoLocator Data Package'
-version: 1.1.0
+version: 1.1.1
 identifiers:
 - type: url
   value: https://geopressure.org/GeoLocatoR/
@@ -53,6 +53,18 @@ references:
     email: gabor@posit.co
   year: '2026'
   doi: 10.32614/CRAN.package.cli
+- type: software
+  title: config
+  abstract: 'config: Manage Environment Specific Configuration Values'
+  notes: Imports
+  url: https://rstudio.github.io/config/
+  repository: https://CRAN.R-project.org/package=config
+  authors:
+  - family-names: Allaire
+    given-names: JJ
+    email: jj@rstudio.com
+  year: '2026'
+  doi: 10.32614/CRAN.package.config
 - type: software
   title: desc
   abstract: 'desc: Manipulate DESCRIPTION Files'
