@@ -1,3 +1,13 @@
+# GeoLocatoR 1.1.1
+
+- Added a configurable timeout for Zenodo downloads and excluded discarded
+  pressure-path altitudes from exported paths.
+- Preserved measurement labels, magnetic acceleration axes, and saved
+  GeoPressureR parameters when converting a data package to a tag.
+- Improved GeoPressureTemplate exports by writing tabular sensor data,
+  preserving supported saved parameters, omitting derived defaults, and using
+  compact YAML vectors.
+
 # GeoLocatoR 1.1.0
 
 - Added support for frictionless 1.3.0 and migrated to its `resource_names()`
