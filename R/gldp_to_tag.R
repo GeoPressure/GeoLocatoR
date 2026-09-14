@@ -53,6 +53,7 @@
 #' - `magnetic_x/y/z` → `magnetic` (date, magnetic_x, magnetic_y, magnetic_z)
 #'
 #' **Additional data extracted:**
+#' - `params.json` → `tag$param` when it contains parameters for the tag
 #' - `staps` table → `tag$stap` (stap_id, start, end, known_lat, known_lon, include)
 #' - `twilights` table → `tag$twilight` (twilight, rise, label)
 #'
@@ -140,14 +141,16 @@ gldp_to_tag_single <- function(pkg, tid) {
     cli_abort("Tag ID {.val {tid}} not found in tags table.")
   }
 
-  # Initialize tag structure using GeoPressureR's param_create
+  # Reuse saved GeoPressureR parameters when available.
+  param_saved <- purrr::detect(pkg$params, \(x) identical(x$id, tid))
+  param <- GeoPressureR::param_create(id = tid)
+  if (is.null(param_saved)) {
+    param$tag_create$manufacturer <- "datapackage"
+  }
   tag <- structure(
-    list(param = GeoPressureR::param_create(id = tid)),
+    list(param = param),
     class = "tag"
   )
-
-  # Update manufacturer info
-  tag$param$tag_create$manufacturer <- "datapackage"
 
   # Extract sensor data
   # Map GLDP sensor types to GeoPressureR sensor names
@@ -318,6 +321,10 @@ gldp_to_tag_single <- function(pkg, tid) {
           by = "stap_id"
         )
     }
+  }
+
+  if (!is.null(param_saved)) {
+    tag[["param"]] <- param_saved
   }
 
   # Validate that we have at least some data

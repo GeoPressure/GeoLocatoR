@@ -1,5 +1,6 @@
 library(testthat)
 library(GeoLocatoR)
+library(GeoPressureR)
 
 # pkg_shared is loaded from setup.R
 
@@ -147,6 +148,21 @@ test_that("gldp_to_tag works with GeoPressureR functions", {
   suppressMessages({
     expect_no_error(print(tag))
   })
+})
+
+test_that("gldp_to_tag reuses saved GeoPressureR parameters", {
+  pkg <- pkg_shared
+  tag_id <- unique(tags(pkg)$tag_id)[1]
+  param <- param_create(tag_id, default = TRUE)
+  param$tag_create$manufacturer <- "migratetech"
+  param$tag_set_map$scale <- 1.5
+  pkg$params <- list(param)
+
+  tag <- gldp_to_tag(pkg, tag_id)
+
+  expect_identical(tag$param, param)
+  expect_equal(tag$param$tag_create$manufacturer, "migratetech")
+  expect_equal(tag$param$tag_set_map$scale, 1.5)
 })
 
 test_that("gldp_to_tag extracts stap and twilight data correctly", {
