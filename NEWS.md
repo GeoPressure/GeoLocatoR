@@ -1,5 +1,7 @@
 # GeoLocatoR 1.1.1
 
+[Full changelog](https://github.com/GeoPressure/GeoLocatoR/compare/7f1e98d...cd6c214) · [PR #36](https://github.com/GeoPressure/GeoLocatoR/pull/36)
+
 - Added a configurable timeout for Zenodo downloads and excluded discarded
   pressure-path altitudes from exported paths.
 - Preserved measurement labels, magnetic acceleration axes, and saved
