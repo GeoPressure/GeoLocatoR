@@ -340,8 +340,6 @@ create_geopressuretemplate_data <- function(pkg) {
   readr::write_csv(tags(pkg), "./data/tags.csv")
   readr::write_csv(observations(pkg), "./data/observations.csv")
 
-  m <- measurements(pkg)
-
   tag_ids <- unique(tags(pkg)$tag_id)
   tags_export <- gldp_to_tag(pkg, tag_id = tag_ids)
   if (inherits(tags_export, "tag")) {
@@ -349,11 +347,11 @@ create_geopressuretemplate_data <- function(pkg) {
   }
 
   # Create the tag-label directory if it doesn't exist
-  path_label <- glue::glue("./data/tag-label/")
+  path_label <- "./data/tag-label/"
   if (!dir.exists(path_label)) {
     dir.create(path_label, recursive = TRUE)
   }
-  path_twl <- glue::glue("./data/twilight-label/")
+  path_twl <- "./data/twilight-label/"
   if (!dir.exists(path_twl)) {
     dir.create(path_twl, recursive = TRUE)
   }
@@ -379,48 +377,12 @@ create_geopressuretemplate_data <- function(pkg) {
         if (!sensor %in% names(tag)) {
           return(invisible(NULL))
         }
+        # Label and stap state are stored in the tag-label sidecar, not raw sensor files.
         tag[[sensor]] |>
+          dplyr::select(-dplyr::any_of(c("label", "stap_id"))) |>
           dplyr::rename(datetime = "date") |>
           readr::write_csv(file = glue::glue("{dir_path}/{sensor}.csv"))
       })
-
-      labels_pressure <- m |>
-        dplyr::filter(.data$tag_id == !!tag_id, .data$sensor == "pressure") |>
-        dplyr::transmute(
-          date = .data$datetime,
-          label = ifelse(is.na(.data$label), "", .data$label)
-        ) |>
-        dplyr::group_by(.data$date) |>
-        dplyr::summarize(
-          label = dplyr::first(.data$label[.data$label != ""], default = ""),
-          .groups = "drop"
-        )
-
-      labels_acceleration <- m |>
-        dplyr::filter(
-          .data$tag_id == !!tag_id,
-          .data$sensor %in% c("acceleration", "activity")
-        ) |>
-        dplyr::transmute(
-          date = .data$datetime,
-          label = ifelse(is.na(.data$label), "", .data$label)
-        ) |>
-        dplyr::group_by(.data$date) |>
-        dplyr::summarize(
-          label = dplyr::first(.data$label[.data$label != ""], default = ""),
-          .groups = "drop"
-        )
-
-      if ("pressure" %in% names(tag)) {
-        tag$pressure <- tag$pressure |>
-          dplyr::left_join(labels_pressure, by = "date") |>
-          dplyr::mutate(label = dplyr::coalesce(.data$label, ""))
-      }
-      if ("acceleration" %in% names(tag)) {
-        tag$acceleration <- tag$acceleration |>
-          dplyr::left_join(labels_acceleration, by = "date") |>
-          dplyr::mutate(label = dplyr::coalesce(.data$label, ""))
-      }
 
       if ("pressure" %in% names(tag)) {
         GeoPressureR::tag_label_write(
@@ -460,9 +422,32 @@ create_geopressuretemplate_config <- function(pkg) {
 
   t <- tags(pkg)
   o <- observations(pkg)
+  m <- measurements(pkg)
 
   t_config <- t |>
     purrr::pmap(\(tag_id, ring_number, scientific_name, ...) {
+      param <- purrr::detect(pkg$params, \(x) identical(x$id, tag_id))
+      if (!is.null(param)) {
+        param_default <- GeoPressureR::param_create(tag_id, default = TRUE)
+        param_config <- unclass(param)[intersect(names(param), names(param_default))]
+        param_config$GeoPressureR_version <- NULL
+        param_config$graph_add_wind$file <- NULL
+        param_config <- purrr::imap(param_config, \(x, name) {
+          default <- param_default[[name]]
+          if (is.list(x) && is.list(default) && !is.data.frame(x)) {
+            x[intersect(names(x), names(default))]
+          } else {
+            x
+          }
+        })
+        param_config$tag_create$directory <- NULL
+        if ("geopressuretemplate" %in% names(param)) {
+          param_config$geopressuretemplate <- param$geopressuretemplate
+        }
+      } else {
+        param_config <- list()
+      }
+
       # Create the basic config from tag tibble
       co <- list(
         bird_create = list(
@@ -549,6 +534,52 @@ create_geopressuretemplate_config <- function(pkg) {
           pull(.data$dt)
       )
 
+      sensor <- m |>
+        filter(.data$tag_id == tag_id) |>
+        pull(.data$sensor)
+      co$tag_create <- utils::modifyList(
+        list(
+          manufacturer = "tabular",
+          pressure_file = if ("pressure" %in% sensor) "pressure.csv" else NULL,
+          light_file = if ("light" %in% sensor) "light.csv" else NULL,
+          acceleration_file = if (any(sensor %in% c("activity", "mean_acceleration_z"))) {
+            "acceleration.csv"
+          } else {
+            NULL
+          },
+          temperature_external_file = if ("temperature-external" %in% sensor) {
+            "temperature_external.csv"
+          } else {
+            NULL
+          },
+          temperature_internal_file = if ("temperature-internal" %in% sensor) {
+            "temperature_internal.csv"
+          } else {
+            NULL
+          },
+          magnetic_file = if (
+            any(
+              sensor %in%
+                c(
+                  "magnetic_x",
+                  "magnetic_y",
+                  "magnetic_z",
+                  "acceleration_x",
+                  "acceleration_y",
+                  "acceleration_z"
+                )
+            )
+          ) {
+            "magnetic.csv"
+          } else {
+            NULL
+          },
+          assert_pressure = "pressure" %in% sensor,
+          time_shift = 0
+        ),
+        co$tag_create
+      )
+
       # Add known
       co$tag_set_map <- list(
         known = k |>
@@ -557,13 +588,61 @@ create_geopressuretemplate_config <- function(pkg) {
           )
       )
 
+      co <- utils::modifyList(param_config, co)
       co
     })
 
   # Add tag_id as name
   names(t_config) <- t$tag_id
 
-  # convert to yaml
+  config_default <- GeoPressureR::geopressuretemplate_config(
+    id = "default",
+    config = config::get(config = "default"),
+    assert_tag = FALSE
+  )
+  remove_default <- function(x, default) {
+    if (identical(x, default)) {
+      return(NULL)
+    }
+    if (is.list(x) && is.list(default) && !is.data.frame(x)) {
+      x <- purrr::imap(x, \(value, name) remove_default(value, default[[name]]))
+      return(purrr::compact(x))
+    }
+    x
+  }
+  t_config <- purrr::map(t_config, \(config) remove_default(config, config_default))
+
+  remove_expressions <- function(x) {
+    if (is.call(x) || is.name(x)) {
+      return(NULL)
+    }
+    if (is.list(x) && !is.data.frame(x)) {
+      x <- lapply(x, remove_expressions)
+      return(x[!vapply(x, is.null, logical(1))])
+    }
+    x
+  }
+  t_config <- remove_expressions(t_config)
+
+  inline_vectors <- function(x) {
+    if (is.atomic(x) && length(x) > 1) {
+      values <- vapply(
+        x,
+        \(value) {
+          trimws(sub("^value: ", "", yaml::as.yaml(list(value = value))))
+        },
+        character(1)
+      )
+      return(glue::glue("__YAML_INLINE_VECTOR__[{glue::glue_collapse(values, sep = ', ')}]"))
+    }
+    if (is.list(x) && !is.data.frame(x)) {
+      return(lapply(x, inline_vectors))
+    }
+    x
+  }
+  t_config <- inline_vectors(t_config)
+
+  # Convert to YAML.
   t_yaml <- yaml::as.yaml(
     t_config,
     handlers = list(
@@ -591,6 +670,7 @@ create_geopressuretemplate_config <- function(pkg) {
 
   # Manually fix issue with tibble export
   t_yaml <- gsub("\\]\\'", "]", gsub("\\'\\[", "[", t_yaml))
+  t_yaml <- gsub("__YAML_INLINE_VECTOR__(\\[[^\\n]+\\])", "\\1", t_yaml)
 
   # Combine default config.yml with trim_yaml
   combined_yaml <- c(readLines("config.yml"), t_yaml)

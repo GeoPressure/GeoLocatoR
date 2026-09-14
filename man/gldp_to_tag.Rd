@@ -21,10 +21,11 @@ correspond to the \code{tag_id} values.
 A GeoPressureR \code{tag} object contains:
 \itemize{
 \item \code{param}: parameter object (see \code{\link[GeoPressureR:param_create]{GeoPressureR::param_create()}})
-\item \code{pressure}: data.frame with columns \code{date} and \code{value} (if pressure data available)
+\item \code{pressure}: data.frame with columns \code{date} and \code{value}, plus \code{label} and \code{stap_id} when
+labels are available
 \item \code{light}: data.frame with columns \code{date} and \code{value} (if light data available)
 \item \code{acceleration}: data.frame with columns \code{date}, \code{value} (activity measure), and optionally
-\code{mean_acceleration_z} (if available)
+\code{mean_acceleration_z}, \code{label}, and \code{stap_id} (when labels are available)
 \item \code{temperature_external}: data.frame with columns \code{date} and \code{value}
 (if external temperature data available)
 \item \code{temperature_internal}: data.frame with columns \code{date} and \code{value}
@@ -57,9 +58,9 @@ to the format expected by GeoPressureR. The conversion includes:
 
 \strong{Sensor mapping from GLDP to GeoPressureR:}
 \itemize{
-\item \code{pressure} → \code{pressure} (date, value)
+\item \code{pressure} → \code{pressure} (date, value, label)
 \item \code{light} → \code{light} (date, value)
-\item \code{activity} + \code{mean_acceleration_z} → \code{acceleration} (date, value, mean_acceleration_z) where value = activity
+\item \code{activity} + \code{mean_acceleration_z} → \code{acceleration} (date, value, mean_acceleration_z, label) where value = activity
 \item \code{temperature-external} → \code{temperature_external} (date, value)
 \item \code{temperature-internal} → \code{temperature_internal} (date, value)
 \item \code{magnetic_x/y/z} → \code{magnetic} (date, magnetic_x, magnetic_y, magnetic_z)
@@ -67,6 +68,7 @@ to the format expected by GeoPressureR. The conversion includes:
 
 \strong{Additional data extracted:}
 \itemize{
+\item \code{params.json} → \code{tag$param} when it contains parameters for the tag
 \item \code{staps} table → \code{tag$stap} (stap_id, start, end, known_lat, known_lon, include)
 \item \code{twilights} table → \code{tag$twilight} (twilight, rise, label)
 }

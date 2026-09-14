@@ -239,7 +239,11 @@ validate_gldp_geopressure_coherence <- function(pkg) {
     check_datetime_window(pressurepaths_data, "pressurepaths", "datetime")
     if ("altitude" %in% names(pressurepaths_data)) {
       altitude <- suppressWarnings(as.numeric(pressurepaths_data$altitude))
-      invalid_altitude <- !is.na(altitude) & (altitude <= -200 | altitude >= 7000)
+      invalid_altitude <- !is.na(altitude) &
+        (altitude <= -200 | altitude >= 7000) &
+        (!"label" %in% names(pressurepaths_data) |
+          is.na(pressurepaths_data$label) |
+          pressurepaths_data$label != "discard")
       if (any(invalid_altitude)) {
         cli_alert_danger(
           "{sum(invalid_altitude)} value{?s} in {.field pressurepaths$altitude} must be > -200 and < 7000."

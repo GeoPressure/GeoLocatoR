@@ -89,7 +89,11 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
   # Goal: return a self-contained package where `resources[[i]]$data` is available
   # and `path` is dropped, while still surfacing readr parsing issues with location.
   if (force_read) {
-    read_order <- order(vapply(pkg[["resources"]], \(r) identical(r[["name"]], "measurements"), logical(1)))
+    read_order <- order(vapply(
+      pkg[["resources"]],
+      \(r) identical(r[["name"]], "measurements"),
+      logical(1)
+    ))
     pkg[["resources"]][read_order] <- purrr::map(pkg[["resources"]][read_order], \(r) {
       resource_name <- as.character(r$name %||% NA_character_)[1]
       resource_path <- as.character(r$path %||% NA_character_)[1]

@@ -25,13 +25,14 @@ adjusted according to the schema.}
 \item{cast_type}{A logical value indicating whether the data frame should be cast to the types
 specified in the schema. Defaults to \code{FALSE}.}
 
-\item{replace}{If \code{TRUE}, the added resource will replace an existing
-resource with the same name.}
+\item{replace}{If \code{TRUE}, allows an existing resource of the same name to be
+replaced.}
 
-\item{delim}{Single character used to separate the fields in the CSV file(s),
-e.g. \verb{\\t} for tab delimited file.
+\item{delim}{Delimiter for the CSV file(s) referenced in \code{data} (e.g. \verb{\\t}
+for a tab-separated file).
 Will be set as \code{delimiter} in the resource Table Dialect, so read functions
-.  know how to read the file(s).}
+know how to read the file(s).
+Ignored if \code{data} is a data frame.}
 }
 \value{
 The updated GeoLocator Data Package object with the new resource added.

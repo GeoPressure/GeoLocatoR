@@ -13,7 +13,8 @@ file, or a URL to \code{datapackage.json}.}
 \item{force_read}{If \code{TRUE} (default), loads resource data into memory so
 the returned object is self-contained in memory. This means that each
 resource is read immediately with \code{\link[frictionless:read_resource]{frictionless::read_resource()}}, cast to
-the schema types, stored in \code{resource$data}, and its \code{path} field is removed.}
+the schema types, stored in \code{resource$data}, and its \code{path} field is removed.
+The \code{measurements} resource is read last.}
 
 \item{drop_measurements}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}} If \code{TRUE},
 drops the \code{measurements} resource after reading \code{datapackage.json} and

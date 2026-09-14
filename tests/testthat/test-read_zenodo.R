@@ -97,14 +97,16 @@ test_that("read_zenodo reuses sandbox-resolved token for fetch and download", {
 
   fetch_token <- NULL
   download_token <- NULL
+  download_timeout <- NULL
 
   local_mocked_bindings(
     read_zenodo_fetch_record = function(id, token, draft, sandbox) {
       fetch_token <<- token
       list()
     },
-    read_zenodo_download_files = function(zenodo_record, token, sandbox) {
+    read_zenodo_download_files = function(zenodo_record, token, sandbox, timeout) {
       download_token <<- token
+      download_timeout <<- timeout
       NULL
     },
     create_gldp = function(...) {
@@ -116,10 +118,11 @@ test_that("read_zenodo reuses sandbox-resolved token for fetch and download", {
   )
 
   suppressMessages({
-    expect_no_error(read_zenodo("470406", sandbox = TRUE))
+    expect_no_error(read_zenodo("470406", sandbox = TRUE, timeout = 1200))
   })
   expect_equal(fetch_token, "sandbox-token")
   expect_equal(download_token, "sandbox-token")
+  expect_equal(download_timeout, 1200)
 })
 
 test_that("read_zenodo_download_files aborts when parallel downloads fail", {

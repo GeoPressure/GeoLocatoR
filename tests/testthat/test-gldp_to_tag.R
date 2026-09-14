@@ -1,5 +1,6 @@
 library(testthat)
 library(GeoLocatoR)
+library(GeoPressureR)
 
 # pkg_shared is loaded from setup.R
 
@@ -149,6 +150,21 @@ test_that("gldp_to_tag works with GeoPressureR functions", {
   })
 })
 
+test_that("gldp_to_tag reuses saved GeoPressureR parameters", {
+  pkg <- pkg_shared
+  tag_id <- unique(tags(pkg)$tag_id)[1]
+  param <- param_create(tag_id, default = TRUE)
+  param$tag_create$manufacturer <- "migratetech"
+  param$tag_set_map$scale <- 1.5
+  pkg$params <- list(param)
+
+  tag <- gldp_to_tag(pkg, tag_id)
+
+  expect_identical(tag$param, param)
+  expect_equal(tag$param$tag_create$manufacturer, "migratetech")
+  expect_equal(tag$param$tag_set_map$scale, 1.5)
+})
+
 test_that("gldp_to_tag extracts stap and twilight data correctly", {
   pkg <- pkg_shared
 
@@ -236,4 +252,113 @@ test_that("gldp_to_tag keeps mean_acceleration_z in acceleration", {
   expect_true("acceleration" %in% names(tag))
   expect_true("mean_acceleration_z" %in% names(tag$acceleration))
   expect_true(any(tag$acceleration$mean_acceleration_z == marker, na.rm = TRUE))
+})
+
+test_that("gldp_to_tag combines magnetic and acceleration axes", {
+  pkg <- pkg_shared
+  resource_idx <- which(vapply(pkg$resources, \(r) identical(r$name, "measurements"), logical(1)))
+  m <- pkg$resources[[resource_idx[1]]]$data
+  tag_id <- unique(tags(pkg)$tag_id)[1]
+  datetime <- as.POSIXct("2000-01-01 00:00:00", tz = "UTC")
+  axes <- c(
+    "magnetic_x",
+    "magnetic_y",
+    "magnetic_z",
+    "acceleration_x",
+    "acceleration_y",
+    "acceleration_z"
+  )
+  template <- m[1, , drop = FALSE]
+
+  axis_data <- purrr::imap_dfr(axes, \(sensor, i) {
+    row <- template
+    row$tag_id <- tag_id
+    row$sensor <- sensor
+    row$datetime <- datetime
+    row$value <- i
+    if ("label" %in% names(row)) {
+      row$label <- NA_character_
+    }
+    row
+  })
+  pkg$resources[[resource_idx[1]]]$data <- dplyr::bind_rows(m, axis_data)
+
+  tag <- gldp_to_tag(pkg, tag_id)
+  expect_true("magnetic" %in% names(tag))
+  expect_true(all(c("date", axes) %in% names(tag$magnetic)))
+  expect_equal(unname(unlist(tag$magnetic[1, axes])), seq_along(axes))
+})
+
+test_that("gldp_to_tag preserves pressure and acceleration labels", {
+  pkg <- pkg_shared
+  resource_idx <- which(vapply(pkg$resources, \(r) identical(r$name, "measurements"), logical(1)))
+  skip_if(length(resource_idx) == 0, "Package has no measurements resource")
+
+  m <- pkg$resources[[resource_idx[1]]]$data
+  tag_id <- unique(tags(pkg)$tag_id)[1]
+  datetime <- as.POSIXct("2000-01-01 00:00:00", tz = "UTC")
+  template <- m[1, , drop = FALSE]
+
+  pressure <- template
+  pressure$tag_id <- tag_id
+  pressure$sensor <- "pressure"
+  pressure$datetime <- datetime
+  pressure$value <- 1000
+  pressure$label <- "flight"
+
+  activity <- template
+  activity$tag_id <- tag_id
+  activity$sensor <- "activity"
+  activity$datetime <- datetime
+  activity$value <- 1
+  activity$label <- "discard"
+
+  mean_acceleration <- template
+  mean_acceleration$tag_id <- tag_id
+  mean_acceleration$sensor <- "mean_acceleration_z"
+  mean_acceleration$datetime <- datetime
+  mean_acceleration$value <- 2
+  mean_acceleration$label <- "flight"
+
+  unlabelled_pressure <- pressure
+  unlabelled_pressure$datetime <- datetime + 60
+  unlabelled_pressure$label <- NA_character_
+
+  unlabelled_activity <- activity
+  unlabelled_activity$datetime <- datetime + 60
+  unlabelled_activity$label <- NA_character_
+
+  pkg$resources[[resource_idx[1]]]$data <- dplyr::bind_rows(
+    m,
+    pressure,
+    activity,
+    mean_acceleration,
+    unlabelled_pressure,
+    unlabelled_activity
+  )
+  tag <- gldp_to_tag(pkg, tag_id)
+
+  expect_equal(tag$pressure$label[tag$pressure$date == datetime], "flight")
+  expect_equal(tag$acceleration$label[tag$acceleration$date == datetime], "discard")
+  expect_equal(tag$pressure$label[tag$pressure$date == datetime + 60], "")
+  expect_equal(tag$acceleration$label[tag$acceleration$date == datetime + 60], "")
+  expect_true("stap_id" %in% names(tag$pressure))
+  expect_true("stap_id" %in% names(tag$acceleration))
+})
+
+test_that("gldp_to_tag omits empty label columns", {
+  pkg <- pkg_shared
+  tag_id <- unique(tags(pkg)$tag_id)[1]
+  tag <- gldp_to_tag(pkg, tag_id)
+
+  m <- measurements(pkg) |> dplyr::filter(.data$tag_id == tag_id)
+  if (any(m$sensor == "pressure") && all(is.na(m$label[m$sensor == "pressure"]))) {
+    expect_false("label" %in% names(tag$pressure))
+  }
+  if (
+    any(m$sensor %in% c("activity", "mean_acceleration_z")) &&
+      all(is.na(m$label[m$sensor %in% c("activity", "mean_acceleration_z")]))
+  ) {
+    expect_false("label" %in% names(tag$acceleration))
+  }
 })

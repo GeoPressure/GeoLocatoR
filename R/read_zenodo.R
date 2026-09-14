@@ -53,6 +53,7 @@
 #'   Zenodo service. This also switches token lookup to sandbox-first sources.
 #' @param quiet Logical. If `TRUE`, suppress progress messages from
 #'   `read_zenodo()`.
+#' @param timeout Maximum time in seconds allowed to download each file.
 #'
 #' @return A `geolocatordp` object from the Zenodo record.
 #'
@@ -85,7 +86,8 @@ read_zenodo <- function(
   token = NULL,
   draft = FALSE,
   sandbox = FALSE,
-  quiet = FALSE
+  quiet = FALSE,
+  timeout = 600
 ) {
   token <- resolve_zenodo_token(token = token, sandbox = sandbox)
 
@@ -107,7 +109,8 @@ read_zenodo <- function(
   download_dir <- read_zenodo_download_files(
     zenodo_record = zenodo_record,
     token = token,
-    sandbox = sandbox
+    sandbox = sandbox,
+    timeout = timeout
   )
 
   # 3) Read downloaded datapackage
