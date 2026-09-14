@@ -54,7 +54,7 @@ read_zenodo_download_files <- function(
       httr2::req_error(body = \(resp) {
         status <- httr2::resp_status(resp)
         glue::glue(
-          "Failed to download file {.url {url}} from Zenodo record <{rec_url}> (HTTP {status})."
+          "Failed to download file <{url}> from Zenodo record <{rec_url}> (HTTP {status})."
         )
       })
     if (is_non_empty_string(token)) {
