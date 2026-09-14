@@ -40,6 +40,15 @@ Comments
 - Edit `README.Rmd`, not `README.md`.
 - Do not manually edit generated files (`NAMESPACE`, `man/*.Rd`).
 
+## Release notes
+- Write each `NEWS.md` release as copy-paste-ready GitHub release Markdown:
+  one release heading, a `Full changelog` link and PR link when available, then
+  a flat list of bullets.
+- Link every release-note bullet to the specific commit or commits that support
+  it. Use multiple inline links when one bullet summarises several changes.
+- Do not use subsection headings in a release entry. Prefix compatibility
+  changes with `**Breaking:**` in a linked bullet instead.
+
 ## Checks and format
 - Format code with `air format . --check`
 - Check lint with: `jarl check .`
