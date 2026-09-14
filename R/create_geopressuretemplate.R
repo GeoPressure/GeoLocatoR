@@ -347,11 +347,11 @@ create_geopressuretemplate_data <- function(pkg) {
   }
 
   # Create the tag-label directory if it doesn't exist
-  path_label <- glue::glue("./data/tag-label/")
+  path_label <- "./data/tag-label/"
   if (!dir.exists(path_label)) {
     dir.create(path_label, recursive = TRUE)
   }
-  path_twl <- glue::glue("./data/twilight-label/")
+  path_twl <- "./data/twilight-label/"
   if (!dir.exists(path_twl)) {
     dir.create(path_twl, recursive = TRUE)
   }

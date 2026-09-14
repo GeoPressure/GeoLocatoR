@@ -17,7 +17,7 @@ check_gldp <- function(pkg) {
       c(
         "{.arg pkg} must be a GeoLocator Data Package object.",
         "x" = "{.arg pkg} is missing a {.val geolocatordp} class."
-      ),
+      )
     )
   }
   invisible(pkg)
