@@ -182,7 +182,6 @@ test_that("upgrade_gldp migrates v0.6 package to v1.0 schema refs", {
     resources = list(
       list(
         name = "tags",
-        path = "tags.csv",
         data = data.frame(
           tag_id = c("tag-1", "tag-2"),
           ring_number = c("A-123", NA),
@@ -192,7 +191,6 @@ test_that("upgrade_gldp migrates v0.6 package to v1.0 schema refs", {
       ),
       list(
         name = "measurements",
-        path = "measurements.csv",
         data = data.frame(
           tag_id = c("tag-1", "tag-1"),
           sensor = c("pitch", "light"),
@@ -205,8 +203,8 @@ test_that("upgrade_gldp migrates v0.6 package to v1.0 schema refs", {
         data = data.frame(
           tag_id = "tag-1",
           stap_id = "stap-1",
-          latitude = 46.1,
-          longitude = 8.1,
+          lat = 46.1,
+          lon = 8.1,
           j = 1L,
           type = "most_likely",
           ind = 42L,
@@ -234,10 +232,10 @@ test_that("upgrade_gldp migrates v0.6 package to v1.0 schema refs", {
           tag_id = "tag-1",
           stap_s = "stap-1",
           stap_t = "stap-2",
-          latitude_s = 46.1,
-          longitude_s = 8.1,
-          latitude_t = 46.2,
-          longitude_t = 8.2,
+          lat_s = 46.1,
+          lon_s = 8.1,
+          lat_t = 46.2,
+          lon_t = 8.2,
           j = 1L,
           type = "most_likely",
           s = 11L,
@@ -284,4 +282,32 @@ test_that("upgrade_gldp migrates v0.6 package to v1.0 schema refs", {
   expect_false("include" %in% names(staps_res$data))
   expect_false("s" %in% names(edges_res$data))
   expect_false("t" %in% names(edges_res$data))
+})
+
+test_that("upgrade_gldp rejects a resource holding both path and data", {
+  # The Data Package standard allows `path` or `data`, never both. Going through
+  # gldp_resource() in mutate_resource() surfaces such a descriptor instead of
+  # silently carrying it into the upgraded package.
+  pkg <- list(
+    "$schema" = "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/v0.6/geolocator-dp-profile.json",
+    resources = list(
+      list(
+        name = "measurements",
+        path = "measurements.csv",
+        data = data.frame(
+          tag_id = "tag-1",
+          sensor = "pitch",
+          value = 0.2,
+          stringsAsFactors = FALSE
+        )
+      )
+    )
+  )
+  class(pkg) <- c("geolocatordp", "datapackage", "list")
+  attr(pkg, "directory") <- "."
+
+  expect_error(
+    suppressMessages(upgrade_gldp(pkg, to_version = "v1.0")),
+    class = "gldp_error_resource_both_path_data"
+  )
 })
