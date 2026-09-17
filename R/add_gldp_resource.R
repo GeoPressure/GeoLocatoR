@@ -44,10 +44,9 @@ add_gldp_resource <- function(
 
   # Retrieve full schema (pkg$resources) does not have schema at first
   pkg_schema <- gldp_profile_schema(version)
+  # The first branch is the one for the fixed tables.
   possible_gldp_resources <-
-    pkg_schema$allOf[[2]]$properties$resources$items$oneOf[[
-      1
-    ]]$properties$name$enum
+    gldp_profile_resource_branches(pkg_schema)[[1]]$properties$name$enum
 
   if (!resource_name %in% possible_gldp_resources) {
     cli_abort(c(

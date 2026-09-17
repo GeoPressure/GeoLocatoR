@@ -63,9 +63,7 @@ normalize_upgraded_resources <- function(x) {
   # We only touch resources already present in the package and keep custom resources unchanged.
   target_version <- gldp_version(x)
   profile <- gldp_profile_schema(target_version)
-  supported_resources <- profile$allOf[[2]]$properties$resources$items$oneOf |>
-    purrr::map(~ .x$properties$name$enum %||% .x$properties$name$const %||% character(0)) |>
-    purrr::flatten_chr()
+  supported_resources <- gldp_profile_resource_names(profile)
 
   resources <- x$resources %||% list()
   for (resource in resources) {

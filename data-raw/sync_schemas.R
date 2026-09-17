@@ -10,6 +10,7 @@
 # sync_gldp_schemas()
 
 source("R/versioning.R")
+source("R/zzz.R")
 
 sync_gldp_schemas <- function(
   versions = setdiff(.gldp_supported_versions, "main"),
@@ -35,16 +36,7 @@ sync_gldp_schemas <- function(
       simplifyVector = TRUE
     )
 
-    one_of <- profile$allOf[[2]]$properties$resources$items$oneOf
-    resource_names <- unique(unlist(lapply(one_of, function(x) {
-      if (!is.null(x$properties$name$enum)) {
-        x$properties$name$enum
-      } else if (!is.null(x$properties$name$const)) {
-        x$properties$name$const
-      } else {
-        character(0)
-      }
-    })))
+    resource_names <- unique(gldp_profile_resource_names(profile))
 
     for (resource_name in resource_names) {
       schema_url <- glue::glue("{base_url}/{resource_name}-table-schema.json")
