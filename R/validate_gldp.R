@@ -162,7 +162,11 @@ validate_gldp_resources <- function(pkg) {
   for (i in seq_along(pkg$resources)) {
     resource <- pkg$resources[[i]]
 
-    is_tabular_resource <- identical(resource$profile, "tabular-data-resource") &&
+    # `type: "table"` is the Data Package v2 spelling, `profile:
+    # "tabular-data-resource"` the v1 one. Accept either so packages written by
+    # frictionless < 2.0 keep validating.
+    is_tabular_resource <- (identical(resource$type, "table") ||
+      identical(resource$profile, "tabular-data-resource")) &&
       is.list(resource$schema) &&
       !is.null(resource$schema$fields)
 
