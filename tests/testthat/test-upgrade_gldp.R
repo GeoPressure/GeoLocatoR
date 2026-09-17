@@ -311,3 +311,33 @@ test_that("upgrade_gldp rejects a resource holding both path and data", {
     class = "gldp_error_resource_both_path_data"
   )
 })
+
+test_that("upgrade_gldp migrates a v1.0 package to v1.1", {
+  pkg <- list(
+    "$schema" = "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/v1.0/geolocator-dp-profile.json",
+    resources = list(
+      list(
+        name = "tags",
+        data = data.frame(
+          tag_id = "tag-1",
+          ring_number = "A-123",
+          scientific_name = "Hirundo rustica",
+          stringsAsFactors = FALSE
+        )
+      )
+    )
+  )
+  class(pkg) <- c("geolocatordp", "datapackage", "list")
+  attr(pkg, "directory") <- "."
+
+  upgraded <- suppressMessages(suppressWarnings(upgrade_gldp(pkg, to_version = "v1.1")))
+
+  expect_equal(gldp_version(upgraded), "v1.1")
+  expect_equal(upgraded$`$schema`, gldp_schema_url("v1.1"))
+
+  # v1.1 requires `type` and the table schema in `schema`, not in `$schema`.
+  tags_res <- purrr::detect(upgraded$resources, \(r) r$name == "tags")
+  expect_equal(tags_res$type, "table")
+  expect_type(tags_res$schema, "list")
+  expect_false(is.null(tags_res$schema$fields))
+})
