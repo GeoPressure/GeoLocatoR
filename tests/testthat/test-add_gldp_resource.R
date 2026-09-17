@@ -52,3 +52,19 @@ test_that("add_gldp_resource marks resources as tabular", {
 
   expect_equal(pkg$resources[[1]]$type, "table")
 })
+
+test_that("add_gldp_resource sets the data resource profile", {
+  # GeoLocator-DP requires `$schema` from v1.1, and frictionless only sets it
+  # from version 2.0. Implementations read it to tell which version of the
+  # Data Package standard a resource follows.
+  data <- tibble::tibble(tag_id = "a", ring_number = "r1")
+  pkg <- suppressWarnings(add_gldp_resource(create_gldp(), "tags", data))
+  resource <- pkg$resources[[1]]
+
+  expect_equal(
+    resource[["$schema"]],
+    "https://datapackage.org/profiles/2.0/dataresource.json"
+  )
+  # `$schema` first, as frictionless 2.0 writes it.
+  expect_equal(names(resource)[1], "$schema")
+})

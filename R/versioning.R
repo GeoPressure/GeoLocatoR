@@ -11,6 +11,14 @@
   "v1.0",
   "v1.1"
 )
+
+#' Data Package profile of a tabular resource descriptor
+#'
+#' GeoLocator-DP requires this on its tabular resources from v1.1.
+#'
+#' @noRd
+.gldp_data_resource_profile <- "https://datapackage.org/profiles/2.0/dataresource.json"
+
 .gldp_default_version <- utils::tail(.gldp_supported_versions, 1)
 
 #' Get GeoLocator DP version
