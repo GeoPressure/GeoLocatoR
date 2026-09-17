@@ -1,6 +1,16 @@
 # Supported GeoLocator-DP versions.
 # This vector is the single source of truth for runtime and schema sync.
-.gldp_supported_versions <- c("main", "v0.1", "v0.2", "v0.3", "v0.4", "v0.5", "v0.6", "v1.0")
+.gldp_supported_versions <- c(
+  "main",
+  "v0.1",
+  "v0.2",
+  "v0.3",
+  "v0.4",
+  "v0.5",
+  "v0.6",
+  "v1.0",
+  "v1.1"
+)
 .gldp_default_version <- utils::tail(.gldp_supported_versions, 1)
 
 #' Get GeoLocator DP version
