@@ -45,9 +45,7 @@ update_gldp_order_resources <- function(pkg) {
 
   pkg_schema <- gldp_profile_schema(version)
 
-  resource_order <- pkg_schema$allOf[[2]]$properties$resources$items$oneOf |>
-    purrr::map(~ .x$properties$name$enum %||% .x$properties$name$const %||% character(0)) |>
-    purrr::flatten_chr()
+  resource_order <- gldp_profile_resource_names(pkg_schema)
 
   if (length(resource_order) == 0) {
     return(pkg)

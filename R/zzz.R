@@ -85,6 +85,46 @@ gldp_resource <- function(pkg, resource_name) {
   pkg
 }
 
+#' Resource branches declared by a GeoLocator-DP profile
+#'
+#' @description
+#' A profile constrains each resource through a list of alternatives keyed on
+#' the resource `name`: one for the fixed tables, one for `params`, one for
+#' custom resources.
+#'
+#' Up to GeoLocator-DP v1.0 that list is a `oneOf`. From v1.1 it is an `allOf`
+#' of `if`/`then` pairs, so a validator can report the property at fault rather
+#' than only that the resource matched no branch. Both shapes are read here
+#' because `upgrade_gldp()` walks packages written against any earlier version.
+#'
+#' @param profile A GeoLocator-DP profile, as returned by
+#'   [gldp_profile_schema()].
+#' @return List of branch schemas, tables first.
+#' @noRd
+gldp_profile_resource_branches <- function(profile) {
+  items <- profile$allOf[[2]]$properties$resources$items
+
+  if (!is.null(items$oneOf)) {
+    return(items$oneOf)
+  }
+
+  purrr::map(items$allOf %||% list(), ~ .x$then)
+}
+
+#' Resource names a GeoLocator-DP profile declares
+#'
+#' @param profile A GeoLocator-DP profile.
+#' @return Character vector of names, in the order the profile declares them.
+#'   Custom resources contribute nothing, having no fixed name.
+#' @noRd
+gldp_profile_resource_names <- function(profile) {
+  gldp_profile_resource_branches(profile) |>
+    purrr::map(
+      ~ .x$properties$name$enum %||% .x$properties$name$const %||% character(0)
+    ) |>
+    purrr::flatten_chr()
+}
+
 #' Locate a resource by name
 #'
 #' @param pkg A GeoLocator Data Package object.
