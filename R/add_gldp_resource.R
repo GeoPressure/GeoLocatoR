@@ -57,72 +57,74 @@ add_gldp_resource <- function(
     ))
   }
 
-  # Retrieve the resource schema
-
   schema <- gldp_resource_schema(version, resource_name)
 
-  # We need to massage a bit the data to make it adequate for add_resource in v1.
-  # https://github.com/frictionlessdata/frictionless-r/issues/254
+  # frictionless does not implement `fieldsMatch`
+  # (frictionlessdata/frictionless-r#216), and `add_resource()` matches schema
+  # fields to data columns by name *and* order, so the data is reconciled with
+  # the schema here first.
+  #
+  # GeoLocator-DP only ever declares two of the five modes, so only those two
+  # are handled. Both allow the data to have fewer columns than the schema
+  # declares; they differ on columns the schema does not define, which
+  # `partial` keeps and `superset` drops.
+  fields_match <- as.character(schema$fieldsMatch %||% "exact")[1]
 
-  schema_fields <- sapply(schema$fields, \(x) x$name)
-  schema_types <- sapply(schema$fields, \(x) x$type)
-  # schema_required <- sapply(schema$fields, \(x) x$constraints$required)
-  # data_fields <- names(data)
-
-  if (schema$fieldsMatch == "equal") {
-    # The data source MUST have exactly the same fields as defined in the fields array.
-    # Fields MUST be mapped by their names.
-    # NOT SURE THE ORDER BY NAME IS CHECKED!!!
+  if (!fields_match %in% c("superset", "partial")) {
+    cli_abort(c(
+      "x" = "Unsupported {.field fieldsMatch} {.val {fields_match}} for resource
+             {.val {resource_name}}.",
+      "i" = "GeoLocatoR handles {.val superset} and {.val partial}, the only modes
+             used by GeoLocator-DP."
+    ))
   }
 
-  if (schema$fieldsMatch == "subset" || schema$fieldsMatch == "partial") {
-    # The data source MUST have all the fields defined in the fields array, but MAY have more.
-    # Fields MUST be mapped by their names.
+  undeclared <- setdiff(names(data), schema_field_names(schema))
 
-    # Create a schema from the data (adding all possible field)
-    schema_data <- frictionless::create_schema(data)
-
-    # Add fields not existing in the initial schema
-    for (f in schema_data$fields) {
-      if (!(f$name %in% schema_fields)) {
-        schema$fields <- append(schema$fields, list(f))
-      }
+  if (fields_match == "partial") {
+    # `partial` keeps undeclared columns, so describe them in the schema.
+    if (length(undeclared) > 0) {
+      schema$fields <- append(
+        schema$fields,
+        frictionless::create_schema(data[undeclared])$fields
+      )
     }
-
-    # Update schema_fields
-    schema_fields <- sapply(schema$fields, \(x) x$name)
+  } else if (length(undeclared) > 0) {
+    # `superset` allows only columns the schema defines, so the selection below
+    # drops these. Say so, rather than losing them silently.
+    cli_warn(
+      c(
+        "!" = "Dropped {length(undeclared)} column{?s} from {.val {resource_name}}
+               not defined by its schema: {.field {undeclared}}.",
+        "i" = "{.val {resource_name}} declares {.code fieldsMatch: superset}, which
+               allows only the columns its schema defines."
+      ),
+      class = "gldp_warning_undeclared_columns_dropped"
+    )
   }
 
-  if (schema$fieldsMatch == "superset" || schema$fieldsMatch == "partial") {
-    # superset: The data source MUST only have fields defined in the fields array, but MAY have
-    # fewer. Fields MUST be mapped by their names.
-
-    for (i in seq_along(schema_fields)) {
-      # Check if column already exists
-      if (!(schema_fields[i] %in% names(data))) {
-        na_type <- switch(
-          schema_types[i],
-          string = NA_character_,
-          number = NA_real_,
-          integer = NA_integer_,
-          date = as.Date(NA), # NA_Date_,
-          duration = NA_character_,
-          NA
-        )
-        # Add the column with NA values of the specified type
-        data[[schema_fields[i]]] <- na_type
-      }
+  # Materialise declared-but-absent columns as typed NA, so every written
+  # resource carries the full set of columns its schema declares.
+  for (field in schema$fields) {
+    if (!field$name %in% names(data)) {
+      # Types not listed fall back to a logical NA, which writes as an empty
+      # CSV column and is typed by `frictionless::read_resource()` on the way in.
+      data[[field$name]] <- switch(
+        as.character(field$type)[1],
+        string = NA_character_,
+        number = NA_real_,
+        integer = NA_integer_,
+        date = as.Date(NA),
+        duration = NA_character_,
+        NA
+      )
     }
   }
 
-  if (schema$fieldsMatch == "partial") {
-    # Partial: The data source MUST have at least one field defined in the fields array.
-    # Fields MUST be mapped by their names.
-    # NOT CHECKING FOR AT LEAST ONE FIELD
-  }
-
-  # Update schema_fields
-  data <- data |> select(all_of(schema_fields))
+  # `add_resource()` matches schema fields to data columns positionally, so the
+  # selection below is what makes the pair acceptable to it. For `superset` it
+  # is also what drops columns the schema does not define.
+  data <- data |> select(all_of(schema_field_names(schema)))
 
   if (cast_type) {
     data <- cast_table(data, schema)
