@@ -139,5 +139,19 @@ add_gldp_resource <- function(
     delim = delim
   )
 
+  # GeoLocator-DP requires `type: "table"` on its tabular resources from v1.1.
+  # frictionless only sets it from version 2.0, so set it here to stay correct
+  # on both. Every profile version declares the property, so this is safe for
+  # older packages too.
+  resource <- gldp_resource(pkg, resource_name)
+  if (!identical(resource$type, "table")) {
+    resource <- append(
+      resource,
+      list(type = "table"),
+      after = which(names(resource) == "name")
+    )
+    gldp_resource(pkg, resource_name) <- resource
+  }
+
   return(pkg)
 }

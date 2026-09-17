@@ -20,7 +20,9 @@ test_that("read_gldp reads a local datapackage.json", {
 
   expect_s3_class(pkg, "geolocatordp")
   expect_true("resources" %in% names(pkg))
-  expect_equal(gldp_version(pkg), "v1.0")
+  # read_gldp() upgrades to the latest supported version, so track it rather
+  # than a literal that goes stale at every GeoLocator-DP release.
+  expect_equal(gldp_version(pkg), .gldp_default_version)
 })
 
 test_that("read_gldp reads a local package directory", {
@@ -132,10 +134,7 @@ test_that("read_gldp canonicalizes legacy schema owners", {
 
   pkg <- expect_no_warning(read_gldp(path, force_read = FALSE))
 
-  expect_equal(
-    pkg$`$schema`,
-    "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/v1.0/geolocator-dp-profile.json"
-  )
+  expect_equal(pkg$`$schema`, gldp_schema_url(.gldp_default_version))
 })
 
 test_that("write_gldp writes a datapackage readable by read_gldp", {

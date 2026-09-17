@@ -43,3 +43,12 @@ test_that("add_gldp_resource fills declared but absent columns with typed NA", {
   expect_identical(names(pkg$resources[[1]]$data), schema_fields)
   expect_true(all(is.na(pkg$resources[[1]]$data$scientific_name)))
 })
+
+test_that("add_gldp_resource marks resources as tabular", {
+  # GeoLocator-DP requires `type: "table"` from v1.1, and frictionless only sets
+  # it from version 2.0.
+  data <- tibble::tibble(tag_id = "a", ring_number = "r1")
+  pkg <- suppressWarnings(add_gldp_resource(create_gldp(), "tags", data))
+
+  expect_equal(pkg$resources[[1]]$type, "table")
+})
