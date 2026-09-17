@@ -507,7 +507,8 @@ check_format <- function(value, format, field) {
 
   format_map <- list(
     `date-time` = function(v) {
-      all(is.na(v) | grepl("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$", v))
+      # Data Package v2 allows optional milliseconds with `"format": "default"`.
+      all(is.na(v) | grepl("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$", v))
     },
     date = function(v) all(is.na(v) | grepl("^\\d{4}-\\d{2}-\\d{2}$", v)),
     time = function(v) all(is.na(v) | grepl("^\\d{2}:\\d{2}:\\d{2}$", v)),
@@ -583,6 +584,8 @@ check_format <- function(value, format, field) {
 get_type_map <- function() {
   list(
     string = function(v) is.character(v),
+    # Data Package v2 `list` fields are read as character by frictionless.
+    list = function(v) is.character(v),
     number = function(v) is.numeric(v) && !is.logical(v),
     integer = function(v) {
       is.integer(v) || (is.numeric(v) && all(v == floor(v), na.rm = TRUE))
@@ -597,7 +600,7 @@ get_type_map <- function() {
       }
       if (is.character(v)) {
         return(all(
-          grepl("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$", v),
+          grepl("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$", v),
           na.rm = TRUE
         ))
       }

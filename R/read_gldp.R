@@ -76,7 +76,11 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
   class(pkg) <- c("geolocatordp", class(pkg))
   pkg[["$schema"]] <- gsub("Rafnuss", "GeoPressure", pkg[["$schema"]], fixed = TRUE)
   pkg[["resources"]] <- purrr::map(pkg[["resources"]] %||% list(), \(r) {
-    r[["$schema"]] <- gsub("Rafnuss", "GeoPressure", r[["$schema"]] %||% "", fixed = TRUE)
+    # Only rewrite an existing `$schema`; adding an empty one would write
+    # `"$schema": ""` back out, which no Data Package version allows.
+    if (!is.null(r[["$schema"]])) {
+      r[["$schema"]] <- gsub("Rafnuss", "GeoPressure", r[["$schema"]], fixed = TRUE)
+    }
     r
   })
 
@@ -88,6 +92,11 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
   # Optionally load each resource table immediately into memory.
   # Goal: return a self-contained package where `resources[[i]]$data` is available
   # and `path` is dropped, while still surfacing readr parsing issues with location.
+  # Note that `path` is dropped as `data` is set: the Data Package standard
+  # allows one or the other, never both, and frictionless enforces it.
+  # frictionlessdata/frictionless-r#372 proposes this as
+  # `read_package(load = ...)` upstream; once it lands this block can delegate
+  # to it, with `drop_measurements` becoming a `load` selection.
   if (force_read) {
     read_order <- order(vapply(
       pkg[["resources"]],
