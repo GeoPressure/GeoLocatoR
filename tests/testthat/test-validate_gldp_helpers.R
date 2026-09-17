@@ -188,3 +188,32 @@ test_that("gldp_profile_resource_names reads both profile shapes", {
     )
   }
 })
+
+test_that("schema validation reads allowed values from categories", {
+  # GeoLocator-DP v1.1 declares `categories` alongside the `enum` constraint.
+  # A schema that dropped `enum` must still constrain its values.
+  schema <- list(
+    name = "observations",
+    fields = list(
+      list(
+        name = "sex",
+        type = "string",
+        categories = list(
+          list(value = "U", label = "Unknown"),
+          list(value = "M", label = "Male"),
+          list(value = "F", label = "Female")
+        ),
+        constraints = list(required = TRUE)
+      )
+    )
+  )
+
+  expect_true(suppressMessages(validate_gldp_table(
+    tibble::tibble(sex = c("M", "F")),
+    schema
+  )))
+  expect_false(suppressMessages(validate_gldp_table(
+    tibble::tibble(sex = c("M", "female")),
+    schema
+  )))
+})
