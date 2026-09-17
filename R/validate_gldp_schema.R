@@ -374,21 +374,31 @@ validate_gldp_item <- function(item, prop, field) {
     }
   }
 
-  # Check if 'enum' property exists and is specified
-  if (!is.null(prop$enum)) {
-    # Check if each item is one of the allowed values in the enum
-    if (required) {
-      in_enum <- item %in% unlist(prop$enum)
-    } else {
+  # Both `categories` and the `enum` constraint restrict a field to a fixed set
+  # of values. GeoLocator-DP declares both, `categories` being the Data Package
+  # v2 spelling that also carries a label per value, so read whichever is there.
+  allowed <- if (!is.null(prop$categories)) {
+    vapply(
+      prop$categories,
+      \(x) if (is.list(x)) as.character(x$value)[1] else as.character(x)[1],
+      character(1)
+    )
+  } else if (!is.null(prop$enum)) {
+    as.character(unlist(prop$enum))
+  }
+
+  if (!is.null(allowed)) {
+    in_allowed <- item %in% allowed
+    if (!required) {
       # Allow NA if not required
-      in_enum <- (item %in% unlist(prop$enum)) | is.na(item)
+      in_allowed <- in_allowed | is.na(item)
     }
 
-    if (!all(in_enum)) {
-      invalid_values <- item[!in_enum]
+    if (!all(in_allowed)) {
+      invalid_values <- item[!in_allowed]
       cli_alert_danger(
-        "{.field {field}} has {sum(!in_enum)} item{?s} that are not in the allowed values:
-      {.val {glue::glue_collapse(prop$enum, sep = ', ')}}. Invalid value{?s}:
+        "{.field {field}} has {sum(!in_allowed)} item{?s} that are not in the allowed values:
+      {.val {glue::glue_collapse(allowed, sep = ', ')}}. Invalid value{?s}:
       {.val {glue::glue_collapse(unique(invalid_values), sep = ', ')}}"
       )
       valid <- FALSE
