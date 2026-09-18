@@ -1,3 +1,29 @@
+# GeoLocatoR v1.2.0
+
+Supports [GeoLocator-DP v1.1](https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v1.1), which aligns the standard with Data Package v2, and makes it the version `create_gldp()` writes. Packages written against any earlier version are upgraded on read, so archived packages need no rewriting.
+
+## Main
+
+- [Bundle the GeoLocator-DP v1.1 schemas](https://github.com/GeoPressure/GeoLocatoR/commit/867b2a1) and [upgrade packages to v1.1](https://github.com/GeoPressure/GeoLocatoR/commit/e63c112).
+- [Match a resource schema to its file by column name](https://github.com/GeoPressure/GeoLocatoR/commit/02db970). [`frictionless::read_resource()`](https://docs.ropensci.org/frictionless/reference/read_resource.html) maps schema fields to columns by position, `fieldsMatch` being unimplemented ([frictionless-r#216](https://github.com/frictionlessdata/frictionless-r/issues/216)), so a CSV that legitimately left a column out read every later column under the wrong name, with no error and no warning. Reads now reconcile the schema with the CSV header first.
+- [Report a table missing a required column](https://github.com/GeoPressure/GeoLocatoR/commit/5d4a0ac). `fieldsMatch` says nothing about which columns are required, so a `tags` table with no `tag_id` at all previously validated clean. **`validate_gldp()` is therefore stricter than in v1.1.1** and may report packages it used to pass.
+- [Set the data resource profile on resources](https://github.com/GeoPressure/GeoLocatoR/commit/0f6ff84) and [mark them as tabular with `type`](https://github.com/GeoPressure/GeoLocatoR/commit/b67e218). frictionless only writes `$schema` and `type` from version 2.0, so GeoLocatoR sets them itself; without them `frictionless::version()` reads a resource as Data Package v1 inside a package declaring v2.
+
+## Minor
+
+- [Accept Data Package v2 tabular resources in `validate_gldp()`](https://github.com/GeoPressure/GeoLocatoR/commit/3255d6e), and [support v2 field types while no longer emitting an empty `$schema`](https://github.com/GeoPressure/GeoLocatoR/commit/2f07495).
+- [Read allowed values from `categories` as well as `enum`](https://github.com/GeoPressure/GeoLocatoR/commit/6b7d4e2), GeoLocator-DP v1.1 declaring both.
+- [Read resource names from either profile shape](https://github.com/GeoPressure/GeoLocatoR/commit/9a1b471), v1.1 selecting resource schemas with `if`/`then` where v1.0 used `oneOf`.
+- [Simplify `fieldsMatch` handling and warn on dropped columns](https://github.com/GeoPressure/GeoLocatoR/commit/adad0b1), and [add `gldp_resource()` accessors](https://github.com/GeoPressure/GeoLocatoR/commit/73489b5).
+
+## Compatibility
+
+Addresses [#38](https://github.com/GeoPressure/GeoLocatoR/issues/38): verified against both frictionless 1.3.0 (CRAN) and 1.3.0.9000, the development version that becomes 2.0.0. The full suite passes on both, and packages written by either validate against the published GeoLocator-DP v1.1 profile. Users need change nothing.
+
+Resources still carry `profile: "tabular-data-resource"` alongside `$schema` and `type`, because frictionless 1.3.0 refuses to read a resource without it. Once frictionless 2.0.0 reaches CRAN, that can be dropped and `DESCRIPTION` raised to `frictionless (>= 2.0.0)`.
+
+**Full Changelog**: <https://github.com/GeoPressure/GeoLocatoR/compare/v1.1.1...v1.2.0>
+
 # GeoLocatoR v1.1.1
 
 ## Main
