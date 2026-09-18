@@ -9,7 +9,11 @@
 - Do not add defensive guards/fallback logic unless explicitly asked or required for external I/O.
 - Ask or inform on potential fallback logic, but don't add them by default
 - Warn me in case of breaking back compatibility. I generally only care about released/version back-compabtility not during develeopement.
-- Do not run tests unless explicitly asked.
+- Do not run the test suite while iterating on a change. It is slow and its
+  feedback is rarely the feedback needed mid-edit.
+- Do run it when handing work over: before opening or updating a pull
+  request, before a release, and whenever a change alters behaviour rather
+  than only shape. Report what it said rather than asserting the change works.
 - Do not run `devtools::document()` or regenerate roxygen outputs unless explicitly asked.
 - Do not use `:::` or `::` in tests.
 
@@ -112,6 +116,9 @@ Comments
   then paste that exact block into the pull-request body.
 - Resolve all `R CMD check` warnings and release-relevant notes, and confirm
   the pull request's GitHub Actions matrix is green.
+- Run the suite against both the CRAN and the development version of
+  frictionless. The two disagree on what a resource descriptor must carry,
+  so a release that is green on only one of them is untested.
 - After merging to `main`, create tag `vX.Y.Z` and paste the unchanged
   canonical release block into the GitHub Release description.
 - Refresh `inst/schemas/` with `sync_gldp_schemas()` against a released
