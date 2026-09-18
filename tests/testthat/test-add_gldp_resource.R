@@ -2,20 +2,38 @@ library(testthat)
 library(GeoLocatoR)
 
 test_that("add_gldp_resource warns when a superset resource drops columns", {
-  # `tags` declares `fieldsMatch: superset`, so a column its schema does not
+  # `staps` declares `fieldsMatch: superset`, so a column its schema does not
   # define cannot be kept. Warn rather than lose it silently.
   data <- tibble::tibble(
     tag_id = "a",
-    ring_number = "r1",
-    scientific_name = "Turdus merula",
+    stap_id = 1,
     my_custom_note = "hello"
   )
 
   expect_warning(
-    pkg <- add_gldp_resource(create_gldp(), "tags", data),
+    pkg <- add_gldp_resource(create_gldp(), "staps", data),
     class = "gldp_warning_undeclared_columns_dropped"
   )
   expect_false("my_custom_note" %in% names(pkg$resources[[1]]$data))
+})
+
+test_that("add_gldp_resource keeps undeclared columns on tags", {
+  # `tags` declares `fieldsMatch: partial`, so extra attributes a user carries
+  # alongside the standard columns are kept and described in the schema.
+  data <- tibble::tibble(
+    tag_id = "a",
+    ring_number = "r1",
+    movebank_tag_id = 12345
+  )
+
+  expect_no_warning(add_gldp_resource(create_gldp(), "tags", data))
+
+  pkg <- add_gldp_resource(create_gldp(), "tags", data)
+  resource <- pkg$resources[[1]]
+  expect_true("movebank_tag_id" %in% names(resource$data))
+  expect_true(
+    "movebank_tag_id" %in% vapply(resource$schema$fields, \(f) f$name, character(1))
+  )
 })
 
 test_that("add_gldp_resource keeps undeclared columns for a partial resource", {
