@@ -124,7 +124,7 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
       has_parsing_warning <- FALSE
       df <- tryCatch(
         withCallingHandlers(
-          frictionless::read_resource(pkg, resource_name),
+          gldp_read_resource(pkg, resource_name),
           warning = function(w) {
             msg <- conditionMessage(w)
             if (grepl("One or more parsing issues", msg, fixed = TRUE)) {

@@ -1,6 +1,6 @@
 .get_resource_data <- function(x, resource_name) {
   check_gldp(x)
-  frictionless::read_resource(x, resource_name = resource_name)
+  gldp_read_resource(x, resource_name = resource_name)
 }
 
 .set_resource_data <- function(x, value, resource_name, post = identity) {
