@@ -217,3 +217,30 @@ test_that("schema validation reads allowed values from categories", {
     schema
   )))
 })
+
+test_that("schema validation flags a missing required column", {
+  # `fieldsMatch` says nothing about which columns are required, so every mode
+  # GeoLocator-DP uses would otherwise accept a table without its primary key
+  # (frictionlessdata/datapackage#1126).
+  schema <- list(
+    name = "tags",
+    fieldsMatch = "partial",
+    fields = list(
+      list(name = "tag_id", type = "string", constraints = list(required = TRUE)),
+      list(name = "ring_number", type = "string", constraints = list(required = TRUE)),
+      list(name = "tag_comments", type = "string")
+    )
+  )
+
+  # An optional column may be left out.
+  expect_true(suppressMessages(validate_gldp_table(
+    tibble::tibble(tag_id = "a", ring_number = "r1"),
+    schema
+  )))
+
+  # A required one may not.
+  expect_false(suppressMessages(validate_gldp_table(
+    tibble::tibble(ring_number = "r1"),
+    schema
+  )))
+})
