@@ -224,7 +224,7 @@ merge_gldp_prepare_tags <- function(pkg, resources) {
     return(NULL)
   }
 
-  tags <- frictionless::read_resource(pkg, resource_name = "tags")
+  tags <- gldp_read_resource(pkg, resource_name = "tags")
   if (!"datapackage_id" %in% names(tags)) {
     tags$datapackage_id <- pkg$id
   }
@@ -246,7 +246,7 @@ merge_gldp_resources <- function(pkgs, resources, resources_by_pkg, tags_by_pkg)
           if (!resource_name %in% resources_by_pkg[[idx]]) {
             return(NULL)
           }
-          frictionless::read_resource(pkgs[[idx]], resource_name = resource_name)
+          gldp_read_resource(pkgs[[idx]], resource_name = resource_name)
         }
       )
       data_parts <- purrr::compact(data_parts)
