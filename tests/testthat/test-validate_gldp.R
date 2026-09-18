@@ -141,8 +141,42 @@ make_geopressure_test_pkg <- function() {
 
 test_that("validate_gldp validates a strict geolocatordp", {
   expect_no_error(suppressMessages({
-    validate_gldp(pkg_shared)
+    valid <- validate_gldp(pkg_shared)
   }))
+  expect_true(valid)
+})
+
+test_that("validate_gldp_resources accepts v1 and v2 tabular resources", {
+  # frictionless < 2.0 marks tabular resources with `profile`, >= 2.0 with
+  # `type`. Both must validate.
+  make_pkg <- function(...) {
+    pkg <- create_gldp()
+    pkg[["resources"]] <- list(
+      c(
+        list(
+          name = "tags",
+          data = data.frame(tag_id = "tag-1", stringsAsFactors = FALSE),
+          schema = list(
+            name = "tags",
+            fieldsMatch = "superset",
+            fields = list(list(name = "tag_id", type = "string"))
+          )
+        ),
+        list(...)
+      )
+    )
+    pkg
+  }
+
+  expect_true(suppressMessages(
+    validate_gldp_resources(make_pkg(profile = "tabular-data-resource"))
+  ))
+  expect_true(suppressMessages(
+    validate_gldp_resources(make_pkg(type = "table"))
+  ))
+  expect_false(suppressMessages(
+    validate_gldp_resources(make_pkg())
+  ))
 })
 
 test_that("validate_gldp_meta checks missing title", {

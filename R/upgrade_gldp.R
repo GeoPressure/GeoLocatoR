@@ -43,7 +43,8 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
       "v0.3" = upgrade_gldp_v0_3_to_v0_4(x),
       "v0.4" = upgrade_gldp_v0_4_to_v0_5(x),
       "v0.5" = upgrade_gldp_v0_5_to_v0_6(x),
-      "v0.6" = upgrade_gldp_v0_6_to_v1_0(x)
+      "v0.6" = upgrade_gldp_v0_6_to_v1_0(x),
+      "v1.0" = upgrade_gldp_v1_0_to_v1_1(x)
     )
 
     from_version <- gldp_version(x)
@@ -62,9 +63,7 @@ normalize_upgraded_resources <- function(x) {
   # We only touch resources already present in the package and keep custom resources unchanged.
   target_version <- gldp_version(x)
   profile <- gldp_profile_schema(target_version)
-  supported_resources <- profile$allOf[[2]]$properties$resources$items$oneOf |>
-    purrr::map(~ .x$properties$name$enum %||% .x$properties$name$const %||% character(0)) |>
-    purrr::flatten_chr()
+  supported_resources <- gldp_profile_resource_names(profile)
 
   resources <- x$resources %||% list()
   for (resource in resources) {
@@ -86,13 +85,10 @@ normalize_upgraded_resources <- function(x) {
       )
     } else {
       # Keep schema in sync when data are not loaded in memory.
-      idx <- which(vapply(
-        x$resources %||% list(),
-        \(r) identical(r$name, resource_name),
-        logical(1)
-      ))
-      if (length(idx) > 0) {
-        x$resources[[idx[1]]]$schema <- gldp_resource_schema(target_version, resource_name)
+      lazy_resource <- gldp_resource(x, resource_name)
+      if (!is.null(lazy_resource)) {
+        lazy_resource$schema <- gldp_resource_schema(target_version, resource_name)
+        gldp_resource(x, resource_name) <- lazy_resource
       }
     }
   }
@@ -229,10 +225,7 @@ upgrade_gldp_v0_4_to_v0_5 <- function(x) {
 
     if (any(missing)) {
       # Recover from `paths$type` when available; edges may match on either endpoint.
-      paths <- {
-        idx <- which(vapply(x$resources %||% list(), \(r) identical(r$name, "paths"), logical(1)))
-        if (length(idx) == 0) NULL else x$resources[[idx[1]]]$data %||% NULL
-      }
+      paths <- gldp_resource(x, "paths")$data
       can_map <- is.data.frame(paths) &&
         all(c("tag_id", "stap_id", "type") %in% names(paths)) &&
         all(c("tag_id", "stap_s", "stap_t") %in% names(d))
@@ -352,18 +345,23 @@ upgrade_gldp_v0_6_to_v1_0 <- function(x) {
 }
 
 #' @noRd
-mutate_resource <- function(pkg, resource_name, fn) {
-  idx <- which(vapply(pkg$resources, \(r) identical(r$name, resource_name), logical(1)))
-  if (length(idx) == 0) {
-    return(pkg)
-  }
+upgrade_gldp_v1_0_to_v1_1 <- function(x) {
+  # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v1.1
+  # The table schema moved from `resource$$schema` to `resource$schema`, and
+  # `type` became required. Resources are rebuilt against the v1.1 schemas by
+  # `normalize_upgraded_resources()`, so only the profile URL changes here.
+  x[["$schema"]] <- gldp_schema_url("v1.1")
+  x
+}
 
-  resource <- pkg$resources[[idx[1]]]
-  if (!is.data.frame(resource$data)) {
+#' @noRd
+mutate_resource <- function(pkg, resource_name, fn) {
+  resource <- gldp_resource(pkg, resource_name)
+  if (is.null(resource) || !is.data.frame(resource$data)) {
     return(pkg)
   }
 
   resource$data <- fn(resource$data)
-  pkg$resources[[idx[1]]] <- resource
+  gldp_resource(pkg, resource_name) <- resource
   pkg
 }

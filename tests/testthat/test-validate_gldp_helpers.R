@@ -163,3 +163,84 @@ test_that("check_type and check_format handle NA values correctly", {
     expect_false(check_format(c("2023-12-25", NA, "invalid"), "date", "test_field"))
   })
 })
+
+test_that("gldp_profile_resource_names reads both profile shapes", {
+  # GeoLocator-DP up to v1.0 lists the resource alternatives under `oneOf`, from
+  # v1.1 under `allOf` as `if`/`then` pairs. Both must yield the same names, or
+  # upgrading a package written against an older version drops resources.
+  tables <- c(
+    "tags",
+    "observations",
+    "measurements",
+    "staps",
+    "twilights",
+    "paths",
+    "edges",
+    "pressurepaths"
+  )
+
+  for (version in c("v1.0", "v1.1")) {
+    profile <- gldp_profile_schema(version)
+    expect_identical(
+      gldp_profile_resource_names(profile),
+      c(tables, "params"),
+      info = version
+    )
+  }
+})
+
+test_that("schema validation reads allowed values from categories", {
+  # GeoLocator-DP v1.1 declares `categories` alongside the `enum` constraint.
+  # A schema that dropped `enum` must still constrain its values.
+  schema <- list(
+    name = "observations",
+    fields = list(
+      list(
+        name = "sex",
+        type = "string",
+        categories = list(
+          list(value = "U", label = "Unknown"),
+          list(value = "M", label = "Male"),
+          list(value = "F", label = "Female")
+        ),
+        constraints = list(required = TRUE)
+      )
+    )
+  )
+
+  expect_true(suppressMessages(validate_gldp_table(
+    tibble::tibble(sex = c("M", "F")),
+    schema
+  )))
+  expect_false(suppressMessages(validate_gldp_table(
+    tibble::tibble(sex = c("M", "female")),
+    schema
+  )))
+})
+
+test_that("schema validation flags a missing required column", {
+  # `fieldsMatch` says nothing about which columns are required, so every mode
+  # GeoLocator-DP uses would otherwise accept a table without its primary key
+  # (frictionlessdata/datapackage#1126).
+  schema <- list(
+    name = "tags",
+    fieldsMatch = "partial",
+    fields = list(
+      list(name = "tag_id", type = "string", constraints = list(required = TRUE)),
+      list(name = "ring_number", type = "string", constraints = list(required = TRUE)),
+      list(name = "tag_comments", type = "string")
+    )
+  )
+
+  # An optional column may be left out.
+  expect_true(suppressMessages(validate_gldp_table(
+    tibble::tibble(tag_id = "a", ring_number = "r1"),
+    schema
+  )))
+
+  # A required one may not.
+  expect_false(suppressMessages(validate_gldp_table(
+    tibble::tibble(ring_number = "r1"),
+    schema
+  )))
+})

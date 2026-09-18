@@ -9,7 +9,11 @@
 - Do not add defensive guards/fallback logic unless explicitly asked or required for external I/O.
 - Ask or inform on potential fallback logic, but don't add them by default
 - Warn me in case of breaking back compatibility. I generally only care about released/version back-compabtility not during develeopement.
-- Do not run tests unless explicitly asked.
+- Do not run the test suite while iterating on a change. It is slow and its
+  feedback is rarely the feedback needed mid-edit.
+- Do run it when handing work over: before opening or updating a pull
+  request, before a release, and whenever a change alters behaviour rather
+  than only shape. Report what it said rather than asserting the change works.
 - Do not run `devtools::document()` or regenerate roxygen outputs unless explicitly asked.
 - Do not use `:::` or `::` in tests.
 
@@ -26,6 +30,22 @@ Comments
 - Prefer `glue::glue()` / `glue::glue_collapse()` over `paste()` / `paste0()`.
 - Prefer `purrr` for mapping and list transformations.
 - Do not introduce new dependencies unless explicitly approved.
+
+## File organisation
+- Name each file in `R/` after the concern it covers, not after a single export:
+  `read_gldp.R`, `validate_gldp_schema.R`, `gldp_read_resource.R`.
+- Internal `@noRd` helpers live in a file named for their concern, exactly as
+  exported functions do. `validate_gldp_schema.R` is entirely internal.
+- Keep `zzz.R` for package-level hooks (`.onLoad()`, `.onAttach()`,
+  `globalVariables()`) and small generic utilities. It is not a home for
+  whatever has no file yet: once a group of related helpers has a subject of
+  its own, give it a file.
+- Keep a function next to the helpers it calls; do not insert an unrelated
+  concern between them.
+- Preserve the testthat pairing: `tests/testthat/test-X.R` tests `R/X.R`.
+- Moving code between files is a move, not an edit. Make the source file
+  byte-identical to before the code was added, and verify with
+  `git diff <sha> -- <file>` rather than by eye.
 
 ## geolocatordp conventions
 - Main object class: `geolocatordp` (extends `datapackage`).
@@ -48,6 +68,20 @@ Comments
 - Use a draft pull request while release metadata or release checks are
   incomplete. Mark it ready only when the final version, NEWS entry, and
   required GitHub checks are complete.
+
+### Choosing the version number
+- `X.Y.Z` is judged by what a user must do to take the release, not by how
+  large the diff is.
+- Patch (`Z`): fixes and internal changes only. Safe to take blindly — the same
+  call on the same input behaves as before.
+- Minor (`Y`): new features, or any behaviour a user can notice. A stricter
+  `validate_gldp()`, a different GeoLocator-DP version written by
+  `create_gldp()`, or a changed return value are minor, never patch.
+- Major (`X`): an exported function is removed or changes signature, or
+  packages that used to be readable no longer are.
+- Say in the release block when behaviour a user relied on has changed, even
+  though the bump is only minor.
+- After a release, bump `DESCRIPTION` on `dev` to the next `X.Y.Z.9000`.
 
 ### Canonical release block
 - For every release, write one Markdown release block first. It is the source
@@ -82,8 +116,16 @@ Comments
   then paste that exact block into the pull-request body.
 - Resolve all `R CMD check` warnings and release-relevant notes, and confirm
   the pull request's GitHub Actions matrix is green.
+- Run the suite against both the CRAN and the development version of
+  frictionless. The two disagree on what a resource descriptor must carry,
+  so a release that is green on only one of them is untested.
 - After merging to `main`, create tag `vX.Y.Z` and paste the unchanged
   canonical release block into the GitHub Release description.
+- Refresh `inst/schemas/` with `sync_gldp_schemas()` against a released
+  GeoLocator-DP tag, never by copying from a branch or a working tree. A sync
+  that changes nothing is the proof the bundle matches the release.
+- Edit `CITATION.cff` by hand for the version line. `cffr::cff_write()`
+  regenerates the whole file and drops its dependency references.
 
 ## Checks and format
 - Format code with `air format . --check`

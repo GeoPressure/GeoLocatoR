@@ -162,7 +162,11 @@ validate_gldp_resources <- function(pkg) {
   for (i in seq_along(pkg$resources)) {
     resource <- pkg$resources[[i]]
 
-    is_tabular_resource <- identical(resource$profile, "tabular-data-resource") &&
+    # `type: "table"` is the Data Package v2 spelling, `profile:
+    # "tabular-data-resource"` the v1 one. Accept either so packages written by
+    # frictionless < 2.0 keep validating.
+    is_tabular_resource <- (identical(resource$type, "table") ||
+      identical(resource$profile, "tabular-data-resource")) &&
       is.list(resource$schema) &&
       !is.null(resource$schema$fields)
 
@@ -208,6 +212,26 @@ validate_gldp_table <- function(data, schema) {
     names(data),
     schema$fieldsMatch[[1]]
   )
+
+  # `fieldsMatch` is a rule over the whole set of fields and says nothing about
+  # which ones are required, so every mode GeoLocator-DP uses would let a table
+  # leave out a column carrying `required`. The standard has no way to say "the
+  # required columns must be present, the optional ones may be absent"
+  # (frictionlessdata/datapackage#1126), so it is checked here instead.
+  required <- names(schema_fields)[vapply(
+    schema_fields,
+    \(f) isTRUE(f$constraints$required),
+    logical(1)
+  )]
+  absent_required <- setdiff(required, names(data))
+
+  if (length(absent_required) > 0) {
+    cli_alert_danger(
+      "{.field {schema$name}} is missing {length(absent_required)} required
+       column{?s}: {.field {absent_required}}."
+    )
+    valid <- FALSE
+  }
 
   fields <- intersect(names(schema_fields), names(data))
 
