@@ -96,3 +96,35 @@ test_that("a NULL directory returns the table without writing files", {
   expect_s3_class(occurrence, "data.frame")
   expect_gt(nrow(occurrence), 0)
 })
+
+test_that("known-location uncertainty uses the tag grid or ERA5 default", {
+  pkg <- pkg_shared
+  path_data <- paths(pkg)
+  stap_data <- staps(pkg)
+  stap_data$known_lat <- 0
+  stap_data$known_lon <- 0
+  staps(pkg) <- stap_data
+  path_data$lat <- 0
+  paths(pkg) <- path_data
+  pkg$params <- lapply(unique(path_data$tag_id), \(id) list(id = id, tag_set_map = list(scale = 2)))
+  ids <- data.frame(
+    scientific_name = unique(tags(pkg)$scientific_name),
+    scientificNameID = NA_character_
+  )
+  occurrence <- gldp_to_dwc(pkg, NULL, scientific_name_ids = ids)
+  expected <- ceiling(6371008.8 * acos(cos(pi / 720)^2))
+  expect_true(all(occurrence$coordinateUncertaintyInMeters == expected))
+  expect_true(all(grepl("analysis parameters", occurrence$eventRemarks)))
+
+  pkg$params <- list()
+  default <- gldp_to_dwc(pkg, NULL, scientific_name_ids = ids)
+  expected <- ceiling(6371008.8 * acos(cos(pi / 1440)^2))
+  expect_true(all(default$coordinateUncertaintyInMeters == expected))
+  expect_true(all(grepl("ERA5 default", default$eventRemarks)))
+  path_data$lat <- 45
+  paths(pkg) <- path_data
+  higher_latitude <- gldp_to_dwc(pkg, NULL, scientific_name_ids = ids)
+  expect_true(all(
+    higher_latitude$coordinateUncertaintyInMeters < default$coordinateUncertaintyInMeters
+  ))
+})

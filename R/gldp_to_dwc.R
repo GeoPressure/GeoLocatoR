@@ -59,7 +59,9 @@
 #'   from `pressurepaths$altitude` when available.
 #' - `coordinateUncertaintyInMeters` is calculated as the 50th percentile of
 #'   the distance between simulation paths and the `most_likely` position for
-#'   each stationary period.
+#'   each stationary period. For known locations, uncertainty is the radius
+#'   enclosing the analysis grid cell, using `params$tag_set_map$scale` or
+#'   an ERA5 default resolution of 0.25 degrees when parameters are absent.
 #'
 #' @seealso [gldp_to_eml()] to create the matching `eml.xml` metadata file.
 #'
@@ -301,6 +303,12 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
   path_has_known <- "known" %in% names(occurrence)
   stap_has_known <- all(c("known_lat", "known_lon") %in% names(occurrence))
 
+  # Match each tag’s analysis grid; missing scales use the ERA5 0.25-degree grid.
+  grid_scales <- stats::setNames(
+    purrr::map_dbl(pkg$params, \(param) param$tag_set_map$scale %||% NA_real_),
+    purrr::map_chr(pkg$params, \(param) param$id)
+  )
+
   occurrence <- occurrence |>
     dplyr::mutate(
       location_is_known = if (path_has_known) {
@@ -310,6 +318,27 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
       } else {
         FALSE
       },
+      grid_scale = unname(grid_scales[.data$tag_id]),
+      grid_resolution = 1 / dplyr::coalesce(.data$grid_scale, 4),
+      # The corner towards the equator is furthest from the cell centre.
+      grid_half_angle = .data$grid_resolution * pi / 360,
+      grid_corner_lat = .data$lat *
+        pi /
+        180 +
+        dplyr::if_else(.data$lat >= 0, -.data$grid_half_angle, .data$grid_half_angle),
+      coordinateUncertaintyInMeters = dplyr::if_else(
+        .data$location_is_known,
+        ceiling(
+          6371008.8 *
+            acos(pmin(
+              1,
+              sin(.data$lat * pi / 180) *
+                sin(.data$grid_corner_lat) +
+                cos(.data$lat * pi / 180) * cos(.data$grid_corner_lat) * cos(.data$grid_half_angle)
+            ))
+        ),
+        .data$coordinateUncertaintyInMeters
+      ),
       georeferenceSources = dplyr::case_when(
         .data$location_is_known ~ paste(
           "GeoPressureR::tag_set_map()",
@@ -327,9 +356,11 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
         list(
           .data$location_is_known,
           .data$eventRemarks,
-          .data$coordinateUncertaintyInMeters
+          .data$coordinateUncertaintyInMeters,
+          .data$grid_resolution,
+          .data$grid_scale
         ),
-        \(location_is_known, event_remarks, coordinate_uncertainty) {
+        \(location_is_known, event_remarks, coordinate_uncertainty, grid_resolution, grid_scale) {
           values <- c(
             if (isTRUE(location_is_known)) {
               "Location taken from known stationary coordinates."
@@ -338,7 +369,13 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
             },
             event_remarks,
             if (!is.na(coordinate_uncertainty)) {
-              "Coordinate uncertainty estimated as the 50th percentile of simulation distances from the `most_likely` position."
+              if (isTRUE(location_is_known)) {
+                glue::glue(
+                  "Coordinate uncertainty encloses a {grid_resolution}-degree grid cell ({if (is.na(grid_scale)) 'ERA5 default' else 'analysis parameters'})."
+                )
+              } else {
+                "Coordinate uncertainty estimated as the 50th percentile of simulation distances from the `most_likely` position."
+              }
             }
           )
           values <- values[!is.na(values) & values != ""]
