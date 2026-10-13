@@ -70,3 +70,29 @@ test_that("gldp_to_dwc writes occurrence.csv and returns occurrence data", {
   expect_type(occurrence$decimalLatitude, "double")
   expect_type(occurrence$decimalLongitude, "double")
 })
+
+test_that("supplied taxonomy identifiers bypass automatic lookups", {
+  tmp <- tempfile()
+  dir.create(tmp)
+  pkg <- pkg_shared
+  ids <- data.frame(
+    scientific_name = unique(tags(pkg)$scientific_name),
+    scientificNameID = "avibase-7A2734EB"
+  )
+  occurrence <- suppressMessages(gldp_to_dwc(pkg, tmp, scientific_name_ids = ids))
+  expect_true(all(occurrence$scientificNameID == "avibase-7A2734EB"))
+  ids$scientificNameID <- NA_character_
+  occurrence <- suppressMessages(gldp_to_dwc(pkg, tmp, scientific_name_ids = ids))
+  expect_true(all(is.na(occurrence$scientificNameID)))
+  unlink(tmp, recursive = TRUE)
+})
+
+test_that("a NULL directory returns the table without writing files", {
+  ids <- data.frame(
+    scientific_name = unique(tags(pkg_shared)$scientific_name),
+    scientificNameID = "avibase-7A2734EB"
+  )
+  occurrence <- gldp_to_dwc(pkg_shared, NULL, scientific_name_ids = ids)
+  expect_s3_class(occurrence, "data.frame")
+  expect_gt(nrow(occurrence), 0)
+})

@@ -2,9 +2,9 @@
 #'
 #' @description
 #' Transforms a [GeoLocator Data Package (GLDP)](https://geopressure.org/GeoLocator-DP/)
-#' to a [Darwin Core Archive](https://dwc.tdwg.org/).
+#' to a Darwin Core occurrence table.
 #' The resulting CSV files can be uploaded to an [IPT](https://www.gbif.org/ipt)
-#' for publication to GBIF. A `meta.xml` file is included as well.
+#' for publication to GBIF. Archive descriptors are configured separately.
 #' See [gldp_to_eml()] to create an `eml.xml` file.
 #'
 #' @param pkg A GeoLocator Data Package object.
@@ -12,6 +12,10 @@
 #'   If `NULL`, then a data frame is returned instead, which can be useful
 #'   for extending/adapting the Darwin Core mapping before writing with
 #'   [readr::write_csv()].
+#' @param scientific_name_ids Optional data frame with unique `scientific_name`
+#'   and `scientificNameID` columns. Supply this to avoid automatic Aphia lookups;
+#'   for example, Avibase identifiers from an AviList species catalogue.
+#'   Identifiers can be `NA` when no target taxonomy has been chosen.
 #' @return `occurrence.csv` file written to disk.
 #'   Invisibly, an occurrence data frame.
 #'
@@ -47,7 +51,7 @@
 #'   multiple observations and deployments.
 #' - `organismName` is set to `ring_number` as the available label for the
 #'   tracked individual.
-#' - `occurrenceID` is a unique identifier combining `tag_id` and `stap_id`.
+#' - `occurrenceID` combines `ring_number`, `tag_id`, and `stap_id`.
 #' - `occurrenceStatus` is set to `"present"`.
 #' - `sex`, `lifeStage`, and `eventRemarks` are included from matching
 #'   observations when available.
@@ -60,7 +64,7 @@
 #' @seealso [gldp_to_eml()] to create the matching `eml.xml` metadata file.
 #'
 #' @export
-gldp_to_dwc <- function(pkg, directory) {
+gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
   check_gldp(pkg)
 
   # Set properties from metadata
@@ -129,27 +133,29 @@ gldp_to_dwc <- function(pkg, directory) {
       dplyr::mutate(observation_dynamic_properties = NA_character_)
   }
 
-  scientific_name_ids <- tags |>
-    dplyr::distinct(.data$scientific_name)
-  if (requireNamespace("movepub", quietly = TRUE)) {
-    scientific_name_ids <- scientific_name_ids |>
-      dplyr::mutate(
-        scientificNameID = purrr::map_chr(
-          .data$scientific_name,
-          \(scientific_name) {
-            aphia <- movepub::get_aphia_id(scientific_name)
-            aphia_lsid <- aphia$aphia_lsid[!is.na(aphia$aphia_lsid)]
-            if (length(aphia_lsid) == 0) {
-              NA_character_
-            } else {
-              aphia_lsid[[1]]
+  if (is.null(scientific_name_ids)) {
+    scientific_name_ids <- tags |>
+      dplyr::distinct(.data$scientific_name)
+    if (requireNamespace("movepub", quietly = TRUE)) {
+      scientific_name_ids <- scientific_name_ids |>
+        dplyr::mutate(
+          scientificNameID = purrr::map_chr(
+            .data$scientific_name,
+            \(scientific_name) {
+              aphia <- movepub::get_aphia_id(scientific_name)
+              aphia_lsid <- aphia$aphia_lsid[!is.na(aphia$aphia_lsid)]
+              if (length(aphia_lsid) == 0) {
+                NA_character_
+              } else {
+                aphia_lsid[[1]]
+              }
             }
-          }
+          )
         )
-      )
-  } else {
-    scientific_name_ids <- scientific_name_ids |>
-      dplyr::mutate(scientificNameID = NA_character_)
+    } else {
+      scientific_name_ids <- scientific_name_ids |>
+        dplyr::mutate(scientificNameID = NA_character_)
+    }
   }
 
   # Keep the most likely positions for the export itself.
@@ -200,7 +206,8 @@ gldp_to_dwc <- function(pkg, directory) {
       pressurepath_elevation <- pp |>
         dplyr::filter(
           .data$type == "most_likely",
-          .data$stap_id == round(.data$stap_id)
+          .data$stap_id == round(.data$stap_id),
+          is.finite(.data$altitude)
         ) |>
         dplyr::group_by(.data$tag_id, .data$stap_id) |>
         dplyr::summarise(
@@ -429,6 +436,10 @@ gldp_to_dwc <- function(pkg, directory) {
       scientificName = .data$scientific_name,
       kingdom = "Animalia"
     )
+
+  if (is.null(directory)) {
+    return(invisible(occurrence))
+  }
 
   # Write files
   if (!dir.exists(directory)) {
