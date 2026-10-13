@@ -57,9 +57,12 @@
 #'   observations when available.
 #' - `minimumElevationInMeters` and `maximumElevationInMeters` are estimated
 #'   from `pressurepaths$altitude` when available.
-#' - `coordinateUncertaintyInMeters` is calculated as the 50th percentile of
-#'   the distance between simulation paths and the `most_likely` position for
-#'   each stationary period. For known locations, uncertainty is the radius
+#' - Reconstructed-location uncertainty uses the 95th percentile of distances
+#'   from the `most_likely` position with at least 100 finite simulations, or
+#'   the maximum distance with fewer simulations. The grid-cell radius is a
+#'   minimum; without simulations uncertainty is left empty. The 100-simulation
+#'   threshold is a practical convention, not a GBIF requirement.
+#'   For known locations, uncertainty is the radius
 #'   enclosing the analysis grid cell, using `params$tag_set_map$scale` or
 #'   an ERA5 default resolution of 0.25 degrees when parameters are absent.
 #'
@@ -185,12 +188,14 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
       dlon_m = (.data$lon - .data$lon_center) * 111000 * cos(.data$lat_center * pi / 180),
       distance_m = sqrt(.data$dlat_m^2 + .data$dlon_m^2)
     ) |>
+    dplyr::filter(is.finite(.data$distance_m)) |>
     dplyr::group_by(.data$tag_id, .data$stap_id) |>
     dplyr::summarise(
-      coordinateUncertaintyInMeters = round(stats::quantile(
+      simulation_count = dplyr::n(),
+      coordinateUncertaintyInMeters = ceiling(stats::quantile(
         .data$distance_m,
-        0.5,
-        na.rm = TRUE
+        if (dplyr::n() >= 100) 0.95 else 1,
+        names = FALSE
       )),
       .groups = "drop"
     )
@@ -326,18 +331,19 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
         pi /
         180 +
         dplyr::if_else(.data$lat >= 0, -.data$grid_half_angle, .data$grid_half_angle),
+      grid_radius = ceiling(
+        6371008.8 *
+          acos(pmin(
+            1,
+            sin(.data$lat * pi / 180) *
+              sin(.data$grid_corner_lat) +
+              cos(.data$lat * pi / 180) * cos(.data$grid_corner_lat) * cos(.data$grid_half_angle)
+          ))
+      ),
       coordinateUncertaintyInMeters = dplyr::if_else(
         .data$location_is_known,
-        ceiling(
-          6371008.8 *
-            acos(pmin(
-              1,
-              sin(.data$lat * pi / 180) *
-                sin(.data$grid_corner_lat) +
-                cos(.data$lat * pi / 180) * cos(.data$grid_corner_lat) * cos(.data$grid_half_angle)
-            ))
-        ),
-        .data$coordinateUncertaintyInMeters
+        .data$grid_radius,
+        pmax(.data$coordinateUncertaintyInMeters, .data$grid_radius)
       ),
       georeferenceSources = dplyr::case_when(
         .data$location_is_known ~ paste(
@@ -358,9 +364,17 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
           .data$eventRemarks,
           .data$coordinateUncertaintyInMeters,
           .data$grid_resolution,
-          .data$grid_scale
+          .data$grid_scale,
+          .data$simulation_count
         ),
-        \(location_is_known, event_remarks, coordinate_uncertainty, grid_resolution, grid_scale) {
+        \(
+          location_is_known,
+          event_remarks,
+          coordinate_uncertainty,
+          grid_resolution,
+          grid_scale,
+          simulation_count
+        ) {
           values <- c(
             if (isTRUE(location_is_known)) {
               "Location taken from known stationary coordinates."
@@ -368,13 +382,18 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
               "Location reconstructed from `most_likely` trajectory."
             },
             event_remarks,
+            if (!isTRUE(location_is_known) && is.na(coordinate_uncertainty)) {
+              "Coordinate uncertainty unavailable: no finite simulation distances."
+            },
             if (!is.na(coordinate_uncertainty)) {
               if (isTRUE(location_is_known)) {
                 glue::glue(
                   "Coordinate uncertainty encloses a {grid_resolution}-degree grid cell ({if (is.na(grid_scale)) 'ERA5 default' else 'analysis parameters'})."
                 )
               } else {
-                "Coordinate uncertainty estimated as the 50th percentile of simulation distances from the `most_likely` position."
+                glue::glue(
+                  "Coordinate uncertainty uses {if (simulation_count >= 100) 'the 95th percentile' else 'the maximum'} distance of {simulation_count} available simulations from the most-likely position, with the grid-cell radius as a minimum."
+                )
               }
             }
           )
