@@ -92,14 +92,11 @@ test_that("supplied taxonomy identifiers bypass automatic lookups", {
   unlink(tmp, recursive = TRUE)
 })
 
-test_that("a NULL directory returns the table without writing files", {
-  ids <- data.frame(
-    scientific_name = unique(tags(pkg_shared)$scientific_name),
-    scientificNameID = "avibase-7A2734EB"
-  )
-  occurrence <- gldp_to_dwc(pkg_shared, NULL, scientific_name_ids = ids)
+test_that("default identifiers are blank and a NULL directory returns the table", {
+  occurrence <- gldp_to_dwc(pkg_shared, NULL)
   expect_s3_class(occurrence, "data.frame")
   expect_gt(nrow(occurrence), 0)
+  expect_true(all(is.na(occurrence$scientificNameID)))
 })
 
 test_that("known-location uncertainty uses the tag grid or ERA5 default", {

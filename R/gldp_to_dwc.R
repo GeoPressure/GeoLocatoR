@@ -13,9 +13,9 @@
 #'   for extending/adapting the Darwin Core mapping before writing with
 #'   [readr::write_csv()].
 #' @param scientific_name_ids Optional data frame with unique `scientific_name`
-#'   and `scientificNameID` columns. Supply this to avoid automatic Aphia lookups;
-#'   for example, Avibase identifiers from an AviList species catalogue.
-#'   Identifiers can be `NA` when no target taxonomy has been chosen.
+#'   and `scientificNameID` columns. By default, identifiers are left blank and
+#'   no taxonomic lookup is performed. Supply identifiers explicitly when the
+#'   publication service supports them.
 #' @return `occurrence.csv` file written to disk.
 #'   Invisibly, an occurrence data frame.
 #'
@@ -140,27 +140,8 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
 
   if (is.null(scientific_name_ids)) {
     scientific_name_ids <- tags |>
-      dplyr::distinct(.data$scientific_name)
-    if (requireNamespace("movepub", quietly = TRUE)) {
-      scientific_name_ids <- scientific_name_ids |>
-        dplyr::mutate(
-          scientificNameID = purrr::map_chr(
-            .data$scientific_name,
-            \(scientific_name) {
-              aphia <- movepub::get_aphia_id(scientific_name)
-              aphia_lsid <- aphia$aphia_lsid[!is.na(aphia$aphia_lsid)]
-              if (length(aphia_lsid) == 0) {
-                NA_character_
-              } else {
-                aphia_lsid[[1]]
-              }
-            }
-          )
-        )
-    } else {
-      scientific_name_ids <- scientific_name_ids |>
-        dplyr::mutate(scientificNameID = NA_character_)
-    }
+      dplyr::distinct(.data$scientific_name) |>
+      dplyr::mutate(scientificNameID = NA_character_)
   }
 
   # Keep the most likely positions for the export itself.
