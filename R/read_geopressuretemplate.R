@@ -429,9 +429,11 @@ read_geopressuretemplate <- function(
         "i" = "We will proceed with a merge of the two.",
         ">" = "Please, fix {.file {file}}"
       ))
+      # Manual metadata takes precedence and includes tags without sensor outputs.
+      # Retain generated rows only for IDs absent from the manual table.
       t <- bind_rows(
         filter(t, !(.data$tag_id %in% tf$tag_id)),
-        filter(tf, .data$tag_id %in% t$tag_id)
+        tf
       )
     } else {
       t <- tf
