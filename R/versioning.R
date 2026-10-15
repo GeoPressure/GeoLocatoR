@@ -55,7 +55,7 @@ gldp_version <- function(x) {
     cli_abort(
       c(
         "Unsupported GeoLocator-DP version: {.val {version}}.",
-        "i" = "Supported versions are: {.val {.gldp_supported_versions}}."
+        "i" = "Supported versions are: {.val {(.gldp_supported_versions)}}."
       )
     )
   }
@@ -72,7 +72,7 @@ gldp_schema_url <- function(version = NULL) {
   if (!version %in% .gldp_supported_versions) {
     cli_abort(c(
       "!" = "Unsupported GeoLocator-DP version {.val {version}}.",
-      "i" = "Allowed versions are {.val {.gldp_supported_versions}}."
+      "i" = "Allowed versions are {.val {(.gldp_supported_versions)}}."
     ))
   }
 

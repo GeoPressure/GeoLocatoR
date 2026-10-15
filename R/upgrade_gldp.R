@@ -7,7 +7,7 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
   if (!to_version %in% .gldp_supported_versions) {
     cli_abort(c(
       "!" = "Unsupported target GeoLocator-DP version {.val {to_version}}.",
-      "i" = "Allowed versions are {.val {.gldp_supported_versions}}."
+      "i" = "Allowed versions are {.val {(.gldp_supported_versions)}}."
     ))
   }
 
