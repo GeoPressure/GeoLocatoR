@@ -1,14 +1,18 @@
-# GeoLocatoR v1.2.1
+# GeoLocatoR v1.3.0
 
 ## Main
 
-- [Restore the source-package catalogue as a tibble when reading a package](https://github.com/GeoPressure/GeoLocatoR/commit/cf66fac). `read_gldp()` and `read_zenodo()` now return `pkg$datapackages` in the tabular form documented by `merge_gldp()`, with JSON nulls restored as missing cells. Calls such as `bind_rows(master$datapackages)` are no longer needed. This changes the reader's return structure for packages containing a source catalogue; code that indexes it as a list of rows should use table indexing.
+- [Handle file-backed tables consistently during selection, upgrades and validation](https://github.com/GeoPressure/GeoLocatoR/commit/c667b69). `select_gldp()` now filters packages read with `force_read = FALSE`, and upgrades preserve declared types, units and descriptions for extra fields such as `pressure_tag`. Packages older than GeoLocator-DP v1.0 load their tables before upgrading because those migrations transform data. Validation loads file-backed tables and rejects even a single unmatched measurement tag or ring number; packages that previously passed incomplete checks may now fail.
+- [Restore the source-package catalogue as a tibble when reading a package](https://github.com/GeoPressure/GeoLocatoR/commit/cf66fac). `read_gldp()` and `read_zenodo()` return `pkg$datapackages` with one row per source package and JSON nulls restored as missing cells. Code that indexed the catalogue as a list of rows should use table indexing.
 
 ## Minor
 
-- [Fix unsupported-version error messages with cli 3.4.0 and later](https://github.com/GeoPressure/GeoLocatoR/commit/419b2a2), so the requested and supported GeoLocator-DP versions are shown without an interpolation error masking the cause.
+- [Retain manual tags without sensor outputs during GeoPressureTemplate imports](https://github.com/GeoPressure/GeoLocatoR/commit/ac58421), including when generated tags are missing from the manual metadata table. Manual metadata keeps precedence; generated-only tags are added with the existing warning.
+- [Fix unsupported-version error messages with cli 3.4.0 and later](https://github.com/GeoPressure/GeoLocatoR/commit/419b2a2) and [correct diagnostic wording](https://github.com/GeoPressure/GeoLocatoR/commit/02a9148), so errors identify the underlying data or version issue.
 
-**Full Changelog**: <https://github.com/GeoPressure/GeoLocatoR/compare/v1.2.0...v1.2.1>
+- [Add regression tests for missing foreign-key columns, invalid observation histories and template metadata precedence](https://github.com/GeoPressure/GeoLocatoR/commit/13a19ab).
+
+**Full Changelog**: <https://github.com/GeoPressure/GeoLocatoR/compare/v1.2.0...v1.3.0>
 
 # GeoLocatoR v1.2.0
 
