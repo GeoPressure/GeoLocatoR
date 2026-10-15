@@ -278,7 +278,7 @@ validate_gldp_item <- function(item, prop, field) {
       # If any NULL or NA items exist, report and set valid to FALSE
       if (any(nn)) {
         cli_alert_danger(
-          "{.field {field}} is required but {sum(nn)} item{?s} are {.val NA}"
+          "{.field {field}} is required but {sum(nn)} item{?s} {?is/are} {.val NA}"
         )
         valid <- FALSE
       }

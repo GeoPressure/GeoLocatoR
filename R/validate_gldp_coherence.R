@@ -70,7 +70,7 @@ validate_gldp_geopressure_coherence <- function(pkg) {
     invalid <- !is.na(year) & (year <= 2000 | year >= 2050)
     if (any(invalid)) {
       cli_alert_danger(
-        "{sum(invalid)} value{?s} in {.field {resource_name}${field}} must have year > 2000 and < 2050."
+        "{sum(invalid)} value{?s} in {.field {resource_name}${field}} must have a year > 2000 and < 2050."
       )
       valid <<- FALSE
     }
@@ -128,7 +128,7 @@ validate_gldp_geopressure_coherence <- function(pkg) {
         )
       } else {
         cli_alert_danger(
-          "{sum(invalid)} duration{?s} in {.field {resource_name}} are outside expected range ({expected_range_label[1]} < duration < {expected_range_label[2]}). {extreme_kind} invalid duration: {extreme_label}."
+          "{sum(invalid)} duration{?s} in {.field {resource_name}} {?is/are} outside the expected range ({expected_range_label[1]} < duration < {expected_range_label[2]}). {extreme_kind} invalid duration: {extreme_label}."
         )
         valid <<- FALSE
       }
@@ -174,14 +174,14 @@ validate_gldp_geopressure_coherence <- function(pkg) {
 
         if (!all(child_fields %in% names(child_data))) {
           cli_alert_danger(
-            "Foreign key check for {.field {child_name}} failed: child field{?s} {.field {child_fields}} are missing."
+            "Foreign key check for {.field {child_name}} failed: missing child fields: {.field {child_fields}}."
           )
           valid <<- FALSE
           next
         }
         if (!all(parent_fields %in% names(parent_data))) {
           cli_alert_danger(
-            "Foreign key check for {.field {child_name}} failed: parent field{?s} {.field {parent_fields}} are missing in {.field {parent_name}}."
+            "Foreign key check for {.field {child_name}} failed: missing parent fields in {.field {parent_name}}: {.field {parent_fields}}."
           )
           valid <<- FALSE
           next
@@ -204,7 +204,7 @@ validate_gldp_geopressure_coherence <- function(pkg) {
         missing_keys <- anti_join(child_keys, parent_keys, by = child_fields)
         if (nrow(missing_keys) > 0) {
           cli_alert_danger(
-            "{nrow(missing_keys)} foreign key row{?s} in {.field {child_name}} are missing in parent {.field {parent_name}}."
+            "{nrow(missing_keys)} foreign key row{?s} in {.field {child_name}} {?is/are} missing in parent {.field {parent_name}}."
           )
           valid <<- FALSE
         }
@@ -383,7 +383,7 @@ validate_gldp_core_coherence <- function(pkg) {
       "{.field tags} is missing {.field tag_id}={.val {midmissing}} which are present in {.field measurements}."
     )
     cli_alert_info(
-      "All {.field tag_id} presents in the resource {.field measurements} need to also be present in the resource {.field tags}."
+      "All {.field tag_id} values present in the resource {.field measurements} need to also be present in the resource {.field tags}."
     )
     valid <- FALSE
   }
@@ -405,7 +405,7 @@ validate_gldp_core_coherence <- function(pkg) {
     anti_join(t, by = c("tag_id", "ring_number"))
   if (nrow(invalid_combinations) > 0) {
     cli_alert_danger(
-      "The following {.field tag_id} and {.field ring_number} combinations in {.field observation} are not present in {.field tags}:"
+      "The following {.field tag_id} and {.field ring_number} combinations in {.field observations} are not present in {.field tags}:"
     )
     print(invalid_combinations)
     valid <- FALSE
@@ -430,7 +430,7 @@ validate_gldp_core_coherence <- function(pkg) {
   )
   if (length(tidmissingequip) > 0) {
     cli_alert_danger(
-      "No equipment found for {.val {tidmissingequip}} in in {.field observations} while data present in {.field measurements}."
+      "No equipment found for {.val {tidmissingequip}} in {.field observations} while data are present in {.field measurements}."
     )
     valid <- FALSE
   }
@@ -440,7 +440,7 @@ validate_gldp_core_coherence <- function(pkg) {
   )
   if (length(tidmissingret) > 0) {
     cli_alert_danger(
-      "No retrieval found for {.val {tidmissingret}} in in {.field observations} while data present in {.field measurements}."
+      "No retrieval found for {.val {tidmissingret}} in {.field observations} while data are present in {.field measurements}."
     )
     valid <- FALSE
   }
@@ -515,7 +515,7 @@ validate_gldp_observations <- function(o) {
   if (nrow(obs_equi_retrieval_without_present) > 0) {
     error_tag <- unique(obs_equi_retrieval_without_present$tag_id)
     cli_alert_danger(
-      "{length(error_tag)} equipment or retrieval observation{?s} don't have a device status 'present'. Check: {.field {error_tag}}"
+      "{length(error_tag)} equipment or retrieval observation{?s} {?does/do} not have a device status 'present'. Check: {.field {error_tag}}"
     )
     valid <- FALSE
   }
@@ -531,7 +531,7 @@ validate_gldp_observations <- function(o) {
   if (nrow(missing_tag_id) > 0) {
     error_ring_number <- unique(missing_tag_id$ring_number)
     cli_alert_danger(
-      "{length(error_ring_number)} {.var ring_number} with a device status {.val missing} or {.val present} {?is/are} missing a {.var tag_id}. Check: {.field {error_ring_number}}"
+      "{length(error_ring_number)} {.var ring_number} value{?s} with a device status {.val missing} or {.val present} {?is/are} missing a {.var tag_id}. Check: {.field {error_ring_number}}"
     )
     valid <- FALSE
   }
@@ -615,7 +615,7 @@ validate_gldp_observations <- function(o) {
   if (nrow(duplicate_observations) > 0) {
     error_tag <- unique(duplicate_observations$tag_id)
     cli_alert_danger(
-      "{length(error_tag)} duplicate observations found. Check: {.field {error_tag}}"
+      "{length(error_tag)} duplicate observation{?s} found. Check: {.field {error_tag}}"
     )
     valid <- FALSE
   }
@@ -642,7 +642,7 @@ validate_gldp_observations <- function(o) {
   if (nrow(invalid_transitions) > 0) {
     error_ring_number <- unique(invalid_transitions$ring_number)
     cli_alert_danger(
-      "{length(error_ring_number)} invalid device_status transitions found. Check: {.field {error_ring_number}}"
+      "{length(error_ring_number)} invalid device_status transition{?s} found. Check: {.field {error_ring_number}}"
     )
     valid <- FALSE
   }

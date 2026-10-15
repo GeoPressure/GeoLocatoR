@@ -149,7 +149,7 @@ read_geopressuretemplate <- function(
         is_null_var <- sapply(interim[[var]], is.null)
         if (any(is_null_var)) {
           cli_abort(c(
-            "x" = "File {.file {basename(all_files)[is_null_var]}} missing variable {.var {var}}."
+            "x" = "File {.file {basename(all_files)[is_null_var]}} is missing variable {.var {var}}."
           ))
         }
       }
@@ -424,7 +424,7 @@ read_geopressuretemplate <- function(
     if (!all(t$tag_id %in% tf$tag_id)) {
       missing_tag_ids <- setdiff(t$tag_id, tf$tag_id)
       cli_warn(c(
-        "!" = "The following tag_id from interim/raw data are missing in {.file {file}}: \\
+        "!" = "The following tag_id values from interim/raw data are missing in {.file {file}}: \\
         {missing_tag_ids}",
         "i" = "We will proceed with a merge of the two.",
         ">" = "Please, fix {.file {file}}"
@@ -550,8 +550,8 @@ raw_tag_id_to_tag <- function(id, display_config_error = TRUE) {
       if (display_config_error) {
         # Warn that the configuration file could not be read and display the error
         cli_warn(c(
-          "i" = "Configuration file {.file config.yml} could not be read for {.field {id}}}.",
-          ">" = "Create the tag with default value with {.fun GeoPressureR::param_create}.",
+          "i" = "Configuration file {.file config.yml} could not be read for {.field {id}}.",
+          ">" = "Create the tag with default values using {.fun GeoPressureR::param_create}.",
           "!" = "Error: {e$message}"
         ))
         display_config_error <- FALSE
