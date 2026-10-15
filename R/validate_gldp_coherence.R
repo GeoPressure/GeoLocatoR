@@ -39,6 +39,8 @@ validate_gldp_coherence <- function(pkg) {
 #'   warnings.
 #' @noRd
 validate_gldp_geopressure_coherence <- function(pkg) {
+  # Foreign-key checks require both child and parent tables, including file-backed ones.
+  pkg <- gldp_materialize_tables(pkg)
   valid <- TRUE
   resources <- pkg$resources %||% list()
   resource_names <- vapply(resources, \(x) x$name %||% NA_character_, character(1))
@@ -378,7 +380,7 @@ validate_gldp_core_coherence <- function(pkg) {
   # Check for measurements with tag_id not present in the tags table.
   # All tag_id entries in measurements must be declared in tags.
   midmissing <- unique(m$tag_id[!(m$tag_id %in% t$tag_id)])
-  if (length(midmissing) > 1) {
+  if (length(midmissing) > 0) {
     cli_alert_danger(
       "{.field tags} is missing {.field tag_id}={.val {midmissing}} which are present in {.field measurements}."
     )
@@ -391,7 +393,7 @@ validate_gldp_core_coherence <- function(pkg) {
   # Check for ring_number present in tags but missing from observations.
   # All birds with a ring_number in tags should have at least one corresponding observation.
   tringmissing <- unique(t$ring_number[!(t$ring_number %in% o$ring_number)])
-  if (length(tringmissing) > 1) {
+  if (length(tringmissing) > 0) {
     cli_alert_danger(
       "{.field observations} is missing {.field ring_number} {.val {tringmissing}} which are present in {.field tags}."
     )

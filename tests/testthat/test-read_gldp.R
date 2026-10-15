@@ -184,3 +184,51 @@ test_that("read_gldp restores the provenance table after a JSON round trip", {
   expect_equal(restored$datapackages$numberTags_tags, c(2L, 3L))
   expect_true(all(is.na(restored$datapackages$embargo)))
 })
+
+test_that("file-backed metadata, merging and writing match loaded packages", {
+  directory <- tempfile("read-lazy-workflows-")
+  on.exit(unlink(directory, recursive = TRUE))
+  loaded <- list()
+  lazy <- list()
+  for (id in c("AA", "BB")) {
+    pkg <- create_gldp()
+    pkg[["id"]] <- paste0("source-", id)
+    pkg <- add_gldp_resource(
+      pkg,
+      "tags",
+      data.frame(
+        tag_id = id,
+        ring_number = paste0("ring-", id),
+        scientific_name = "Upupa epops",
+        manufacturer = "test",
+        model = "test"
+      )
+    )
+    pkg <- add_gldp_resource(
+      pkg,
+      "measurements",
+      data.frame(
+        tag_id = id,
+        sensor = "pressure",
+        datetime = as.POSIXct(c("2020-01-01", "2020-01-02"), tz = "UTC"),
+        value = c(1000, 1001),
+        label = NA_character_
+      )
+    )
+    write_gldp(pkg, file.path(directory, id))
+    loaded[[id]] <- read_gldp(file.path(directory, id))
+    lazy[[id]] <- read_gldp(file.path(directory, id), force_read = FALSE)
+    expect_equal(lazy[[id]]$numberTags, loaded[[id]]$numberTags)
+    expect_equal(lazy[[id]]$temporal, loaded[[id]]$temporal)
+    expect_equal(lazy[[id]]$taxonomic, loaded[[id]]$taxonomic)
+  }
+  merged_lazy <- merge_gldp(lazy)
+  merged_loaded <- merge_gldp(loaded)
+  expect_equal(tags(merged_lazy), tags(merged_loaded))
+  expect_equal(measurements(merged_lazy), measurements(merged_loaded))
+  write_gldp(lazy[["AA"]], file.path(directory, "copy"))
+  reopened <- read_gldp(file.path(directory, "copy"))
+  expect_equal(tags(reopened), tags(loaded[["AA"]]))
+  expect_equal(measurements(reopened), measurements(loaded[["AA"]]))
+  expect_true(all(vapply(lazy[["AA"]]$resources, function(r) !is.null(r$path), logical(1))))
+})

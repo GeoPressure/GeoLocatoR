@@ -15,6 +15,8 @@
 #'    lengths, item counts, and numeric values.
 #'
 #' 2. **Resource validation**
+#'    File-backed tables are loaded for field and foreign-key checks; source files
+#'    are not modified.
 #'    Resources are checked against their schema: columns must match the
 #'    `fieldsMatch` rule, and each column must satisfy its declared constraints
 #'    such as type, format, requiredness, uniqueness, allowed values, patterns,
@@ -83,6 +85,7 @@
 #' @export
 validate_gldp <- function(pkg) {
   check_gldp(pkg)
+  pkg <- gldp_materialize_tables(pkg)
 
   valid <- validate_gldp_profile(pkg)
 
@@ -150,6 +153,7 @@ validate_gldp_profile <- function(pkg) {
 #'   their schema checks, `FALSE` otherwise.
 #' @noRd
 validate_gldp_resources <- function(pkg) {
+  pkg <- gldp_materialize_tables(pkg)
   pkg <- update_gldp_order_resources(pkg)
 
   valid <- TRUE

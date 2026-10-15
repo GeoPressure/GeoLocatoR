@@ -20,6 +20,8 @@
 #' resource is read immediately with [frictionless::read_resource()], cast to
 #' the schema types, stored in `resource$data`, and its `path` field is removed.
 #'   The `measurements` resource is read last.
+#'   Packages older than GeoLocator-DP v1.0 are loaded even when `FALSE`, because
+#'   their upgrades transform table values and cannot operate on file paths alone.
 #' @param drop_measurements `r lifecycle::badge("experimental")` If `TRUE`,
 #'   drops the `measurements` resource after reading `datapackage.json` and
 #'   before the optional `force_read` step loads resource data into memory. Use

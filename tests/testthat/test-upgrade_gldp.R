@@ -341,3 +341,123 @@ test_that("upgrade_gldp migrates a v1.0 package to v1.1", {
   expect_type(tags_res$schema, "list")
   expect_false(is.null(tags_res$schema$fields))
 })
+
+test_that("file-backed legacy upgrades transform values and match loaded upgrades", {
+  directory <- tempfile("upgrade-lazy-")
+  on.exit(unlink(directory, recursive = TRUE))
+  pkg <- create_gldp()
+  pkg[["$schema"]] <- gldp_schema_url("v0.6")
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = c("AA", "unused"),
+      ring_number = c("R1", NA),
+      scientific_name = "Upupa epops",
+      manufacturer = "test",
+      model = "test"
+    )
+  )
+  pkg <- add_gldp_resource(
+    pkg,
+    "observations",
+    data.frame(
+      tag_id = "AA",
+      ring_number = "R1",
+      observation_type = "equipment",
+      datetime = as.POSIXct("2020-01-01", tz = "UTC"),
+      latitude = 47,
+      longitude = 8,
+      age_class = "0",
+      sex = "U"
+    )
+  )
+  pkg <- add_gldp_resource(
+    pkg,
+    "measurements",
+    data.frame(
+      tag_id = "AA",
+      sensor = "pitch",
+      datetime = as.POSIXct("2020-01-01", tz = "UTC"),
+      value = 0.2,
+      label = NA_character_
+    )
+  )
+  # Exercise the existing v0.6 migration, including its tag-removal policy.
+  write_gldp(pkg, directory)
+  lazy <- suppressMessages(read_gldp(directory, force_read = FALSE))
+  loaded <- suppressMessages(read_gldp(directory))
+  expect_equal(tags(lazy), tags(loaded))
+  expect_equal(measurements(lazy), measurements(loaded))
+  expect_identical(as.character(measurements(lazy)$sensor), "mean_acceleration_z")
+  expect_identical(tags(lazy)$tag_id, "AA")
+  expect_equal(gldp_version(lazy), .gldp_default_version)
+  expect_true(all(vapply(lazy$resources, function(r) is.null(r$path), logical(1))))
+})
+
+test_that("mixed-version merges preserve declared extra numeric fields in lazy and loaded reads", {
+  directory <- tempfile("upgrade-extra-fields-")
+  on.exit(unlink(directory, recursive = TRUE))
+  for (version in c("v1.0", "v1.1")) {
+    pkg <- create_gldp()
+    pkg[["id"]] <- paste0("source-", version)
+    pkg[["$schema"]] <- gldp_schema_url(version)
+    pkg <- add_gldp_resource(
+      pkg,
+      "tags",
+      data.frame(
+        tag_id = version,
+        ring_number = version,
+        scientific_name = "Upupa epops",
+        manufacturer = "test",
+        model = "test"
+      )
+    )
+    pkg <- add_gldp_resource(
+      pkg,
+      "pressurepaths",
+      data.frame(
+        tag_id = version,
+        datetime = as.POSIXct("2020-01-01", tz = "UTC"),
+        stap_id = 1,
+        type = "most_likely",
+        j = 1L,
+        lat = 47,
+        lon = 8,
+        pressure_tag = 812L
+      )
+    )
+    resource <- gldp_resource(pkg, "pressurepaths")
+    i <- match("pressure_tag", schema_field_names(resource$schema))
+    resource$schema$fields[[i]]$unit <- "hPa"
+    resource$schema$fields[[i]]$description <- "Recorded tag pressure"
+    gldp_resource(pkg, "pressurepaths") <- resource
+    write_gldp(pkg, file.path(directory, version))
+  }
+  for (force in c(FALSE, TRUE)) {
+    old <- suppressMessages(read_gldp(file.path(directory, "v1.0"), force_read = force))
+    current <- read_gldp(file.path(directory, "v1.1"), force_read = force)
+    fields <- gldp_resource(old, "pressurepaths")$schema$fields
+    field <- fields[[match("pressure_tag", schema_field_names(list(fields = fields)))]]
+    expect_identical(field$type, "integer")
+    expect_identical(field$unit, "hPa")
+    expect_identical(field$description, "Recorded tag pressure")
+    expect_true(is.numeric(pressurepaths(old)$pressure_tag))
+    expect_equal(pressurepaths(old)$pressure_tag, 812)
+    expect_identical(is.null(gldp_resource(old, "pressurepaths")$data), !force)
+    merged <- merge_gldp(old, current)
+    expect_true(is.numeric(pressurepaths(merged)$pressure_tag))
+    expect_equal(pressurepaths(merged)$pressure_tag, c(812, 812))
+    write_gldp(old, file.path(directory, "copy"))
+    reopened <- read_gldp(file.path(directory, "copy"))
+    expect_equal(pressurepaths(reopened)$pressure_tag, 812)
+    reopened_fields <- gldp_resource(reopened, "pressurepaths")$schema$fields
+    expect_identical(
+      reopened_fields[[match(
+        "pressure_tag",
+        schema_field_names(list(fields = reopened_fields))
+      )]]$unit,
+      "hPa"
+    )
+  }
+})

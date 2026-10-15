@@ -29,6 +29,12 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
     ))
   }
 
+  # Older migrations rename columns and transform values, so schema-only upgrades
+  # would leave file-backed tables in the old format. v1.0 -> v1.1 is schema-only.
+  if (from_rank < match("v1.0", .gldp_supported_versions)) {
+    x <- gldp_materialize_tables(x)
+  }
+
   cli_alert_success("Upgrading GeoLocator-DP from {.val {from_version}} to {.val {to_version}}.")
 
   while (!identical(from_version, to_version)) {
@@ -74,6 +80,7 @@ normalize_upgraded_resources <- function(x) {
     if (!resource_name %in% supported_resources) {
       next
     }
+    target_schema <- gldp_resource_schema(target_version, resource_name)
     if (is.data.frame(resource$data)) {
       # Rebuild resource from target schema for stable write/read round-trips.
       x <- add_gldp_resource(
@@ -87,9 +94,34 @@ normalize_upgraded_resources <- function(x) {
       # Keep schema in sync when data are not loaded in memory.
       lazy_resource <- gldp_resource(x, resource_name)
       if (!is.null(lazy_resource)) {
-        lazy_resource$schema <- gldp_resource_schema(target_version, resource_name)
+        lazy_resource$schema <- target_schema
         gldp_resource(x, resource_name) <- lazy_resource
       }
+    }
+
+    # Extra columns retain their source types and units when the target permits
+    # extensions. Standard fields and columns removed by migrations use the target schema.
+    if (target_schema$fieldsMatch %in% c("partial", "subset")) {
+      extra_fields <- Filter(
+        function(field) {
+          !field$name %in% schema_field_names(target_schema) &&
+            (!is.data.frame(resource$data) || field$name %in% names(resource$data))
+        },
+        resource$schema$fields
+      )
+      upgraded_resource <- gldp_resource(x, resource_name)
+      extra_names <- schema_field_names(list(fields = extra_fields))
+      upgraded_resource$schema$fields <- c(
+        Filter(function(field) !field$name %in% extra_names, upgraded_resource$schema$fields),
+        extra_fields
+      )
+      if (is.data.frame(upgraded_resource$data)) {
+        upgraded_resource[["data"]] <- cast_table(
+          upgraded_resource$data[, schema_field_names(upgraded_resource$schema), drop = FALSE],
+          upgraded_resource$schema
+        )
+      }
+      gldp_resource(x, resource_name) <- upgraded_resource
     }
   }
 
