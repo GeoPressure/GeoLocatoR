@@ -10,6 +10,9 @@
 #' 5. upgrades older package versions when needed;
 #' 6. recomputes derived package properties with [update_gldp()].
 #'
+#' When present, the `datapackages` provenance catalogue is restored as a tibble,
+#' with one row per source package, as returned by [merge_gldp()].
+#'
 #' @param x Path to a GeoLocator-DP package directory or `datapackage.json`
 #'   file, or a URL to `datapackage.json`.
 #' @param force_read If `TRUE` (default), loads resource data into memory so
@@ -83,6 +86,14 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
     }
     r
   })
+
+  # Restore the provenance table; JSON nulls represent missing cells.
+  if (!is.null(pkg$datapackages)) {
+    pkg[["datapackages"]] <- dplyr::bind_rows(purrr::map(
+      pkg$datapackages,
+      \(row) purrr::map(row, \(value) value %||% NA)
+    ))
+  }
 
   # Drop measurements
   if (isTRUE(drop_measurements)) {

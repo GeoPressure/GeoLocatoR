@@ -37,6 +37,9 @@ The function:
 \item upgrades older package versions when needed;
 \item recomputes derived package properties with \code{\link[=update_gldp]{update_gldp()}}.
 }
+
+When present, the \code{datapackages} provenance catalogue is restored as a tibble,
+with one row per source package, as returned by \code{\link[=merge_gldp]{merge_gldp()}}.
 }
 \examples{
 \dontrun{

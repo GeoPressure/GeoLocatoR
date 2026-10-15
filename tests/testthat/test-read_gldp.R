@@ -162,3 +162,25 @@ test_that("write_gldp/read_gldp roundtrip keeps pkg$params via params.json", {
   expect_true(is.list(pkg_back$params))
   expect_equal(pkg_back$params[[1]]$id, "TEST-PARAM")
 })
+
+test_that("read_gldp restores the provenance table after a JSON round trip", {
+  pkg <- create_gldp()
+  pkg[["datapackages"]] <- data.frame(
+    datapackage_id = c("source-1", "source-2"),
+    title = c("First source", "Second source"),
+    is_published = c(TRUE, NA),
+    numberTags_tags = c(2L, 3L),
+    embargo = c(NA_character_, NA_character_)
+  )
+  directory <- withr::local_tempdir()
+  suppressMessages(write_gldp(pkg, directory))
+  restored <- suppressWarnings(read_gldp(directory))
+
+  expect_s3_class(restored$datapackages, "tbl_df")
+  expect_equal(names(restored$datapackages), names(pkg$datapackages))
+  expect_equal(restored$datapackages$datapackage_id, pkg$datapackages$datapackage_id)
+  expect_equal(restored$datapackages$title, pkg$datapackages$title)
+  expect_equal(restored$datapackages$is_published, c(TRUE, NA))
+  expect_equal(restored$datapackages$numberTags_tags, c(2L, 3L))
+  expect_true(all(is.na(restored$datapackages$embargo)))
+})
