@@ -244,3 +244,14 @@ test_that("schema validation flags a missing required column", {
     schema
   )))
 })
+
+test_that("required fields report missing cells", {
+  expect_message(
+    expect_false(validate_gldp_item(
+      c("R1", NA_character_),
+      list(type = "string", required = TRUE),
+      "ring_number"
+    )),
+    "is required but 1 item is"
+  )
+})

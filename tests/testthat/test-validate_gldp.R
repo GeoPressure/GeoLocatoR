@@ -123,6 +123,7 @@ make_geopressure_test_pkg <- function() {
         lon = 8,
         j = 1L,
         altitude = 100,
+        label = NA_character_,
         stringsAsFactors = FALSE
       ),
       schema = list(
@@ -514,4 +515,51 @@ test_that("one orphan measurement tag and one unobserved ring each invalidate co
     vapply(invalid$resources, function(r) r$name, character(1))
   )]]$data$ring_number <- "unobserved"
   expect_false(suppressMessages(validate_gldp_core_coherence(invalid)))
+})
+
+test_that("observation histories report invalid device states and duplicate events", {
+  observations <- data.frame(
+    tag_id = c("AA", "AA"),
+    ring_number = "R1",
+    datetime = as.POSIXct(c("2024-01-01", "2024-02-01"), tz = "UTC"),
+    observation_type = c("equipment", "retrieval"),
+    device_status = "present"
+  )
+  expect_true(suppressMessages(validate_gldp_observations(observations)))
+
+  invalid <- observations
+  invalid$device_status[1] <- "none"
+  expect_message(expect_false(validate_gldp_observations(invalid)), "does not have a device status")
+
+  invalid <- rbind(observations, observations[1, ])
+  invalid$observation_type[3] <- "capture"
+  invalid$datetime[3] <- invalid$datetime[1] + 86400
+  invalid$tag_id[3] <- NA_character_
+  expect_message(expect_false(validate_gldp_observations(invalid)), "missing a")
+
+  invalid <- rbind(observations, observations[1, ])
+  expect_message(expect_false(validate_gldp_observations(invalid)), "duplicate observation")
+
+  invalid <- rbind(observations, observations[1, ])
+  invalid$observation_type[3] <- "capture"
+  invalid$datetime[3] <- invalid$datetime[1] + 86400
+  invalid$device_status[3] <- "none"
+  expect_message(
+    expect_false(validate_gldp_observations(invalid)),
+    "invalid device_status transition"
+  )
+})
+
+test_that("foreign-key validation reports missing child and parent columns", {
+  pkg <- make_geopressure_test_pkg()
+  resource <- gldp_resource(pkg, "paths")
+  resource$data$stap_id <- NULL
+  gldp_resource(pkg, "paths") <- resource
+  expect_message(expect_false(validate_gldp_geopressure_coherence(pkg)), "missing child fields")
+
+  pkg <- make_geopressure_test_pkg()
+  resource <- gldp_resource(pkg, "staps")
+  resource$data$stap_id <- NULL
+  gldp_resource(pkg, "staps") <- resource
+  expect_message(expect_false(validate_gldp_geopressure_coherence(pkg)), "missing parent fields")
 })

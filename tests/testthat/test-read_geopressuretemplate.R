@@ -25,10 +25,13 @@ test_that("manual tag metadata is retained when an interim tag is absent from it
     end = as.POSIXct("2020-01-02", tz = "UTC")
   )
   save(param, tag, file = file.path(directory, "data", "interim", "AA.RData"))
+  param$id <- "CC"
+  tag$param <- param
+  save(param, tag, file = file.path(directory, "data", "interim", "CC.RData"))
   write.csv(
     data.frame(
-      tag_id = "BB",
-      ring_number = "R2",
+      tag_id = c("AA", "BB"),
+      ring_number = c("R1", "R2"),
       scientific_name = "Upupa epops",
       manufacturer = "Swiss Ornithological Institute",
       model = "M1",
@@ -42,6 +45,16 @@ test_that("manual tag metadata is retained when an interim tag is absent from it
     row.names = FALSE
   )
   expect_warning(pkg <- read_geopressuretemplate(directory, from = "interim"), "missing")
-  expect_setequal(tags(pkg)$tag_id, c("AA", "BB"))
+  expect_setequal(tags(pkg)$tag_id, c("AA", "BB", "CC"))
+  expect_identical(tags(pkg)$ring_number[tags(pkg)$tag_id == "AA"], "R1")
   expect_identical(tags(pkg)$ring_number[tags(pkg)$tag_id == "BB"], "R2")
+})
+
+test_that("incomplete interim files identify the missing variable", {
+  directory <- tempfile("template-incomplete-")
+  dir.create(file.path(directory, "data", "interim"), recursive = TRUE)
+  on.exit(unlink(directory, recursive = TRUE))
+  tag <- list()
+  save(tag, file = file.path(directory, "data", "interim", "AA.RData"))
+  expect_error(read_geopressuretemplate(directory, from = "interim"), "missing variable.*param")
 })
