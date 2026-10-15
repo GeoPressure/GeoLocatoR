@@ -1,3 +1,15 @@
+# GeoLocatoR v1.2.1
+
+## Main
+
+- [Restore the source-package catalogue as a tibble when reading a package](https://github.com/GeoPressure/GeoLocatoR/commit/cf66fac). `read_gldp()` and `read_zenodo()` now return `pkg$datapackages` in the tabular form documented by `merge_gldp()`, with JSON nulls restored as missing cells. Calls such as `bind_rows(master$datapackages)` are no longer needed. This changes the reader's return structure for packages containing a source catalogue; code that indexes it as a list of rows should use table indexing.
+
+## Minor
+
+- [Fix unsupported-version error messages with cli 3.4.0 and later](https://github.com/GeoPressure/GeoLocatoR/commit/419b2a2), so the requested and supported GeoLocator-DP versions are shown without an interpolation error masking the cause.
+
+**Full Changelog**: <https://github.com/GeoPressure/GeoLocatoR/compare/v1.2.0...v1.2.1>
+
 # GeoLocatoR v1.2.0
 
 Supports [GeoLocator-DP v1.1](https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v1.1), which aligns the standard with Data Package v2, and makes it the version `create_gldp()` writes. Packages written against any earlier version are upgraded on read, so archived packages need no rewriting.
