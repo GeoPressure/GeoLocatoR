@@ -164,7 +164,7 @@ test_that("write_gldp/read_gldp roundtrip keeps pkg$params via params.json", {
 })
 
 test_that("read_gldp restores the provenance table after a JSON round trip", {
-  pkg <- create_gldp()
+  pkg <- add_gldp_resource(create_gldp(), "tags", data.frame(tag_id = "tag-1"))
   pkg[["datapackages"]] <- data.frame(
     datapackage_id = c("source-1", "source-2"),
     title = c("First source", "Second source"),
