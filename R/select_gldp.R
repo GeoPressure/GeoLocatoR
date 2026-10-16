@@ -51,11 +51,20 @@ select_gldp <- function(pkg, tag_id) {
 
   for (i in seq_along(pkg$resources)) {
     data <- pkg$resources[[i]]$data
+    # File-backed tables need the same filtering and schema types as loaded tables.
+    if (is.null(data)) {
+      data <- cast_table(
+        gldp_read_resource(pkg, pkg$resources[[i]]$name),
+        pkg$resources[[i]]$schema
+      )
+    }
     if (!is.data.frame(data) || !("tag_id" %in% names(data))) {
       next
     }
 
-    pkg$resources[[i]]$data <- data[data$tag_id %in% keep_tag_ids, , drop = FALSE]
+    pkg$resources[[i]][["data"]] <- data[data$tag_id %in% keep_tag_ids, , drop = FALSE]
+    # Store the selected rows in memory; a resource cannot carry both data and path.
+    pkg$resources[[i]][["path"]] <- NULL
   }
 
   update_gldp(pkg)

@@ -341,3 +341,165 @@ test_that("upgrade_gldp migrates a v1.0 package to v1.1", {
   expect_type(tags_res$schema, "list")
   expect_false(is.null(tags_res$schema$fields))
 })
+
+test_that("file-backed legacy upgrades transform values and match loaded upgrades", {
+  directory <- tempfile("upgrade-lazy-")
+  on.exit(unlink(directory, recursive = TRUE))
+  pkg <- create_gldp()
+  pkg[["$schema"]] <- gldp_schema_url("v0.6")
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = c("AA", "unused"),
+      ring_number = c("R1", NA),
+      scientific_name = "Upupa epops",
+      manufacturer = "test",
+      model = "test"
+    )
+  )
+  pkg <- add_gldp_resource(
+    pkg,
+    "observations",
+    data.frame(
+      tag_id = "AA",
+      ring_number = "R1",
+      observation_type = "equipment",
+      datetime = as.POSIXct("2020-01-01", tz = "UTC"),
+      latitude = 47,
+      longitude = 8,
+      age_class = "0",
+      sex = "U"
+    )
+  )
+  pkg <- add_gldp_resource(
+    pkg,
+    "measurements",
+    data.frame(
+      tag_id = "AA",
+      sensor = "pitch",
+      datetime = as.POSIXct("2020-01-01", tz = "UTC"),
+      value = 0.2,
+      label = NA_character_
+    )
+  )
+  # Exercise the existing v0.6 migration, including its tag-removal policy.
+  write_gldp(pkg, directory)
+  lazy <- suppressMessages(read_gldp(directory, force_read = FALSE))
+  loaded <- suppressMessages(read_gldp(directory))
+  expect_equal(tags(lazy), tags(loaded))
+  expect_equal(measurements(lazy), measurements(loaded))
+  expect_identical(as.character(measurements(lazy)$sensor), "mean_acceleration_z")
+  expect_identical(tags(lazy)$tag_id, "AA")
+  expect_equal(gldp_version(lazy), .gldp_default_version)
+  expect_true(all(vapply(lazy$resources, function(r) is.null(r$path), logical(1))))
+})
+
+test_that("mixed-version merges preserve declared extra numeric fields in lazy and loaded reads", {
+  directory <- tempfile("upgrade-extra-fields-")
+  on.exit(unlink(directory, recursive = TRUE))
+  for (version in c("v1.0", "v1.1")) {
+    pkg <- create_gldp()
+    pkg[["id"]] <- paste0("source-", version)
+    pkg[["$schema"]] <- gldp_schema_url(version)
+    pkg <- add_gldp_resource(
+      pkg,
+      "tags",
+      data.frame(
+        tag_id = version,
+        ring_number = version,
+        scientific_name = "Upupa epops",
+        manufacturer = "test",
+        model = "test"
+      )
+    )
+    pkg <- add_gldp_resource(
+      pkg,
+      "pressurepaths",
+      data.frame(
+        tag_id = version,
+        datetime = as.POSIXct("2020-01-01", tz = "UTC"),
+        stap_id = 1,
+        type = "most_likely",
+        j = 1L,
+        lat = 47,
+        lon = 8,
+        pressure_tag = 812L
+      )
+    )
+    resource <- gldp_resource(pkg, "pressurepaths")
+    i <- match("pressure_tag", schema_field_names(resource$schema))
+    resource$schema$fields[[i]]$unit <- "hPa"
+    resource$schema$fields[[i]]$description <- "Recorded tag pressure"
+    gldp_resource(pkg, "pressurepaths") <- resource
+    write_gldp(pkg, file.path(directory, version))
+  }
+  for (force in c(FALSE, TRUE)) {
+    old <- suppressMessages(read_gldp(file.path(directory, "v1.0"), force_read = force))
+    current <- read_gldp(file.path(directory, "v1.1"), force_read = force)
+    fields <- gldp_resource(old, "pressurepaths")$schema$fields
+    field <- fields[[match("pressure_tag", schema_field_names(list(fields = fields)))]]
+    expect_identical(field$type, "integer")
+    expect_identical(field$unit, "hPa")
+    expect_identical(field$description, "Recorded tag pressure")
+    expect_true(is.numeric(pressurepaths(old)$pressure_tag))
+    expect_equal(pressurepaths(old)$pressure_tag, 812)
+    # The v1.2 upgrade loads pressurepaths to fill `j`, even in a lazy read.
+    expect_false(is.null(gldp_resource(old, "pressurepaths")$data))
+    merged <- merge_gldp(old, current)
+    expect_true(is.numeric(pressurepaths(merged)$pressure_tag))
+    expect_equal(pressurepaths(merged)$pressure_tag, c(812, 812))
+    write_gldp(old, file.path(directory, "copy"))
+    reopened <- read_gldp(file.path(directory, "copy"))
+    expect_equal(pressurepaths(reopened)$pressure_tag, 812)
+    reopened_fields <- gldp_resource(reopened, "pressurepaths")$schema$fields
+    expect_identical(
+      reopened_fields[[match(
+        "pressure_tag",
+        schema_field_names(list(fields = reopened_fields))
+      )]]$unit,
+      "hPa"
+    )
+  }
+})
+
+test_that("gldp_fill_pressurepaths_j fills flight rows with the trajectory's j", {
+  pp <- tibble::tibble(
+    tag_id = c("A", "A", "A", "B", "B", "C", "C", "C"),
+    type = "most_likely",
+    stap_id = c(1, 1.5, 2, 1, 1.5, 1, 1.5, 1),
+    j = c(1L, NA, 1L, NA, NA, 1L, NA, 2L)
+  )
+  out <- gldp_fill_pressurepaths_j(pp)
+
+  expect_identical(out$j[pp$tag_id == "A"], c(1L, 1L, 1L))
+  # No known j: left missing.
+  expect_true(all(is.na(out$j[pp$tag_id == "B"])))
+  # Ambiguous j: left missing for validate_gldp() to report.
+  expect_true(is.na(out$j[pp$tag_id == "C" & pp$stap_id == 1.5]))
+  expect_identical(gldp_fill_pressurepaths_j(out), out)
+})
+
+test_that("upgrade_gldp fills pressurepaths j for packages up to v1.1 only", {
+  pp <- tibble::tibble(
+    tag_id = "A",
+    datetime = as.POSIXct("2020-01-01", tz = "UTC") + 0:2 * 3600,
+    stap_id = c(1, 1.5, 2),
+    type = "most_likely",
+    j = c(1L, NA, 1L),
+    pressure_tag = 900
+  )
+  pkg <- create_gldp(version = "v1.1")
+  pkg <- add_gldp_resource(pkg, "pressurepaths", pp, cast_type = TRUE)
+
+  out <- suppressMessages(upgrade_gldp(pkg))
+  expect_identical(gldp_version(out), "v1.2")
+  expect_identical(pressurepaths(out)$j, c(1L, 1L, 1L))
+
+  # A file-backed table is loaded so that its gaps can be filled.
+  directory <- tempfile("upgrade-j-")
+  on.exit(unlink(directory, recursive = TRUE))
+  write_gldp(pkg, directory)
+  lazy <- suppressMessages(read_gldp(file.path(directory, "datapackage.json"), force_read = FALSE))
+  expect_identical(pressurepaths(lazy)$j, c(1L, 1L, 1L))
+})

@@ -278,7 +278,7 @@ validate_gldp_item <- function(item, prop, field) {
       # If any NULL or NA items exist, report and set valid to FALSE
       if (any(nn)) {
         cli_alert_danger(
-          "{.field {field}} is required but {sum(nn)} item{?s} are {.val NA}"
+          "{.field {field}} is required but {sum(nn)} item{?s} {?is/are} {.val NA}"
         )
         valid <- FALSE
       }
@@ -369,6 +369,26 @@ validate_gldp_item <- function(item, prop, field) {
       cli_alert_danger(
         "{.field {field}} has {sum(above_max, na.rm = TRUE)} item{?s} above the
                        maximum value of {prop$maximum}."
+      )
+      valid <- FALSE
+    }
+  }
+
+  # Table Schema v2 strict bounds, e.g. a body mass must be > 0.
+  if (!is.null(prop$exclusiveMinimum)) {
+    n_bad <- sum(item <= prop$exclusiveMinimum, na.rm = TRUE)
+    if (n_bad > 0) {
+      cli_alert_danger(
+        "{.field {field}} has {n_bad} item{?s} not greater than {prop$exclusiveMinimum}."
+      )
+      valid <- FALSE
+    }
+  }
+  if (!is.null(prop$exclusiveMaximum)) {
+    n_bad <- sum(item >= prop$exclusiveMaximum, na.rm = TRUE)
+    if (n_bad > 0) {
+      cli_alert_danger(
+        "{.field {field}} has {n_bad} item{?s} not less than {prop$exclusiveMaximum}."
       )
       valid <- FALSE
     }

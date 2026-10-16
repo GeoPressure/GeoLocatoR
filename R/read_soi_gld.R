@@ -39,7 +39,7 @@ read_soi_gld <- function(
   if (!is.na(access_file)) {
     if (!is.na(data_file) || !is.na(order_file)) {
       cli_warn(c(
-        "!" = "Both {.arg access_file} and {.arg data_file} and {.arg order_file} were provided.",
+        "!" = "{.arg access_file} was provided alongside {.arg data_file} or {.arg order_file}.",
         ">" = "We'll use {.arg access_file}."
       ))
     }

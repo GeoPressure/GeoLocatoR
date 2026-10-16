@@ -51,7 +51,11 @@ and resource data is combined based on their presence in either package.
 \itemize{
 \item \strong{version}: Uses the package default version from \code{create_gldp()}.
 \item \strong{title}: Combined from both packages, separated by a "/".
-\item \strong{contributors}: Combined from both packages, with duplicates removed.
+\item \strong{contributors}: Combined from both packages. Entries for the same person
+(same ORCID in \code{path}, or the same name when no ORCID is given) are merged
+into one, keeping the first entry's name and the union of \code{roles} and
+\code{organization}. Each source package's own list is preserved in
+\code{datapackages$contributors}.
 \item \strong{licenses}: Combined, with duplicates removed.
 \item \strong{record_type}: Combined from both packages, with duplicates removed.
 \item \strong{codeRepository}: Combined from both packages, with duplicates removed.

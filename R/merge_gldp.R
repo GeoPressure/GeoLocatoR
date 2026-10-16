@@ -25,7 +25,11 @@
 #' **Metadata merging rules:**
 #' - **version**: Uses the package default version from `create_gldp()`.
 #' - **title**: Combined from both packages, separated by a "/".
-#' - **contributors**: Combined from both packages, with duplicates removed.
+#' - **contributors**: Combined from both packages. Entries for the same person
+#'   (same ORCID in `path`, or the same name when no ORCID is given) are merged
+#'   into one, keeping the first entry's name and the union of `roles` and
+#'   `organization`. Each source package's own list is preserved in
+#'   `datapackages$contributors`.
 #' - **licenses**: Combined, with duplicates removed.
 #' - **record_type**: Combined from both packages, with duplicates removed.
 #' - **codeRepository**: Combined from both packages, with duplicates removed.
@@ -170,7 +174,9 @@ merge_gldp <- function(x, y = NULL, ...) {
   code_repository <- unique(
     code_repository[!is.na(code_repository) & nzchar(trimws(code_repository))]
   )
-  contributors <- unique(purrr::flatten(purrr::map(pkgs, \(pkg) pkg$contributors %||% list())))
+  contributors <- merge_gldp_contributors(
+    purrr::flatten(purrr::map(pkgs, \(pkg) pkg$contributors %||% list()))
+  )
   licenses <- unique(purrr::flatten(purrr::map(pkgs, \(pkg) pkg$licenses %||% list())))
 
   merged[["title"]] <- if (length(title_parts) > 0) {
@@ -284,6 +290,7 @@ merge_gldp_datapackages <- function(pkgs) {
     vals <- unique(vals[!is.na(vals) & nzchar(trimws(vals))])
     if (length(vals) == 0) NA_character_ else glue::glue_collapse(vals, sep = ", ")
   }
+  # Names are often "Family, Given", so contributors are separated by "; ".
   collapse_contributors <- function(x) {
     x <- x %||% list()
     vals <- purrr::map_chr(x, \(ctr) {
@@ -297,7 +304,7 @@ merge_gldp_datapackages <- function(pkgs) {
       if (nzchar(fullname)) fullname else NA_character_
     })
     vals <- unique(vals[!is.na(vals) & nzchar(trimws(vals))])
-    if (length(vals) == 0) NA_character_ else glue::glue_collapse(vals, sep = ", ")
+    if (length(vals) == 0) NA_character_ else glue::glue_collapse(vals, sep = "; ")
   }
   collapse_licenses <- function(x) {
     x <- x %||% list()
@@ -437,4 +444,78 @@ merge_gldp_datapackages <- function(pkgs) {
   }
 
   dplyr::distinct(datapackages, .data$datapackage_id, .keep_all = TRUE)
+}
+
+#' Merge contributor entries that refer to the same person
+#'
+#' Entries are the same person when they share an ORCID (in `path`). An entry
+#' without ORCID joins an entry with the same name (`title`, or `givenName
+#' familyName`, ignoring case, accents, punctuation and word order) when that
+#' name identifies a single person; entries with different ORCIDs stay separate.
+#' The first entry is kept, completed with fields it lacks (such as the ORCID
+#' `path`) from the other entries, with the union of `roles` and of `organization`
+#' (values split on `;`, joined with `; `; a value contained in a longer one,
+#' such as `"Institute"` in `"Institute, University"`, is dropped).
+#' @noRd
+merge_gldp_contributors <- function(contributors) {
+  contributors <- purrr::keep(contributors, \(ctr) is.list(ctr) && length(ctr) > 0)
+  if (length(contributors) == 0) {
+    return(list())
+  }
+  name_key <- function(ctr) {
+    title <- as.character(ctr$title %||% "")[1]
+    if (is.na(title) || !nzchar(trimws(title))) {
+      title <- paste(ctr$givenName %||% "", ctr$familyName %||% "")
+    }
+    title <- iconv(tolower(title), to = "ASCII//TRANSLIT")
+    words <- strsplit(gsub("[^a-z ]", " ", title %||% ""), " +")[[1]]
+    paste(sort(words[nzchar(words)]), collapse = " ")
+  }
+  orcid <- purrr::map_chr(contributors, \(ctr) {
+    path <- as.character(ctr$path %||% "")[1]
+    id <- regmatches(path, regexpr("[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]", path))
+    if (length(id) == 1) id else NA_character_
+  })
+  name <- purrr::map_chr(contributors, name_key)
+  key <- ifelse(is.na(orcid), paste0("name:", name), paste0("orcid:", orcid))
+  # A name shared by exactly one ORCID identifies that person.
+  for (k in which(is.na(orcid))) {
+    match <- unique(orcid[!is.na(orcid) & name == name[k]])
+    if (length(match) == 1) key[k] <- paste0("orcid:", match)
+  }
+
+  split_values <- function(entries, field) {
+    values <- unlist(purrr::map(entries, \(ctr) ctr[[field]]), use.names = FALSE)
+    values <- trimws(unlist(strsplit(as.character(values), ";", fixed = TRUE)))
+    values <- values[!is.na(values) & nzchar(values)]
+    values <- values[!duplicated(tolower(values))]
+    # Drop a value contained in a longer one ("Institute" in "Institute, University").
+    contained <- purrr::map_lgl(seq_along(values), \(i) {
+      any(
+        nchar(values[-i]) > nchar(values[i]) &
+          grepl(tolower(values[i]), tolower(values[-i]), fixed = TRUE)
+      )
+    })
+    values[!contained]
+  }
+  purrr::map(unique(key), \(k) {
+    entries <- contributors[key == k]
+    merged <- entries[[1]]
+    # Fill fields the first entry lacks (e.g. the ORCID `path`) from the others.
+    for (field in unique(unlist(purrr::map(entries, names)))) {
+      if (!has_value(merged[[field]])) {
+        value <- purrr::detect(purrr::map(entries, field), has_value)
+        if (!is.null(value)) merged[[field]] <- value
+      }
+    }
+    roles <- split_values(entries, "roles")
+    if (length(roles) > 0) {
+      merged$roles <- as.list(roles)
+    }
+    organization <- split_values(entries, "organization")
+    if (length(organization) > 0) {
+      merged$organization <- paste(organization, collapse = "; ")
+    }
+    merged
+  })
 }

@@ -111,7 +111,7 @@ read_geopressuretemplate <- function(
       var_names_pressurepath <- c(
         "pressurepath_most_likely",
         "pressurepath_geopressureviz",
-        "pressurepath_geopressureviz"
+        "pressurepath_tag"
       )
       var_names <- c(
         var_names_required,
@@ -149,7 +149,7 @@ read_geopressuretemplate <- function(
         is_null_var <- sapply(interim[[var]], is.null)
         if (any(is_null_var)) {
           cli_abort(c(
-            "x" = "File {.file {basename(all_files)[is_null_var]}} missing variable {.var {var}}."
+            "x" = "File {.file {basename(all_files)[is_null_var]}} is missing variable {.var {var}}."
           ))
         }
       }
@@ -283,7 +283,8 @@ read_geopressuretemplate <- function(
         }) |>
         purrr::list_rbind() |>
         tibble::tibble() |>
-        select(-any_of(c("known", "include")))
+        select(-any_of(c("known", "include"))) |>
+        gldp_fill_pressurepaths_j()
 
       if (nrow(pressurepaths) > 0) {
         pkg <- add_gldp_resource(pkg, "pressurepaths", pressurepaths)
@@ -424,14 +425,16 @@ read_geopressuretemplate <- function(
     if (!all(t$tag_id %in% tf$tag_id)) {
       missing_tag_ids <- setdiff(t$tag_id, tf$tag_id)
       cli_warn(c(
-        "!" = "The following tag_id from interim/raw data are missing in {.file {file}}: \\
+        "!" = "The following tag_id values from interim/raw data are missing in {.file {file}}: \\
         {missing_tag_ids}",
         "i" = "We will proceed with a merge of the two.",
         ">" = "Please, fix {.file {file}}"
       ))
+      # Manual metadata takes precedence and includes tags without sensor outputs.
+      # Retain generated rows only for IDs absent from the manual table.
       t <- bind_rows(
         filter(t, !(.data$tag_id %in% tf$tag_id)),
-        filter(tf, .data$tag_id %in% t$tag_id)
+        tf
       )
     } else {
       t <- tf
@@ -550,8 +553,8 @@ raw_tag_id_to_tag <- function(id, display_config_error = TRUE) {
       if (display_config_error) {
         # Warn that the configuration file could not be read and display the error
         cli_warn(c(
-          "i" = "Configuration file {.file config.yml} could not be read for {.field {id}}}.",
-          ">" = "Create the tag with default value with {.fun GeoPressureR::param_create}.",
+          "i" = "Configuration file {.file config.yml} could not be read for {.field {id}}.",
+          ">" = "Create the tag with default values using {.fun GeoPressureR::param_create}.",
           "!" = "Error: {e$message}"
         ))
         display_config_error <- FALSE

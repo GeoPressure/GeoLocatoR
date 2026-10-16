@@ -142,3 +142,11 @@ test_that("params is handled as a plain pkg property", {
   expect_true(is.list(pkg$params))
   expect_equal(pkg$params[[1]]$id, "TEST-PARAM")
 })
+
+test_that("accessors give an instructive error for a missing resource", {
+  pkg <- pkg_shared
+  pkg$resources <- purrr::keep(pkg$resources, \(r) r$name != "measurements")
+
+  expect_error(measurements(pkg), class = "gldp_error_resource_not_found")
+  expect_error(measurements(pkg), "no .*measurements")
+})

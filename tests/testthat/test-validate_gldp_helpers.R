@@ -244,3 +244,42 @@ test_that("schema validation flags a missing required column", {
     schema
   )))
 })
+
+test_that("required fields report missing cells", {
+  expect_message(
+    expect_false(validate_gldp_item(
+      c("R1", NA_character_),
+      list(type = "string", required = TRUE),
+      "ring_number"
+    )),
+    "is required but 1 item is"
+  )
+})
+
+test_that("exclusive bounds reject values equal to the bound", {
+  prop <- list(exclusiveMinimum = 0, maximum = 10000)
+  expect_true(suppressMessages(validate_gldp_item(c(0.1, 10000, NA), prop, "mass")))
+  expect_false(suppressMessages(validate_gldp_item(c(0, 50), prop, "mass")))
+  expect_false(suppressMessages(validate_gldp_item(20000, prop, "mass")))
+  expect_false(suppressMessages(validate_gldp_item(5, list(exclusiveMaximum = 5), "x")))
+})
+
+test_that("schema validation rejects duplicated primary keys", {
+  schema <- list(
+    name = "paths",
+    fieldsMatch = "partial",
+    primaryKey = list("tag_id", "type", "j", "stap_id"),
+    fields = list(
+      list(name = "tag_id", type = "string"),
+      list(name = "type", type = "string"),
+      list(name = "j", type = "integer"),
+      list(name = "stap_id", type = "number")
+    )
+  )
+  paths <- tibble::tibble(tag_id = "a", type = "simulation", j = c(1L, 2L), stap_id = 1)
+  expect_true(suppressMessages(validate_gldp_table(paths, schema)))
+  expect_message(
+    expect_false(validate_gldp_table(paths[c(1, 1, 2), ], schema)),
+    "1 duplicated row for its primary key"
+  )
+})
