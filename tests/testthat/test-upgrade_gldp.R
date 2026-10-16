@@ -461,3 +461,36 @@ test_that("mixed-version merges preserve declared extra numeric fields in lazy a
     )
   }
 })
+
+test_that("gldp_fill_pressurepaths_j fills flight rows with the trajectory's j", {
+  pp <- tibble::tibble(
+    tag_id = c("A", "A", "A", "B", "B", "C", "C", "C"),
+    type = "most_likely",
+    stap_id = c(1, 1.5, 2, 1, 1.5, 1, 1.5, 1),
+    j = c(1L, NA, 1L, NA, NA, 1L, NA, 2L)
+  )
+  out <- gldp_fill_pressurepaths_j(pp)
+
+  expect_identical(out$j[pp$tag_id == "A"], c(1L, 1L, 1L))
+  # No known j: left missing.
+  expect_true(all(is.na(out$j[pp$tag_id == "B"])))
+  # Ambiguous j: left missing for validate_gldp() to report.
+  expect_true(is.na(out$j[pp$tag_id == "C" & pp$stap_id == 1.5]))
+  expect_identical(gldp_fill_pressurepaths_j(out), out)
+})
+
+test_that("upgrade_gldp fills pressurepaths j for packages up to v1.1 only", {
+  pp <- tibble::tibble(
+    tag_id = "A",
+    datetime = as.POSIXct("2020-01-01", tz = "UTC") + 0:2 * 3600,
+    stap_id = c(1, 1.5, 2),
+    type = "most_likely",
+    j = c(1L, NA, 1L),
+    pressure_tag = 900
+  )
+  pkg <- create_gldp(version = "v1.1")
+  pkg <- add_gldp_resource(pkg, "pressurepaths", pp, cast_type = TRUE)
+
+  out <- suppressMessages(upgrade_gldp(pkg))
+  expect_identical(pressurepaths(out)$j, c(1L, 1L, 1L))
+})

@@ -111,7 +111,7 @@ read_geopressuretemplate <- function(
       var_names_pressurepath <- c(
         "pressurepath_most_likely",
         "pressurepath_geopressureviz",
-        "pressurepath_geopressureviz"
+        "pressurepath_tag"
       )
       var_names <- c(
         var_names_required,
@@ -283,7 +283,8 @@ read_geopressuretemplate <- function(
         }) |>
         purrr::list_rbind() |>
         tibble::tibble() |>
-        select(-any_of(c("known", "include")))
+        select(-any_of(c("known", "include"))) |>
+        gldp_fill_pressurepaths_j()
 
       if (nrow(pressurepaths) > 0) {
         pkg <- add_gldp_resource(pkg, "pressurepaths", pressurepaths)

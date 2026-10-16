@@ -11,12 +11,18 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
     ))
   }
 
+  from_rank <- match(from_version, .gldp_supported_versions)
+  to_rank <- match(to_version, .gldp_supported_versions)
+
+  # Packages up to v1.1 may lack `j` on pressurepaths flight rows (GeoPressureR <= 3.6.3).
+  # When a GeoLocator-DP version makes `j` required, move this into its migration step.
+  if (!is.na(from_rank) && from_rank <= match("v1.1", .gldp_supported_versions)) {
+    x <- mutate_resource(x, "pressurepaths", \(d) gldp_fill_pressurepaths_j(d, quiet = FALSE))
+  }
+
   if (identical(from_version, to_version)) {
     return(x)
   }
-
-  from_rank <- match(from_version, .gldp_supported_versions)
-  to_rank <- match(to_version, .gldp_supported_versions)
   if (is.na(from_rank) || is.na(to_rank)) {
     cli_abort(c(
       "x" = "Unsupported version comparison ({.val {from_version}} -> {.val {to_version}})."
@@ -396,4 +402,42 @@ mutate_resource <- function(pkg, resource_name, fn) {
   resource$data <- fn(resource$data)
   gldp_resource(pkg, resource_name) <- resource
   pkg
+}
+
+#' Fill the trajectory index `j` of pressurepaths flight rows
+#'
+#' @description
+#' GeoPressureR versions up to 3.6.3 left `j` empty on the rows of a pressurepath
+#' that fall between two stationary periods (fractional `stap_id`), because the
+#' path was merged on `stap_id` only. A pressurepath describes one trajectory,
+#' so every row of a `tag_id` and `type` shares the same `j`. Missing values are
+#' filled with that `j` when it is unambiguous; otherwise they are left missing
+#' and reported by [validate_gldp()].
+#'
+#' @param data A `pressurepaths` data frame.
+#' @param quiet If `FALSE`, report how many rows were filled.
+#' @return `data` with missing `j` filled where possible.
+#' @noRd
+gldp_fill_pressurepaths_j <- function(data, quiet = TRUE) {
+  if (!is.data.frame(data) || !all(c("tag_id", "type", "j") %in% names(data))) {
+    return(data)
+  }
+  missing <- is.na(data$j)
+  if (!any(missing)) {
+    return(data)
+  }
+  key <- paste(data$tag_id, data$type, sep = "\r")
+  # One known j per tag_id and type: it is the j of the whole trajectory.
+  known <- unique(data.frame(key = key[!missing], j = data$j[!missing]))
+  known <- known[!known$key %in% known$key[duplicated(known$key)], , drop = FALSE]
+  fill <- known$j[match(key[missing], known$key)]
+  data$j[missing] <- fill
+  n_filled <- sum(!is.na(fill))
+  if (!quiet && n_filled > 0) {
+    cli_inform(c(
+      "i" = "Filled {.field j} on {format(n_filled, big.mark = ',')} {.field pressurepaths} flight {cli::qty(n_filled)}row{?s} \\
+      left empty by GeoPressureR <= 3.6.3."
+    ))
+  }
+  data
 }
