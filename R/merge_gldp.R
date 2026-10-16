@@ -491,7 +491,10 @@ merge_gldp_contributors <- function(contributors) {
     values <- values[!duplicated(tolower(values))]
     # Drop a value contained in a longer one ("Institute" in "Institute, University").
     contained <- purrr::map_lgl(seq_along(values), \(i) {
-      any(nchar(values[-i]) > nchar(values[i]) & grepl(tolower(values[i]), tolower(values[-i]), fixed = TRUE))
+      any(
+        nchar(values[-i]) > nchar(values[i]) &
+          grepl(tolower(values[i]), tolower(values[-i]), fixed = TRUE)
+      )
     })
     values[!contained]
   }
@@ -506,9 +509,13 @@ merge_gldp_contributors <- function(contributors) {
       }
     }
     roles <- split_values(entries, "roles")
-    if (length(roles) > 0) merged$roles <- as.list(roles)
+    if (length(roles) > 0) {
+      merged$roles <- as.list(roles)
+    }
     organization <- split_values(entries, "organization")
-    if (length(organization) > 0) merged$organization <- paste(organization, collapse = "; ")
+    if (length(organization) > 0) {
+      merged$organization <- paste(organization, collapse = "; ")
+    }
     merged
   })
 }
