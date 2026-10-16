@@ -444,7 +444,8 @@ test_that("mixed-version merges preserve declared extra numeric fields in lazy a
     expect_identical(field$description, "Recorded tag pressure")
     expect_true(is.numeric(pressurepaths(old)$pressure_tag))
     expect_equal(pressurepaths(old)$pressure_tag, 812)
-    expect_identical(is.null(gldp_resource(old, "pressurepaths")$data), !force)
+    # The v1.2 upgrade loads pressurepaths to fill `j`, even in a lazy read.
+    expect_false(is.null(gldp_resource(old, "pressurepaths")$data))
     merged <- merge_gldp(old, current)
     expect_true(is.numeric(pressurepaths(merged)$pressure_tag))
     expect_equal(pressurepaths(merged)$pressure_tag, c(812, 812))
@@ -492,5 +493,13 @@ test_that("upgrade_gldp fills pressurepaths j for packages up to v1.1 only", {
   pkg <- add_gldp_resource(pkg, "pressurepaths", pp, cast_type = TRUE)
 
   out <- suppressMessages(upgrade_gldp(pkg))
+  expect_identical(gldp_version(out), "v1.2")
   expect_identical(pressurepaths(out)$j, c(1L, 1L, 1L))
+
+  # A file-backed table is loaded so that its gaps can be filled.
+  directory <- tempfile("upgrade-j-")
+  on.exit(unlink(directory, recursive = TRUE))
+  write_gldp(pkg, directory)
+  lazy <- suppressMessages(read_gldp(file.path(directory, "datapackage.json"), force_read = FALSE))
+  expect_identical(pressurepaths(lazy)$j, c(1L, 1L, 1L))
 })

@@ -14,12 +14,6 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
   from_rank <- match(from_version, .gldp_supported_versions)
   to_rank <- match(to_version, .gldp_supported_versions)
 
-  # Packages up to v1.1 may lack `j` on pressurepaths flight rows (GeoPressureR <= 3.6.3).
-  # When a GeoLocator-DP version makes `j` required, move this into its migration step.
-  if (!is.na(from_rank) && from_rank <= match("v1.1", .gldp_supported_versions)) {
-    x <- mutate_resource(x, "pressurepaths", \(d) gldp_fill_pressurepaths_j(d, quiet = FALSE))
-  }
-
   if (identical(from_version, to_version)) {
     return(x)
   }
@@ -56,7 +50,8 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
       "v0.4" = upgrade_gldp_v0_4_to_v0_5(x),
       "v0.5" = upgrade_gldp_v0_5_to_v0_6(x),
       "v0.6" = upgrade_gldp_v0_6_to_v1_0(x),
-      "v1.0" = upgrade_gldp_v1_0_to_v1_1(x)
+      "v1.0" = upgrade_gldp_v1_0_to_v1_1(x),
+      "v1.1" = upgrade_gldp_v1_1_to_v1_2(x)
     )
 
     from_version <- gldp_version(x)
@@ -389,6 +384,26 @@ upgrade_gldp_v1_0_to_v1_1 <- function(x) {
   # `type` became required. Resources are rebuilt against the v1.1 schemas by
   # `normalize_upgraded_resources()`, so only the profile URL changes here.
   x[["$schema"]] <- gldp_schema_url("v1.1")
+  x
+}
+
+#' @noRd
+upgrade_gldp_v1_1_to_v1_2 <- function(x) {
+  # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v1.2
+  # `j` became required on trajectory tables, which also gained primary keys.
+  # GeoPressureR <= 3.6.3 left `j` empty on pressurepaths flight rows, so fill it.
+  # A file-backed table is loaded: the gaps cannot be known without reading it.
+  resource <- gldp_resource(x, "pressurepaths")
+  if (!is.null(resource)) {
+    data <- gldp_read_resource(x, "pressurepaths")
+    if (!is.null(resource$path)) {
+      data <- cast_table(data, resource$schema)
+      resource[["path"]] <- NULL
+    }
+    resource[["data"]] <- gldp_fill_pressurepaths_j(data, quiet = FALSE)
+    gldp_resource(x, "pressurepaths") <- resource
+  }
+  x[["$schema"]] <- gldp_schema_url("v1.2")
   x
 }
 
