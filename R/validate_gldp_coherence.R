@@ -242,15 +242,30 @@ validate_gldp_geopressure_coherence <- function(pkg) {
     if ("altitude" %in% names(pressurepaths_data)) {
       altitude <- suppressWarnings(as.numeric(pressurepaths_data$altitude))
       invalid_altitude <- !is.na(altitude) &
-        (altitude <= -200 | altitude >= 7000) &
+        (altitude < -200 | altitude > 10000) &
         (!"label" %in% names(pressurepaths_data) |
           is.na(pressurepaths_data$label) |
           pressurepaths_data$label != "discard")
       if (any(invalid_altitude)) {
-        cli_alert_danger(
-          "{sum(invalid_altitude)} value{?s} in {.field pressurepaths$altitude} must be > -200 and < 7000."
+        cli_alert_warning(
+          "{sum(invalid_altitude)} value{?s} in {.field pressurepaths$altitude} {?is/are} outside the usual \\
+          -200 to 10,000 m. Check them, or label them {.val discard}."
         )
-        valid <- FALSE
+      }
+    }
+  }
+
+  # Trajectory tables must say which trajectory (j) each row belongs to, or
+  # joins on type and j silently drop rows.
+  for (resource_name in intersect(c("paths", "edges", "pressurepaths"), resource_names)) {
+    data <- gldp_read_resource(pkg, resource_name)
+    if ("j" %in% names(data)) {
+      n_missing <- sum(is.na(data$j))
+      if (n_missing > 0) {
+        cli_alert_warning(
+          "{format(n_missing, big.mark = ',')} {cli::qty(n_missing)}row{?s} of {.field {resource_name}} {?has/have} no {.field j}. \\
+          Each row should identify its trajectory (1 for {.val most_likely})."
+        )
       }
     }
   }
@@ -620,6 +635,16 @@ validate_gldp_observations <- function(o) {
       "{length(error_tag)} duplicate observation{?s} found. Check: {.field {error_tag}}"
     )
     valid <- FALSE
+  }
+
+  # Body mass above 10 kg is implausible for a tagged bird, but not impossible.
+  if ("mass" %in% names(o)) {
+    heavy <- !is.na(o$mass) & o$mass > 10000
+    if (any(heavy)) {
+      cli_alert_warning(
+        "{sum(heavy)} {.field observations$mass} value{?s} {?is/are} above 10,000 g. Check the unit (grams)."
+      )
+    }
   }
 
   # Check 9: Invalid transition

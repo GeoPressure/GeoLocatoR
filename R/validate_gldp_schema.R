@@ -374,6 +374,26 @@ validate_gldp_item <- function(item, prop, field) {
     }
   }
 
+  # Table Schema v2 strict bounds, e.g. a body mass must be > 0.
+  if (!is.null(prop$exclusiveMinimum)) {
+    n_bad <- sum(item <= prop$exclusiveMinimum, na.rm = TRUE)
+    if (n_bad > 0) {
+      cli_alert_danger(
+        "{.field {field}} has {n_bad} item{?s} not greater than {prop$exclusiveMinimum}."
+      )
+      valid <- FALSE
+    }
+  }
+  if (!is.null(prop$exclusiveMaximum)) {
+    n_bad <- sum(item >= prop$exclusiveMaximum, na.rm = TRUE)
+    if (n_bad > 0) {
+      cli_alert_danger(
+        "{.field {field}} has {n_bad} item{?s} not less than {prop$exclusiveMaximum}."
+      )
+      valid <- FALSE
+    }
+  }
+
   # Both `categories` and the `enum` constraint restrict a field to a fixed set
   # of values. GeoLocator-DP declares both, `categories` being the Data Package
   # v2 spelling that also carries a label per value, so read whichever is there.

@@ -28,10 +28,12 @@ required package-level fields and schema-defined constraints such as type, forma
 uniqueness, enumerated values, regular-expression patterns, and minimum or maximum
 lengths, item counts, and numeric values.
 \item \strong{Resource validation}
+File-backed tables are loaded for field and foreign-key checks; source files
+are not modified.
 Resources are checked against their schema: columns must match the
 \code{fieldsMatch} rule, and each column must satisfy its declared constraints
 such as type, format, requiredness, uniqueness, allowed values, patterns,
-and numeric or length limits.
+and numeric or length limits. Rows must be unique on the schema \code{primaryKey}.
 \item \strong{Coherence validation}
 Cross-resource consistency checks are then applied.
 
@@ -64,13 +66,14 @@ and \code{observation_type};
 GeoPressure-specific coherence checks are applied when the corresponding resources are
 present. These include:
 \itemize{
-\item realistic ranges for \code{staps$stap_id}, \code{paths$j}, \code{edges$n}, and
-\code{pressurepaths$altitude};
+\item realistic ranges for \code{staps$stap_id}, \code{paths$j} and \code{edges$n};
 \item realistic year windows for datetime fields in \code{staps}, \code{twilights},
 \code{pressurepaths}, and \code{edges};
 \item duration checks for \code{staps} and \code{edges};
 \item schema-declared foreign key consistency across resources;
-\item warnings for unusual \code{edges} distances, durations, or wind/ground-speed magnitudes.
+\item warnings for unusual \code{edges} distances, durations, or wind/ground-speed magnitudes,
+for \code{pressurepaths$altitude} outside -200 to 10,000 m, and for
+\code{observations$mass} above 10,000 g. These are guidelines, not limits.
 }
 \item \strong{Metadata recommendations}
 Additional metadata quality checks are reported without affecting the final validity.

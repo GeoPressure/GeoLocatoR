@@ -20,7 +20,7 @@
 #'    Resources are checked against their schema: columns must match the
 #'    `fieldsMatch` rule, and each column must satisfy its declared constraints
 #'    such as type, format, requiredness, uniqueness, allowed values, patterns,
-#'    and numeric or length limits.
+#'    and numeric or length limits. Rows must be unique on the schema `primaryKey`.
 #'
 #' 3. **Coherence validation**
 #'    Cross-resource consistency checks are then applied.
@@ -49,13 +49,14 @@
 #'
 #'    GeoPressure-specific coherence checks are applied when the corresponding resources are
 #'    present. These include:
-#'    - realistic ranges for `staps$stap_id`, `paths$j`, `edges$n`, and
-#'      `pressurepaths$altitude`;
+#'    - realistic ranges for `staps$stap_id`, `paths$j` and `edges$n`;
 #'    - realistic year windows for datetime fields in `staps`, `twilights`,
 #'      `pressurepaths`, and `edges`;
 #'    - duration checks for `staps` and `edges`;
 #'    - schema-declared foreign key consistency across resources;
-#'    - warnings for unusual `edges` distances, durations, or wind/ground-speed magnitudes.
+#'    - warnings for unusual `edges` distances, durations, or wind/ground-speed magnitudes,
+#'      for `pressurepaths$altitude` outside -200 to 10,000 m, and for
+#'      `observations$mass` above 10,000 g. These are guidelines, not limits.
 #'
 #' 4. **Metadata recommendations**
 #'    Additional metadata quality checks are reported without affecting the final validity.
@@ -175,7 +176,7 @@ validate_gldp_resources <- function(pkg) {
       !is.null(resource$schema$fields)
 
     if (is_tabular_resource) {
-      valid <- valid & validate_gldp_table(resource$data, resource$schema)
+      valid <- valid & validate_gldp_table(resource$data, resource$schema, resource$name)
     } else {
       cli_h3("Check Resources {.field {resource$name}}")
       cli::cli_alert_warning("Could not check {.field {resource$name}}")
@@ -194,12 +195,13 @@ validate_gldp_resources <- function(pkg) {
 #'
 #' @param data A data frame stored in the resource.
 #' @param schema The frictionless schema describing the resource.
+#' @param name Resource name used in messages. Custom resources have no schema name.
 #'
 #' @return Invisibly returns `TRUE` when the table is consistent with the schema,
 #'   `FALSE` otherwise.
 #' @noRd
-validate_gldp_table <- function(data, schema) {
-  cli_h3("Check Resources {.field {schema$name}}")
+validate_gldp_table <- function(data, schema, name = schema$name) {
+  cli_h3("Check Resources {.field {name}}")
 
   if (is.null(data)) {
     cli_alert_danger("data is not available.")
@@ -250,6 +252,19 @@ validate_gldp_table <- function(data, schema) {
     prop <- resolve_prop(data[[field]], prop, defs = NULL, field = field_name)
 
     valid <- valid & validate_gldp_item(data[[field]], prop, field_name)
+  }
+
+  # A primary key identifies each row, e.g. one row per trajectory and stap in `paths`.
+  primary_key <- unlist(schema$primaryKey)
+  if (length(primary_key) > 0 && all(primary_key %in% names(data))) {
+    n_duplicates <- nrow(data) - nrow(dplyr::distinct(data[primary_key]))
+    if (n_duplicates > 0) {
+      cli_alert_danger(
+        "{.field {name}} has {format(n_duplicates, big.mark = ',')} duplicated \\
+        {cli::qty(n_duplicates)}row{?s} for its primary key {.field {primary_key}}."
+      )
+      valid <- FALSE
+    }
   }
 
   if (valid) {

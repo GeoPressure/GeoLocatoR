@@ -367,6 +367,21 @@ test_that("validate_gldp_geopressure_coherence ignores discarded pressurepath al
   expect_true(suppressMessages(validate_gldp_geopressure_coherence(pkg)))
 })
 
+test_that("validate_gldp_geopressure_coherence only warns on unusual altitudes", {
+  pkg <- make_geopressure_test_pkg()
+  pressurepath_idx <- which(vapply(
+    pkg$resources,
+    \(r) identical(r$name, "pressurepaths"),
+    logical(1)
+  ))
+  pkg[["resources"]][[pressurepath_idx[1]]]$data$altitude[1] <- 12000
+
+  expect_message(
+    expect_true(validate_gldp_geopressure_coherence(pkg)),
+    "outside the usual"
+  )
+})
+
 test_that("validate_gldp_geopressure_coherence warns on unusual distances", {
   pkg <- make_geopressure_test_pkg()
   edge_idx <- which(vapply(pkg$resources, \(r) identical(r$name, "edges"), logical(1)))
@@ -539,6 +554,11 @@ test_that("observation histories report invalid device states and duplicate even
 
   invalid <- rbind(observations, observations[1, ])
   expect_message(expect_false(validate_gldp_observations(invalid)), "duplicate observation")
+
+  # A heavy bird is a guideline warning, not a failure.
+  heavy <- observations
+  heavy$mass <- c(12000, NA)
+  expect_message(expect_true(validate_gldp_observations(heavy)), "above 10,000 g")
 
   invalid <- rbind(observations, observations[1, ])
   invalid$observation_type[3] <- "capture"
