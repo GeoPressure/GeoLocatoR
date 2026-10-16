@@ -9,7 +9,8 @@
   "v0.5",
   "v0.6",
   "v1.0",
-  "v1.1"
+  "v1.1",
+  "v1.2"
 )
 
 #' Data Package profile of a tabular resource descriptor
@@ -55,7 +56,7 @@ gldp_version <- function(x) {
     cli_abort(
       c(
         "Unsupported GeoLocator-DP version: {.val {version}}.",
-        "i" = "Supported versions are: {.val {.gldp_supported_versions}}."
+        "i" = "Supported versions are: {.val {(.gldp_supported_versions)}}."
       )
     )
   }
@@ -72,7 +73,7 @@ gldp_schema_url <- function(version = NULL) {
   if (!version %in% .gldp_supported_versions) {
     cli_abort(c(
       "!" = "Unsupported GeoLocator-DP version {.val {version}}.",
-      "i" = "Allowed versions are {.val {.gldp_supported_versions}}."
+      "i" = "Allowed versions are {.val {(.gldp_supported_versions)}}."
     ))
   }
 

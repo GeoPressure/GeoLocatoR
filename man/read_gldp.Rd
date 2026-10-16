@@ -14,7 +14,9 @@ file, or a URL to \code{datapackage.json}.}
 the returned object is self-contained in memory. This means that each
 resource is read immediately with \code{\link[frictionless:read_resource]{frictionless::read_resource()}}, cast to
 the schema types, stored in \code{resource$data}, and its \code{path} field is removed.
-The \code{measurements} resource is read last.}
+The \code{measurements} resource is read last.
+Packages older than GeoLocator-DP v1.0 are loaded even when \code{FALSE}, because
+their upgrades transform table values and cannot operate on file paths alone.}
 
 \item{drop_measurements}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}} If \code{TRUE},
 drops the \code{measurements} resource after reading \code{datapackage.json} and
@@ -37,6 +39,9 @@ The function:
 \item upgrades older package versions when needed;
 \item recomputes derived package properties with \code{\link[=update_gldp]{update_gldp()}}.
 }
+
+When present, the \code{datapackages} provenance catalogue is restored as a tibble,
+with one row per source package, as returned by \code{\link[=merge_gldp]{merge_gldp()}}.
 }
 \examples{
 \dontrun{

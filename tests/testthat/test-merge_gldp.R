@@ -303,3 +303,49 @@ test_that("merge_gldp keeps orphan param ids", {
   merged <- expect_no_error(merge_gldp(pkg1, pkg2))
   expect_equal(as.character(merged$params[[1]]$id)[1], "ORPHAN-PARAM-ID")
 })
+
+test_that("merge_gldp_contributors merges the same person across packages", {
+  ctr <- list(
+    list(
+      title = "Adamik, Peter",
+      path = "https://orcid.org/0000-0003-1566-1234",
+      roles = list("projectleader")
+    ),
+    list(
+      title = "Adamík, Peter",
+      path = "https://orcid.org/0000-0003-1566-1234",
+      roles = list("supervisor"),
+      organization = "Palacky University, Museum"
+    ),
+    list(title = "Doe, Jane", roles = list("datacollector")),
+    list(title = "Jane Doe", roles = list("researcher"), organization = "Lab"),
+    list(title = "Bauer, Silke", organization = "Institute A"),
+    list(
+      title = "Bauer, Silke",
+      path = "https://orcid.org/0000-0002-0844-164X",
+      organization = "Institute B; Institute A, Department C"
+    )
+  )
+  out <- merge_gldp_contributors(ctr)
+
+  expect_length(out, 3)
+  expect_identical(out[[1]]$title, "Adamik, Peter")
+  expect_identical(unlist(out[[1]]$roles), c("projectleader", "supervisor"))
+  expect_identical(out[[1]]$organization, "Palacky University, Museum")
+  expect_identical(unlist(out[[2]]$roles), c("datacollector", "researcher"))
+  # The ORCID-less Bauer joins the only Bauer with an ORCID; affiliations are kept.
+  expect_identical(out[[3]]$organization, "Institute B; Institute A, Department C")
+  # The ORCID is kept even though the first Bauer entry had none.
+  expect_identical(out[[3]]$path, "https://orcid.org/0000-0002-0844-164X")
+  expect_identical(merge_gldp_contributors(list()), list())
+})
+
+test_that("merge_gldp_contributors keeps equal names with different ORCIDs apart", {
+  ctr <- list(
+    list(title = "Bauer, Silke", path = "https://orcid.org/0000-0002-0844-164X"),
+    list(title = "Bauer, Silke", path = "https://orcid.org/0000-0002-9434-9056"),
+    list(title = "Bauer, Silke")
+  )
+  # The ORCID-less entry is ambiguous, so it stays on its own.
+  expect_length(merge_gldp_contributors(ctr), 3)
+})

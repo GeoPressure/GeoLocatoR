@@ -162,3 +162,73 @@ test_that("write_gldp/read_gldp roundtrip keeps pkg$params via params.json", {
   expect_true(is.list(pkg_back$params))
   expect_equal(pkg_back$params[[1]]$id, "TEST-PARAM")
 })
+
+test_that("read_gldp restores the provenance table after a JSON round trip", {
+  pkg <- add_gldp_resource(create_gldp(), "tags", data.frame(tag_id = "tag-1"))
+  pkg[["datapackages"]] <- data.frame(
+    datapackage_id = c("source-1", "source-2"),
+    title = c("First source", "Second source"),
+    is_published = c(TRUE, NA),
+    numberTags_tags = c(2L, 3L),
+    embargo = c(NA_character_, NA_character_)
+  )
+  directory <- withr::local_tempdir()
+  suppressMessages(write_gldp(pkg, directory))
+  restored <- suppressWarnings(read_gldp(directory))
+
+  expect_s3_class(restored$datapackages, "tbl_df")
+  expect_equal(names(restored$datapackages), names(pkg$datapackages))
+  expect_equal(restored$datapackages$datapackage_id, pkg$datapackages$datapackage_id)
+  expect_equal(restored$datapackages$title, pkg$datapackages$title)
+  expect_equal(restored$datapackages$is_published, c(TRUE, NA))
+  expect_equal(restored$datapackages$numberTags_tags, c(2L, 3L))
+  expect_true(all(is.na(restored$datapackages$embargo)))
+})
+
+test_that("file-backed metadata, merging and writing match loaded packages", {
+  directory <- tempfile("read-lazy-workflows-")
+  on.exit(unlink(directory, recursive = TRUE))
+  loaded <- list()
+  lazy <- list()
+  for (id in c("AA", "BB")) {
+    pkg <- create_gldp()
+    pkg[["id"]] <- paste0("source-", id)
+    pkg <- add_gldp_resource(
+      pkg,
+      "tags",
+      data.frame(
+        tag_id = id,
+        ring_number = paste0("ring-", id),
+        scientific_name = "Upupa epops",
+        manufacturer = "test",
+        model = "test"
+      )
+    )
+    pkg <- add_gldp_resource(
+      pkg,
+      "measurements",
+      data.frame(
+        tag_id = id,
+        sensor = "pressure",
+        datetime = as.POSIXct(c("2020-01-01", "2020-01-02"), tz = "UTC"),
+        value = c(1000, 1001),
+        label = NA_character_
+      )
+    )
+    write_gldp(pkg, file.path(directory, id))
+    loaded[[id]] <- read_gldp(file.path(directory, id))
+    lazy[[id]] <- read_gldp(file.path(directory, id), force_read = FALSE)
+    expect_equal(lazy[[id]]$numberTags, loaded[[id]]$numberTags)
+    expect_equal(lazy[[id]]$temporal, loaded[[id]]$temporal)
+    expect_equal(lazy[[id]]$taxonomic, loaded[[id]]$taxonomic)
+  }
+  merged_lazy <- merge_gldp(lazy)
+  merged_loaded <- merge_gldp(loaded)
+  expect_equal(tags(merged_lazy), tags(merged_loaded))
+  expect_equal(measurements(merged_lazy), measurements(merged_loaded))
+  write_gldp(lazy[["AA"]], file.path(directory, "copy"))
+  reopened <- read_gldp(file.path(directory, "copy"))
+  expect_equal(tags(reopened), tags(loaded[["AA"]]))
+  expect_equal(measurements(reopened), measurements(loaded[["AA"]]))
+  expect_true(all(vapply(lazy[["AA"]]$resources, function(r) !is.null(r$path), logical(1))))
+})

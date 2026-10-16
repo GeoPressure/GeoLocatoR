@@ -144,3 +144,22 @@ gldp_read_resource <- function(pkg, resource_name, ...) {
   pkg <- gldp_align_schema_to_header(pkg, resource_name)
   frictionless::read_resource(pkg, resource_name, ...)
 }
+
+#' Load file-backed tables for operations that inspect or modify resource data
+#'
+#' @param pkg A GeoLocator Data Package object.
+#' @return A package with tabular resources loaded and their file paths removed.
+#' @noRd
+gldp_materialize_tables <- function(pkg) {
+  for (i in seq_along(pkg$resources)) {
+    resource <- pkg$resources[[i]]
+    if (is.null(resource$path) || !is.list(resource$schema) || is.null(resource$schema$fields)) {
+      next
+    }
+    # Preserve the declared schema: validation must still detect missing columns.
+    resource[["data"]] <- cast_table(gldp_read_resource(pkg, resource$name), resource$schema)
+    resource[["path"]] <- NULL
+    pkg$resources[[i]] <- resource
+  }
+  pkg
+}

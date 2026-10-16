@@ -7,16 +7,16 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
   if (!to_version %in% .gldp_supported_versions) {
     cli_abort(c(
       "!" = "Unsupported target GeoLocator-DP version {.val {to_version}}.",
-      "i" = "Allowed versions are {.val {.gldp_supported_versions}}."
+      "i" = "Allowed versions are {.val {(.gldp_supported_versions)}}."
     ))
-  }
-
-  if (identical(from_version, to_version)) {
-    return(x)
   }
 
   from_rank <- match(from_version, .gldp_supported_versions)
   to_rank <- match(to_version, .gldp_supported_versions)
+
+  if (identical(from_version, to_version)) {
+    return(x)
+  }
   if (is.na(from_rank) || is.na(to_rank)) {
     cli_abort(c(
       "x" = "Unsupported version comparison ({.val {from_version}} -> {.val {to_version}})."
@@ -27,6 +27,12 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
     cli_abort(c(
       "x" = "Downgrade is not supported ({.val {from_version}} -> {.val {to_version}})."
     ))
+  }
+
+  # Older migrations rename columns and transform values, so schema-only upgrades
+  # would leave file-backed tables in the old format. v1.0 -> v1.1 is schema-only.
+  if (from_rank < match("v1.0", .gldp_supported_versions)) {
+    x <- gldp_materialize_tables(x)
   }
 
   cli_alert_success("Upgrading GeoLocator-DP from {.val {from_version}} to {.val {to_version}}.")
@@ -44,7 +50,8 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
       "v0.4" = upgrade_gldp_v0_4_to_v0_5(x),
       "v0.5" = upgrade_gldp_v0_5_to_v0_6(x),
       "v0.6" = upgrade_gldp_v0_6_to_v1_0(x),
-      "v1.0" = upgrade_gldp_v1_0_to_v1_1(x)
+      "v1.0" = upgrade_gldp_v1_0_to_v1_1(x),
+      "v1.1" = upgrade_gldp_v1_1_to_v1_2(x)
     )
 
     from_version <- gldp_version(x)
@@ -74,6 +81,7 @@ normalize_upgraded_resources <- function(x) {
     if (!resource_name %in% supported_resources) {
       next
     }
+    target_schema <- gldp_resource_schema(target_version, resource_name)
     if (is.data.frame(resource$data)) {
       # Rebuild resource from target schema for stable write/read round-trips.
       x <- add_gldp_resource(
@@ -87,9 +95,34 @@ normalize_upgraded_resources <- function(x) {
       # Keep schema in sync when data are not loaded in memory.
       lazy_resource <- gldp_resource(x, resource_name)
       if (!is.null(lazy_resource)) {
-        lazy_resource$schema <- gldp_resource_schema(target_version, resource_name)
+        lazy_resource$schema <- target_schema
         gldp_resource(x, resource_name) <- lazy_resource
       }
+    }
+
+    # Extra columns retain their source types and units when the target permits
+    # extensions. Standard fields and columns removed by migrations use the target schema.
+    if (target_schema$fieldsMatch %in% c("partial", "subset")) {
+      extra_fields <- Filter(
+        function(field) {
+          !field$name %in% schema_field_names(target_schema) &&
+            (!is.data.frame(resource$data) || field$name %in% names(resource$data))
+        },
+        resource$schema$fields
+      )
+      upgraded_resource <- gldp_resource(x, resource_name)
+      extra_names <- schema_field_names(list(fields = extra_fields))
+      upgraded_resource$schema$fields <- c(
+        Filter(function(field) !field$name %in% extra_names, upgraded_resource$schema$fields),
+        extra_fields
+      )
+      if (is.data.frame(upgraded_resource$data)) {
+        upgraded_resource[["data"]] <- cast_table(
+          upgraded_resource$data[, schema_field_names(upgraded_resource$schema), drop = FALSE],
+          upgraded_resource$schema
+        )
+      }
+      gldp_resource(x, resource_name) <- upgraded_resource
     }
   }
 
@@ -355,6 +388,26 @@ upgrade_gldp_v1_0_to_v1_1 <- function(x) {
 }
 
 #' @noRd
+upgrade_gldp_v1_1_to_v1_2 <- function(x) {
+  # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v1.2
+  # `j` became required on trajectory tables, which also gained primary keys.
+  # GeoPressureR <= 3.6.3 left `j` empty on pressurepaths flight rows, so fill it.
+  # A file-backed table is loaded: the gaps cannot be known without reading it.
+  resource <- gldp_resource(x, "pressurepaths")
+  if (!is.null(resource)) {
+    data <- gldp_read_resource(x, "pressurepaths")
+    if (!is.null(resource$path)) {
+      data <- cast_table(data, resource$schema)
+      resource[["path"]] <- NULL
+    }
+    resource[["data"]] <- gldp_fill_pressurepaths_j(data, quiet = FALSE)
+    gldp_resource(x, "pressurepaths") <- resource
+  }
+  x[["$schema"]] <- gldp_schema_url("v1.2")
+  x
+}
+
+#' @noRd
 mutate_resource <- function(pkg, resource_name, fn) {
   resource <- gldp_resource(pkg, resource_name)
   if (is.null(resource) || !is.data.frame(resource$data)) {
@@ -364,4 +417,42 @@ mutate_resource <- function(pkg, resource_name, fn) {
   resource$data <- fn(resource$data)
   gldp_resource(pkg, resource_name) <- resource
   pkg
+}
+
+#' Fill the trajectory index `j` of pressurepaths flight rows
+#'
+#' @description
+#' GeoPressureR versions up to 3.6.3 left `j` empty on the rows of a pressurepath
+#' that fall between two stationary periods (fractional `stap_id`), because the
+#' path was merged on `stap_id` only. A pressurepath describes one trajectory,
+#' so every row of a `tag_id` and `type` shares the same `j`. Missing values are
+#' filled with that `j` when it is unambiguous; otherwise they are left missing
+#' and reported by [validate_gldp()].
+#'
+#' @param data A `pressurepaths` data frame.
+#' @param quiet If `FALSE`, report how many rows were filled.
+#' @return `data` with missing `j` filled where possible.
+#' @noRd
+gldp_fill_pressurepaths_j <- function(data, quiet = TRUE) {
+  if (!is.data.frame(data) || !all(c("tag_id", "type", "j") %in% names(data))) {
+    return(data)
+  }
+  missing <- is.na(data$j)
+  if (!any(missing)) {
+    return(data)
+  }
+  key <- paste(data$tag_id, data$type, sep = "\r")
+  # One known j per tag_id and type: it is the j of the whole trajectory.
+  known <- unique(data.frame(key = key[!missing], j = data$j[!missing]))
+  known <- known[!known$key %in% known$key[duplicated(known$key)], , drop = FALSE]
+  fill <- known$j[match(key[missing], known$key)]
+  data$j[missing] <- fill
+  n_filled <- sum(!is.na(fill))
+  if (!quiet && n_filled > 0) {
+    cli_inform(c(
+      "i" = "Filled {.field j} on {format(n_filled, big.mark = ',')} {.field pressurepaths} flight {cli::qty(n_filled)}row{?s} \\
+      left empty by GeoPressureR <= 3.6.3."
+    ))
+  }
+  data
 }

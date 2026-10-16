@@ -123,6 +123,7 @@ make_geopressure_test_pkg <- function() {
         lon = 8,
         j = 1L,
         altitude = 100,
+        label = NA_character_,
         stringsAsFactors = FALSE
       ),
       schema = list(
@@ -366,6 +367,21 @@ test_that("validate_gldp_geopressure_coherence ignores discarded pressurepath al
   expect_true(suppressMessages(validate_gldp_geopressure_coherence(pkg)))
 })
 
+test_that("validate_gldp_geopressure_coherence only warns on unusual altitudes", {
+  pkg <- make_geopressure_test_pkg()
+  pressurepath_idx <- which(vapply(
+    pkg$resources,
+    \(r) identical(r$name, "pressurepaths"),
+    logical(1)
+  ))
+  pkg[["resources"]][[pressurepath_idx[1]]]$data$altitude[1] <- 12000
+
+  expect_message(
+    expect_true(validate_gldp_geopressure_coherence(pkg)),
+    "outside the usual"
+  )
+})
+
 test_that("validate_gldp_geopressure_coherence warns on unusual distances", {
   pkg <- make_geopressure_test_pkg()
   edge_idx <- which(vapply(pkg$resources, \(r) identical(r$name, "edges"), logical(1)))
@@ -383,4 +399,187 @@ test_that("validate_gldp_geopressure_coherence checks foreign keys", {
   pkg[["resources"]][[path_idx[1]]]$data$stap_id[1] <- 999
 
   expect_false(suppressMessages(validate_gldp_geopressure_coherence(pkg)))
+})
+
+test_that("resource validation reads file-backed tables and reports missing identity metadata", {
+  directory <- tempfile("validate-lazy-")
+  on.exit(unlink(directory, recursive = TRUE))
+  pkg <- create_gldp()
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = "AA",
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "test",
+      model = "test"
+    )
+  )
+  write_gldp(pkg, directory)
+  lazy <- read_gldp(directory, force_read = FALSE)
+  expect_true(suppressMessages(validate_gldp_resources(lazy)))
+  # Missing ring numbers remain a validation failure; they are not repaired on read.
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = "AA",
+      ring_number = NA_character_,
+      scientific_name = "Upupa epops",
+      manufacturer = "test",
+      model = "test"
+    ),
+    replace = TRUE
+  )
+  write_gldp(pkg, directory)
+  lazy <- read_gldp(directory, force_read = FALSE)
+  messages <- capture_messages({
+    valid <- validate_gldp_resources(lazy)
+  })
+  expect_false(valid)
+  expect_true(any(grepl("ring_number", messages, fixed = TRUE)))
+})
+
+test_that("file-backed foreign keys fail for a single orphan tag", {
+  directory <- tempfile("validate-fk-")
+  on.exit(unlink(directory, recursive = TRUE))
+  pkg <- create_gldp()
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = "AA",
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "test",
+      model = "test"
+    )
+  )
+  pkg <- add_gldp_resource(
+    pkg,
+    "observations",
+    data.frame(
+      tag_id = "orphan",
+      ring_number = "R1",
+      observation_type = "equipment",
+      datetime = as.POSIXct("2020-01-01", tz = "UTC"),
+      latitude = 47,
+      longitude = 8,
+      age_class = "0",
+      sex = "U"
+    )
+  )
+  write_gldp(pkg, directory)
+  lazy <- read_gldp(directory, force_read = FALSE)
+  messages <- capture_messages({
+    valid <- validate_gldp_geopressure_coherence(lazy)
+  })
+  expect_false(valid)
+  expect_true(any(grepl("foreign key", messages, ignore.case = TRUE)))
+  expect_false(suppressMessages(validate_gldp_geopressure_coherence(read_gldp(directory))))
+})
+
+test_that("one orphan measurement tag and one unobserved ring each invalidate core coherence", {
+  pkg <- create_gldp()
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = "AA",
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "test",
+      model = "test"
+    )
+  )
+  pkg <- add_gldp_resource(
+    pkg,
+    "observations",
+    data.frame(
+      tag_id = "AA",
+      ring_number = "R1",
+      observation_type = c("equipment", "retrieval"),
+      device_status = "present",
+      datetime = as.POSIXct(c("2020-01-01", "2020-01-02"), tz = "UTC"),
+      latitude = 47,
+      longitude = 8
+    )
+  )
+  pkg <- add_gldp_resource(
+    pkg,
+    "measurements",
+    data.frame(
+      tag_id = "AA",
+      sensor = "pressure",
+      datetime = as.POSIXct("2020-01-01", tz = "UTC"),
+      value = 1000,
+      label = NA_character_
+    )
+  )
+  expect_true(suppressMessages(validate_gldp_core_coherence(pkg)))
+  invalid <- pkg
+  invalid[["resources"]][[match(
+    "measurements",
+    vapply(invalid$resources, function(r) r$name, character(1))
+  )]]$data$tag_id <- "orphan"
+  expect_false(suppressMessages(validate_gldp_core_coherence(invalid)))
+  invalid <- pkg
+  invalid[["resources"]][[match(
+    "tags",
+    vapply(invalid$resources, function(r) r$name, character(1))
+  )]]$data$ring_number <- "unobserved"
+  expect_false(suppressMessages(validate_gldp_core_coherence(invalid)))
+})
+
+test_that("observation histories report invalid device states and duplicate events", {
+  observations <- data.frame(
+    tag_id = c("AA", "AA"),
+    ring_number = "R1",
+    datetime = as.POSIXct(c("2024-01-01", "2024-02-01"), tz = "UTC"),
+    observation_type = c("equipment", "retrieval"),
+    device_status = "present"
+  )
+  expect_true(suppressMessages(validate_gldp_observations(observations)))
+
+  invalid <- observations
+  invalid$device_status[1] <- "none"
+  expect_message(expect_false(validate_gldp_observations(invalid)), "does not have a device status")
+
+  invalid <- rbind(observations, observations[1, ])
+  invalid$observation_type[3] <- "capture"
+  invalid$datetime[3] <- invalid$datetime[1] + 86400
+  invalid$tag_id[3] <- NA_character_
+  expect_message(expect_false(validate_gldp_observations(invalid)), "missing a")
+
+  invalid <- rbind(observations, observations[1, ])
+  expect_message(expect_false(validate_gldp_observations(invalid)), "duplicate observation")
+
+  # A heavy bird is a guideline warning, not a failure.
+  heavy <- observations
+  heavy$mass <- c(12000, NA)
+  expect_message(expect_true(validate_gldp_observations(heavy)), "above 10,000 g")
+
+  invalid <- rbind(observations, observations[1, ])
+  invalid$observation_type[3] <- "capture"
+  invalid$datetime[3] <- invalid$datetime[1] + 86400
+  invalid$device_status[3] <- "none"
+  expect_message(
+    expect_false(validate_gldp_observations(invalid)),
+    "invalid device_status transition"
+  )
+})
+
+test_that("foreign-key validation reports missing child and parent columns", {
+  pkg <- make_geopressure_test_pkg()
+  resource <- gldp_resource(pkg, "paths")
+  resource$data$stap_id <- NULL
+  gldp_resource(pkg, "paths") <- resource
+  expect_message(expect_false(validate_gldp_geopressure_coherence(pkg)), "missing child fields")
+
+  pkg <- make_geopressure_test_pkg()
+  resource <- gldp_resource(pkg, "staps")
+  resource$data$stap_id <- NULL
+  gldp_resource(pkg, "staps") <- resource
+  expect_message(expect_false(validate_gldp_geopressure_coherence(pkg)), "missing parent fields")
 })

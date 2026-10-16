@@ -1,5 +1,14 @@
 .get_resource_data <- function(x, resource_name) {
   check_gldp(x)
+  if (!resource_name %in% frictionless::resource_names(x)) {
+    cli_abort(
+      c(
+        "x" = "This package has no {.field {resource_name}} resource.",
+        "i" = "Resources: {.val {frictionless::resource_names(x)}}."
+      ),
+      class = "gldp_error_resource_not_found"
+    )
+  }
   gldp_read_resource(x, resource_name = resource_name)
 }
 
