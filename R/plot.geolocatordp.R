@@ -5,7 +5,9 @@
 #' showing data availability across time for different sensors and tags.
 #'
 #' @param x A GeoLocator Data Package object.
-#' @param type Type of the plot to display. Currently only `"coverage"` is supported.
+#' @param type Type of the plot to display: `"coverage"` (requires `measurements`),
+#'   `"ring"` (requires `observations` and `measurements`) or `"map"` (requires
+#'   `paths` and `staps`). When `NULL`, the first type the package supports is used.
 #' @param ... Additional parameters passed to plotting functions.
 #'
 #' @return a plot, ggplotly or leaflet object.
@@ -24,14 +26,26 @@
 #'
 #' @export
 plot.geolocatordp <- function(x, type = NULL, ...) {
+  required <- list(
+    coverage = "measurements",
+    ring = c("observations", "measurements"),
+    map = c("paths", "staps")
+  )
+  available <- frictionless::resource_names(x)
   if (is.null(type)) {
-    if ("measurements" %in% frictionless::resource_names(x)) {
-      type <- "coverage"
-    } else if ("observations" %in% frictionless::resource_names(x)) {
-      type <- "ring"
-    } else {
-      cli_abort("No coverage data available in the GeoLocator Data Package.")
+    type <- names(required)[vapply(required, \(r) all(r %in% available), logical(1))][1]
+    if (is.na(type)) {
+      cli_abort("This package has no {.field measurements} or {.field paths} to plot.")
     }
+  }
+  if (!type %in% names(required)) {
+    cli_abort("Unsupported plot type {.val {type}}; use one of {.val {names(required)}}.")
+  }
+  missing <- setdiff(required[[type]], available)
+  if (length(missing) > 0) {
+    cli_abort(
+      "{.code type = \"{type}\"} needs {.field {missing}}, which this package does not have."
+    )
   }
 
   if (type == "coverage") {
@@ -40,11 +54,6 @@ plot.geolocatordp <- function(x, type = NULL, ...) {
     plot_pkg_ring(x)
   } else if (type == "map") {
     plot_pkg_map(x)
-  } else {
-    cli_abort(
-      "Unsupported plot type: {.val {type}}.
-              Supported types are 'coverage', 'ring', and 'map'."
-    )
   }
 }
 

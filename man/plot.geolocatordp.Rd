@@ -9,7 +9,9 @@
 \arguments{
 \item{x}{A GeoLocator Data Package object.}
 
-\item{type}{Type of the plot to display. Currently only \code{"coverage"} is supported.}
+\item{type}{Type of the plot to display: \code{"coverage"} (requires \code{measurements}),
+\code{"ring"} (requires \code{observations} and \code{measurements}) or \code{"map"} (requires
+\code{paths} and \code{staps}). When \code{NULL}, the first type the package supports is used.}
 
 \item{...}{Additional parameters passed to plotting functions.}
 }
