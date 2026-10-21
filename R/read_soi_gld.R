@@ -16,9 +16,9 @@
 #'   memory. Required when `access_file` is not provided.
 #' @param order_file Path to the GDL order file, or a data frame already loaded
 #'   in memory. Required when `access_file` is not provided.
-#' @param filter_col Logical. If `TRUE` (default), returns a predefined subset
-#'   of columns useful for package creation; if `FALSE`, returns all joined
-#'   columns.
+#' @param filter_col Logical or character vector. If `TRUE` (default), returns
+#'   a predefined subset of columns useful for package creation; if `FALSE`,
+#'   returns all joined columns; if a character vector, returns these columns.
 #'
 #' @return A data frame combining GDL tag rows and order-level information.
 #'
@@ -36,8 +36,11 @@ read_soi_gld <- function(
   order_file = NA,
   filter_col = TRUE
 ) {
-  if (!is.na(access_file)) {
-    if (!is.na(data_file) || !is.na(order_file)) {
+  # A file path or a data frame counts as provided
+  provided <- function(x) is.data.frame(x) || !(length(x) == 1 && is.na(x))
+
+  if (provided(access_file)) {
+    if (provided(data_file) || provided(order_file)) {
       cli_warn(c(
         "!" = "{.arg access_file} was provided alongside {.arg data_file} or {.arg order_file}.",
         ">" = "We'll use {.arg access_file}."
@@ -47,7 +50,7 @@ read_soi_gld <- function(
     data_file <- data_order_file[[1]]
     order_file <- data_order_file[[2]]
   } else {
-    if (is.na(data_file) || is.na(order_file)) {
+    if (!provided(data_file) || !provided(order_file)) {
       cli_abort(c(
         "x" = "Need {.arg access_file} or both {.arg data_file} and {.arg order_file}."
       ))
@@ -59,6 +62,20 @@ read_soi_gld <- function(
   } else {
     d <- read_soi_gld_data(data_file)
   }
+
+  # 99999 encodes an unknown coordinate in the SOI database
+  d <- mutate(
+    d,
+    across(
+      any_of(c(
+        "LongitudeAttached",
+        "LatitudeAttached",
+        "LongitudeRemoved",
+        "LatitudeRemoved"
+      )),
+      ~ dplyr::if_else(.x == 99999, NA_real_, as.numeric(.x))
+    )
+  )
 
   if (is.data.frame(order_file)) {
     o <- order_file
@@ -105,8 +122,7 @@ read_soi_gld <- function(
           "LatitudeAttached",
           "UTC_Removed",
           "LongitudeRemoved",
-          "LongitudeRemoved",
-          "LongitudeAttached",
+          "LatitudeRemoved",
 
           # Information needed for package
           "RingNumber",
@@ -118,7 +134,7 @@ read_soi_gld <- function(
       )
     }
   } else {
-    gdl <- select(gdl, "filter_col")
+    gdl <- select(gdl, all_of(filter_col))
   }
 
   return(gdl)
@@ -178,7 +194,7 @@ read_soi_gld_orders <- function(order_file) {
       BreastHarnessDiameterHead = readr::col_double(),
       BreastHarnessDiameterTail = readr::col_double(),
       HarnessDescription = readr::col_character(),
-      AccSamplingRate = readr::col_logical(),
+      AccSamplingRate = readr::col_double(),
       AccXaxisEnabled = readr::col_logical(),
       AccYaxisEnabled = readr::col_logical(),
       AccZaxisEnabled = readr::col_logical(),
@@ -195,7 +211,7 @@ read_soi_gld_orders <- function(order_file) {
       TRSchedule = readr::col_character(),
       LoggingSchedule = readr::col_character(),
       ActiveAfterWakeUp = readr::col_double(),
-      PrioritySensor = readr::col_logical(),
+      PrioritySensor = readr::col_character(),
       PriorityMemory = readr::col_double()
     )
   ) |>
@@ -283,8 +299,8 @@ read_soi_gld_data <- function(data_file) {
       Frequency = readr::col_double(),
       MagCalib = readr::col_character(),
       SleepCurrent = readr::col_double(),
-      PrioritySensor = readr::col_logical(),
-      PriorityMemory = readr::col_logical(),
+      PrioritySensor = readr::col_character(),
+      PriorityMemory = readr::col_double(),
       LongitudeRemoved = readr::col_double()
     )
   )

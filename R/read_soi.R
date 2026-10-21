@@ -100,6 +100,10 @@ read_soi <- function(
             }
           },
           error = function(e) {
+            cli_warn(c(
+              "!" = "Could not read the data of tag {.val {GDL_ID}} in {.file {directory}}. Its measurements are skipped.",
+              "x" = conditionMessage(e)
+            ))
             list() # Return empty list on error
           }
         )
