@@ -3,6 +3,7 @@
 ## Main
 
 - [Keep the retrieval latitude in `read_soi_gld()`](https://github.com/GeoPressure/GeoLocatoR/commit/315d186). The default column selection (`filter_col = TRUE`) listed `LongitudeRemoved` and `LongitudeAttached` twice and omitted `LatitudeRemoved`, so every retrieval observation created by `read_soi()` had no latitude. Packages created from SOI data with earlier versions should be recreated, or their retrieval latitudes filled. Coordinates recorded as `99999` (unknown in the SOI database) are now read as missing instead of being written as observations.
+- Read dates from the Access file in `read_soi_gld()` on macOS and Linux. `mdb-export` wrote them as `MM/DD/YY HH:MM:SS`, which was parsed as `NA`, so every date (attachment, retrieval, RTC, first and last data, delivery) was missing and `read_soi()` created equipment and retrieval observations without a datetime. They are now exported in ISO format. Packages created from an Access file on these systems with earlier versions should be recreated.
 
 ## Minor
 

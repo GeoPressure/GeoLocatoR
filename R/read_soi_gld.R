@@ -327,8 +327,14 @@ read_soi_gld_access <- function(
   }
 
   if (.Platform$OS.type == "unix") {
+    # mdb-export writes dates as MM/DD/YY by default, which readr cannot parse
+    # and turns into NA, so request ISO dates explicitly
+    date_args <- "-D '%Y-%m-%d' -T '%Y-%m-%d %H:%M:%S'"
+
     # Export data
-    system(glue::glue("mdb-export '{access_file}' GDL_Data > {data_file}"))
+    system(glue::glue(
+      "mdb-export {date_args} '{access_file}' GDL_Data > {data_file}"
+    ))
 
     if (!file.exists(data_file)) {
       cli_abort(c(
@@ -338,7 +344,9 @@ read_soi_gld_access <- function(
     }
 
     # Export orders
-    system(glue::glue("mdb-export '{access_file}' GDL_Orders > {order_file}"))
+    system(glue::glue(
+      "mdb-export {date_args} '{access_file}' GDL_Orders > {order_file}"
+    ))
     if (!file.exists(order_file)) {
       cli_abort(c(
         "x" = "The file {.file {order_file}} does not exist.",
