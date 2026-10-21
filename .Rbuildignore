@@ -16,6 +16,7 @@
 ^[.]?air[.]toml$
 ^\.vscode$
 ^jarl\.yml$
+^jarl\.toml$
 ^data-raw$
 ^AGENTS.md$
 ^assets$

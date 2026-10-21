@@ -22,9 +22,9 @@ memory. Required when \code{access_file} is not provided.}
 \item{order_file}{Path to the GDL order file, or a data frame already loaded
 in memory. Required when \code{access_file} is not provided.}
 
-\item{filter_col}{Logical. If \code{TRUE} (default), returns a predefined subset
-of columns useful for package creation; if \code{FALSE}, returns all joined
-columns.}
+\item{filter_col}{Logical or character vector. If \code{TRUE} (default), returns
+a predefined subset of columns useful for package creation; if \code{FALSE},
+returns all joined columns; if a character vector, returns these columns.}
 }
 \value{
 A data frame combining GDL tag rows and order-level information.
