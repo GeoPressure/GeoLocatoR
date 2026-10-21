@@ -2,9 +2,9 @@
 #'
 #' @description
 #' Transforms a [GeoLocator Data Package (GLDP)](https://geopressure.org/GeoLocator-DP/)
-#' to a [Darwin Core Archive](https://dwc.tdwg.org/).
+#' to a Darwin Core occurrence table.
 #' The resulting CSV files can be uploaded to an [IPT](https://www.gbif.org/ipt)
-#' for publication to GBIF. A `meta.xml` file is included as well.
+#' for publication to GBIF. Archive descriptors are configured separately.
 #' See [gldp_to_eml()] to create an `eml.xml` file.
 #'
 #' @param pkg A GeoLocator Data Package object.
@@ -12,6 +12,10 @@
 #'   If `NULL`, then a data frame is returned instead, which can be useful
 #'   for extending/adapting the Darwin Core mapping before writing with
 #'   [readr::write_csv()].
+#' @param scientific_name_ids Optional data frame with unique `scientific_name`
+#'   and `scientificNameID` columns. By default, identifiers are left blank and
+#'   no taxonomic lookup is performed. Supply identifiers explicitly when the
+#'   publication service supports them.
 #' @return `occurrence.csv` file written to disk.
 #'   Invisibly, an occurrence data frame.
 #'
@@ -47,20 +51,25 @@
 #'   multiple observations and deployments.
 #' - `organismName` is set to `ring_number` as the available label for the
 #'   tracked individual.
-#' - `occurrenceID` is a unique identifier combining `tag_id` and `stap_id`.
+#' - `occurrenceID` combines `ring_number`, `tag_id`, and `stap_id`.
 #' - `occurrenceStatus` is set to `"present"`.
 #' - `sex`, `lifeStage`, and `eventRemarks` are included from matching
 #'   observations when available.
 #' - `minimumElevationInMeters` and `maximumElevationInMeters` are estimated
 #'   from `pressurepaths$altitude` when available.
-#' - `coordinateUncertaintyInMeters` is calculated as the 50th percentile of
-#'   the distance between simulation paths and the `most_likely` position for
-#'   each stationary period.
+#' - Reconstructed-location uncertainty uses the 95th percentile of distances
+#'   from the `most_likely` position with at least 100 finite simulations, or
+#'   the maximum distance with fewer simulations. The grid-cell radius is a
+#'   minimum; without simulations uncertainty is left empty. The 100-simulation
+#'   threshold is a practical convention, not a GBIF requirement.
+#'   For known locations, uncertainty is the radius
+#'   enclosing the analysis grid cell, using `params$tag_set_map$scale` or
+#'   an ERA5 default resolution of 0.25 degrees when parameters are absent.
 #'
 #' @seealso [gldp_to_eml()] to create the matching `eml.xml` metadata file.
 #'
 #' @export
-gldp_to_dwc <- function(pkg, directory) {
+gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
   check_gldp(pkg)
 
   # Set properties from metadata
@@ -129,26 +138,9 @@ gldp_to_dwc <- function(pkg, directory) {
       dplyr::mutate(observation_dynamic_properties = NA_character_)
   }
 
-  scientific_name_ids <- tags |>
-    dplyr::distinct(.data$scientific_name)
-  if (requireNamespace("movepub", quietly = TRUE)) {
-    scientific_name_ids <- scientific_name_ids |>
-      dplyr::mutate(
-        scientificNameID = purrr::map_chr(
-          .data$scientific_name,
-          \(scientific_name) {
-            aphia <- movepub::get_aphia_id(scientific_name)
-            aphia_lsid <- aphia$aphia_lsid[!is.na(aphia$aphia_lsid)]
-            if (length(aphia_lsid) == 0) {
-              NA_character_
-            } else {
-              aphia_lsid[[1]]
-            }
-          }
-        )
-      )
-  } else {
-    scientific_name_ids <- scientific_name_ids |>
+  if (is.null(scientific_name_ids)) {
+    scientific_name_ids <- tags |>
+      dplyr::distinct(.data$scientific_name) |>
       dplyr::mutate(scientificNameID = NA_character_)
   }
 
@@ -177,12 +169,14 @@ gldp_to_dwc <- function(pkg, directory) {
       dlon_m = (.data$lon - .data$lon_center) * 111000 * cos(.data$lat_center * pi / 180),
       distance_m = sqrt(.data$dlat_m^2 + .data$dlon_m^2)
     ) |>
+    dplyr::filter(is.finite(.data$distance_m)) |>
     dplyr::group_by(.data$tag_id, .data$stap_id) |>
     dplyr::summarise(
-      coordinateUncertaintyInMeters = round(stats::quantile(
+      simulation_count = dplyr::n(),
+      coordinateUncertaintyInMeters = ceiling(stats::quantile(
         .data$distance_m,
-        0.5,
-        na.rm = TRUE
+        if (dplyr::n() >= 100) 0.95 else 1,
+        names = FALSE
       )),
       .groups = "drop"
     )
@@ -200,7 +194,8 @@ gldp_to_dwc <- function(pkg, directory) {
       pressurepath_elevation <- pp |>
         dplyr::filter(
           .data$type == "most_likely",
-          .data$stap_id == round(.data$stap_id)
+          .data$stap_id == round(.data$stap_id),
+          is.finite(.data$altitude)
         ) |>
         dplyr::group_by(.data$tag_id, .data$stap_id) |>
         dplyr::summarise(
@@ -294,6 +289,12 @@ gldp_to_dwc <- function(pkg, directory) {
   path_has_known <- "known" %in% names(occurrence)
   stap_has_known <- all(c("known_lat", "known_lon") %in% names(occurrence))
 
+  # Match each tag’s analysis grid; missing scales use the ERA5 0.25-degree grid.
+  grid_scales <- stats::setNames(
+    purrr::map_dbl(pkg$params, \(param) param$tag_set_map$scale %||% NA_real_),
+    purrr::map_chr(pkg$params, \(param) param$id)
+  )
+
   occurrence <- occurrence |>
     dplyr::mutate(
       location_is_known = if (path_has_known) {
@@ -303,6 +304,28 @@ gldp_to_dwc <- function(pkg, directory) {
       } else {
         FALSE
       },
+      grid_scale = unname(grid_scales[.data$tag_id]),
+      grid_resolution = 1 / dplyr::coalesce(.data$grid_scale, 4),
+      # The corner towards the equator is furthest from the cell centre.
+      grid_half_angle = .data$grid_resolution * pi / 360,
+      grid_corner_lat = .data$lat *
+        pi /
+        180 +
+        dplyr::if_else(.data$lat >= 0, -.data$grid_half_angle, .data$grid_half_angle),
+      grid_radius = ceiling(
+        6371008.8 *
+          acos(pmin(
+            1,
+            sin(.data$lat * pi / 180) *
+              sin(.data$grid_corner_lat) +
+              cos(.data$lat * pi / 180) * cos(.data$grid_corner_lat) * cos(.data$grid_half_angle)
+          ))
+      ),
+      coordinateUncertaintyInMeters = dplyr::if_else(
+        .data$location_is_known,
+        .data$grid_radius,
+        pmax(.data$coordinateUncertaintyInMeters, .data$grid_radius)
+      ),
       georeferenceSources = dplyr::case_when(
         .data$location_is_known ~ paste(
           "GeoPressureR::tag_set_map()",
@@ -320,9 +343,19 @@ gldp_to_dwc <- function(pkg, directory) {
         list(
           .data$location_is_known,
           .data$eventRemarks,
-          .data$coordinateUncertaintyInMeters
+          .data$coordinateUncertaintyInMeters,
+          .data$grid_resolution,
+          .data$grid_scale,
+          .data$simulation_count
         ),
-        \(location_is_known, event_remarks, coordinate_uncertainty) {
+        \(
+          location_is_known,
+          event_remarks,
+          coordinate_uncertainty,
+          grid_resolution,
+          grid_scale,
+          simulation_count
+        ) {
           values <- c(
             if (isTRUE(location_is_known)) {
               "Location taken from known stationary coordinates."
@@ -330,8 +363,19 @@ gldp_to_dwc <- function(pkg, directory) {
               "Location reconstructed from `most_likely` trajectory."
             },
             event_remarks,
+            if (!isTRUE(location_is_known) && is.na(coordinate_uncertainty)) {
+              "Coordinate uncertainty unavailable: no finite simulation distances."
+            },
             if (!is.na(coordinate_uncertainty)) {
-              "Coordinate uncertainty estimated as the 50th percentile of simulation distances from the `most_likely` position."
+              if (isTRUE(location_is_known)) {
+                glue::glue(
+                  "Coordinate uncertainty encloses a {grid_resolution}-degree grid cell ({if (is.na(grid_scale)) 'ERA5 default' else 'analysis parameters'})."
+                )
+              } else {
+                glue::glue(
+                  "Coordinate uncertainty uses {if (simulation_count >= 100) 'the 95th percentile' else 'the maximum'} distance of {simulation_count} available simulations from the most-likely position, with the grid-cell radius as a minimum."
+                )
+              }
             }
           )
           values <- values[!is.na(values) & values != ""]
@@ -429,6 +473,10 @@ gldp_to_dwc <- function(pkg, directory) {
       scientificName = .data$scientific_name,
       kingdom = "Animalia"
     )
+
+  if (is.null(directory)) {
+    return(invisible(occurrence))
+  }
 
   # Write files
   if (!dir.exists(directory)) {
