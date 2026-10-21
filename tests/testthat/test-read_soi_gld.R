@@ -41,4 +41,19 @@ test_that("read_soi_gld() keeps retrieval coordinates and handles column selecti
   expect_named(gdl, c("GDL_ID", "Client"))
 
   expect_error(read_soi_gld(data_file = d), "Need")
+
+  # CSV exports are read with their declared column types; partial exports warn about the
+  # columns they lack
+  data_file <- tempfile(fileext = ".csv")
+  order_file <- tempfile(fileext = ".csv")
+  on.exit(unlink(c(data_file, order_file)), add = TRUE)
+  write.csv(mutate(d, PrioritySensor = "LIGHT", PriorityMemory = 20), data_file, row.names = FALSE)
+  write.csv(mutate(o, AccSamplingRate = 25), order_file, row.names = FALSE)
+  gdl <- suppressWarnings(
+    read_soi_gld(data_file = data_file, order_file = order_file, filter_col = FALSE)
+  )
+  expect_equal(gdl$LatitudeRemoved, c(47.47, NA))
+  expect_identical(gdl$PrioritySensor, c("LIGHT", "LIGHT"))
+  expect_identical(gdl$PriorityMemory, c(20, 20))
+  expect_identical(suppressWarnings(read_soi_gld_orders(order_file))$AccSamplingRate, 25)
 })
