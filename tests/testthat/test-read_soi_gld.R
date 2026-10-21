@@ -41,6 +41,13 @@ test_that("read_soi_gld() keeps retrieval coordinates and handles column selecti
   expect_named(gdl, c("GDL_ID", "Client"))
 
   expect_error(read_soi_gld(data_file = d), "Need")
+  expect_warning(
+    expect_error(
+      read_soi_gld(access_file = "missing.accdb", data_file = d),
+      "does not exist"
+    ),
+    "access_file"
+  )
 
   # CSV exports are read with their declared column types; partial exports warn about the
   # columns they lack

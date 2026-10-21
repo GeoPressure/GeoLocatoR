@@ -326,6 +326,9 @@ read_soi_gld_access <- function(
     ))
   }
 
+  # Exporting needs an Access file and mdb-export or the Access ODBC driver,
+  # which are not available on CI
+  # nocov start
   if (.Platform$OS.type == "unix") {
     # mdb-export writes dates as MM/DD/YY by default, which readr cannot parse
     # and turns into NA, so request ISO dates explicitly
@@ -371,6 +374,7 @@ read_soi_gld_access <- function(
     readr::write_csv(DBI::dbReadTable(con, "GDL_Orders"), order_file)
     readr::write_csv(DBI::dbReadTable(con, "GDL_Data"), data_file)
   }
+  # nocov end
 
   invisible(c(data_file, order_file))
 }
