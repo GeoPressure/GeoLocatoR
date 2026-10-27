@@ -171,6 +171,7 @@ read_geopressuretemplate <- function(
         purrr::map(function(tag) {
           if ("twilight" %in% names(tag)) {
             tag$twilight |>
+              select(-any_of("stap_id")) |>
               mutate(tag_id = tag$param$id)
           } else {
             NULL
@@ -195,7 +196,7 @@ read_geopressuretemplate <- function(
         }) |>
         purrr::compact() |> # Remove NULLs
         purrr::list_rbind() |>
-        select(-any_of(c("duration", "nb_sample")))
+        select(-any_of(c("duration", "nb_sample", "include")))
 
       if (nrow(staps) > 0) {
         pkg <- add_gldp_resource(pkg, "staps", staps)
@@ -208,7 +209,7 @@ read_geopressuretemplate <- function(
             purrr::imap(function(p, i) {
               if (!is.null(p)) {
                 p |>
-                  select(-any_of(c("start", "end", "include"))) |>
+                  select(-any_of(c("start", "end", "include", "ind", "known", "nb_sample"))) |>
                   mutate(
                     type = sub("path_", "", x, fixed = TRUE),
                     tag_id = interim$tag[[i]]$param$id
@@ -231,6 +232,7 @@ read_geopressuretemplate <- function(
             purrr::imap(function(e, i) {
               if (!is.null(e)) {
                 e |>
+                  select(-any_of(c("s", "t", "duration"))) |>
                   mutate(
                     type = sub("edge_", "", x, fixed = TRUE),
                     tag_id = interim$tag[[i]]$param$id
