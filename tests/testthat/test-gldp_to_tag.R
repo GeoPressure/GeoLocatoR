@@ -11,7 +11,7 @@ test_that("gldp_to_tag converts single tag correctly", {
   first_tag_id <- tag_ids[1]
 
   # Convert single tag
-  tag <- gldp_to_tag(pkg, tag_id = first_tag_id)
+  expect_no_warning(tag <- gldp_to_tag(pkg, tag_id = first_tag_id))
 
   # Check that result is a tag object
   expect_s3_class(tag, "tag")

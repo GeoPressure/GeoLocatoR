@@ -98,7 +98,7 @@ gldp_resource <- function(pkg, resource_name) {
 #' because `upgrade_gldp()` walks packages written against any earlier version.
 #'
 #' @param profile A GeoLocator-DP profile, as returned by
-#'   [gldp_profile_schema()].
+#'   `gldp_profile_schema()`.
 #' @return List of branch schemas, tables first.
 #' @noRd
 gldp_profile_resource_branches <- function(profile) {
