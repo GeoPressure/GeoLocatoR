@@ -17,14 +17,18 @@ test_that("manual tag metadata is retained when an interim tag is absent from it
   tag$twilight <- data.frame(
     twilight = as.POSIXct("2020-01-01 06:00:00", tz = "UTC"),
     rise = TRUE,
-    label = NA_character_
+    label = NA_character_,
+    stap_id = 1
   )
   tag$stap <- data.frame(
     stap_id = 1,
+    include = TRUE,
     start = as.POSIXct("2020-01-01", tz = "UTC"),
     end = as.POSIXct("2020-01-02", tz = "UTC")
   )
-  save(param, tag, file = file.path(directory, "data", "interim", "AA.RData"))
+  path_tag <- data.frame(stap_id = 1, lat = 0, lon = 0, j = 1, ind = 1, known = TRUE, nb_sample = 1)
+  edge_tag <- data.frame(stap_s = 1, stap_t = 2, distance = 100, s = 1, t = 2, duration = 24)
+  save(param, tag, path_tag, edge_tag, file = file.path(directory, "data", "interim", "AA.RData"))
   param$id <- "CC"
   tag$param <- param
   save(param, tag, file = file.path(directory, "data", "interim", "CC.RData"))
@@ -44,7 +48,11 @@ test_that("manual tag metadata is retained when an interim tag is absent from it
     file.path(directory, "data", "tags.csv"),
     row.names = FALSE
   )
-  expect_warning(pkg <- read_geopressuretemplate(directory, from = "interim"), "missing")
+  expect_no_warning(
+    expect_warning(pkg <- read_geopressuretemplate(directory, from = "interim"), "missing")
+  )
+  expect_equal(paths(pkg)$lat, 0)
+  expect_equal(edges(pkg)$distance, 100)
   expect_setequal(tags(pkg)$tag_id, c("AA", "BB", "CC"))
   expect_identical(tags(pkg)$ring_number[tags(pkg)$tag_id == "AA"], "R1")
   expect_identical(tags(pkg)$ring_number[tags(pkg)$tag_id == "BB"], "R2")
