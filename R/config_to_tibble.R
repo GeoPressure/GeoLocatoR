@@ -63,11 +63,11 @@ config_to_tibble <- function(
   config_tag_fields <- c("ring_number", "tag_comments")
 
   parse_fun <- \(x) {
-    if (is.null(x) || (length(x) == 1 && is.na(x))) {
-      return(NA_character_)
-    }
     if (is.function(x) || is.call(x)) {
       x <- deparse(x)
+    }
+    if (is.null(x) || (length(x) == 1 && is.na(x))) {
+      return(NA_character_)
     }
     paste(x, collapse = ", ")
   }
@@ -90,7 +90,7 @@ config_to_tibble <- function(
     "tag_label.warning_flight_duration" = as.numeric,
     "tag_label.warning_stap_duration" = as.numeric,
     "tag_set_map.scale" = as.numeric,
-    "tag_set_map.include_stap_id" = as.character, # flexible
+    "tag_set_map.include_stap_id" = parse_fun,
     "tag_set_map.include_min_duration" = as.numeric,
     "tag_set_map.extent" = \(x) list(x),
     "tag_set_map.known" = \(x) {
@@ -109,7 +109,8 @@ config_to_tibble <- function(
     "geolight_map.compute_known" = as.logical,
     "geolight_map.twl_calib_adjust" = as.numeric,
     "geolight_map.twl_llp" = parse_fun,
-    "graph_create.likelihood" = as.character,
+    "geolight_map.fitted_location_duration" = as.numeric,
+    "graph_create.likelihood" = parse_fun,
     "graph_create.thr_likelihood" = as.numeric,
     "graph_create.thr_gs" = as.numeric,
     "graph_set_movement.method" = parse_fun,
@@ -146,7 +147,7 @@ config_to_tibble <- function(
     # Parse GeoPressureR fields, then restore top-level tag fields from raw YAML.
     config <- GeoPressureR::geopressuretemplate_config(
       id,
-      config = file,
+      config = config::get(config = id, file = file),
       assert_tag = FALSE,
       assert_graph = FALSE
     )
