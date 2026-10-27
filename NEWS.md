@@ -1,5 +1,6 @@
 # GeoLocatoR (development version)
 
+- Read `tags.csv` column `datapackage_id` as text in `read_geopressuretemplate()`, including when every value is missing. Previously, readr inferred an entirely empty column as logical, causing a type mismatch in `validate_gldp()`.
 - `read_geopressuretemplate()` applies explicit column parsers only to columns present in `tags.csv` and `observations.csv`, avoiding warnings when optional metadata columns are absent. Present columns retain their declared types, and invalid values still produce parsing warnings. Excel imports are unchanged.
 - Fix `config_to_tibble()` to read each tag's resolved GeoPressureTemplate configuration, including inherited settings, instead of returning GeoPressureR defaults. Preserve multiple graph likelihoods and stationary-period IDs, and return fitted location durations as numeric values.
 

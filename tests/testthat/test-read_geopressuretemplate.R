@@ -75,7 +75,13 @@ test_that("CSV metadata omits optional parsers and preserves declared column typ
 
   # Omit multiple optional fields, including readout_method, from both tables.
   write.csv(
-    data.frame(tag_id = "001", scientific_name = "Upupa epops", firmware = "002", weight = 1.2),
+    data.frame(
+      tag_id = "001",
+      datapackage_id = NA_character_,
+      scientific_name = "Upupa epops",
+      firmware = "002",
+      weight = 1.2
+    ),
     file.path(directory, "data", "tags.csv"),
     row.names = FALSE
   )
@@ -95,6 +101,7 @@ test_that("CSV metadata omits optional parsers and preserves declared column typ
 
   expect_no_warning(pkg <- read_geopressuretemplate(directory, from = "interim"))
   expect_identical(tags(pkg)$tag_id, "001")
+  expect_identical(tags(pkg)$datapackage_id, NA_character_)
   expect_identical(tags(pkg)$firmware, "002")
   expect_identical(tags(pkg)$weight, 1.2)
   expect_identical(observations(pkg)$tag_id, "001")
