@@ -403,6 +403,7 @@ read_geopressuretemplate <- function(
       file <- "data/tags.csv"
       col_types <- readr::cols(
         tag_id = "c",
+        datapackage_id = "c",
         ring_number = "c",
         scientific_name = "c",
         manufacturer = "c",
