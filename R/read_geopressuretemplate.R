@@ -401,21 +401,22 @@ read_geopressuretemplate <- function(
       )
     } else if (file.exists("data/tags.csv")) {
       file <- "data/tags.csv"
-      tf <- readr::read_delim(
-        file,
-        col_types = readr::cols(
-          tag_id = "c",
-          ring_number = "c",
-          scientific_name = "c",
-          manufacturer = "c",
-          model = "c",
-          firmware = "c",
-          weight = "d",
-          attachment_type = "c",
-          readout_method = "c",
-          tag_comments = "c"
-        )
+      col_types <- readr::cols(
+        tag_id = "c",
+        ring_number = "c",
+        scientific_name = "c",
+        manufacturer = "c",
+        model = "c",
+        firmware = "c",
+        weight = "d",
+        attachment_type = "c",
+        readout_method = "c",
+        tag_comments = "c"
       )
+      # Optional metadata columns need parsers only when present in the file.
+      header <- names(readr::read_delim(file, n_max = 0, show_col_types = FALSE))
+      col_types$cols <- col_types$cols[intersect(names(col_types$cols), header)]
+      tf <- readr::read_delim(file, col_types = col_types)
       cli_alert_success(
         "Reading tags from {.file {file.path(directory, file)}}."
       )
@@ -474,28 +475,33 @@ read_geopressuretemplate <- function(
         "Reading observations from {.file {file.path(directory, 'data/observations.xlsx')}}."
       )
     } else if (file.exists("./data/observations.csv")) {
-      o <- readr::read_delim(
-        "./data/observations.csv",
-        col_types = readr::cols(
-          ring_number = "c",
-          tag_id = "c",
-          observation_type = "c",
-          datetime = "T", # ISO 8601 format
-          latitude = "d",
-          longitude = "d",
-          location_name = "c",
-          device_status = "c",
-          observer = "c",
-          catching_method = "c",
-          age_class = "c",
-          sex = "c",
-          condition = "c",
-          mass = "d",
-          wing_length = "d",
-          additional_metric = "c",
-          observation_comments = "c"
-        )
+      col_types <- readr::cols(
+        ring_number = "c",
+        tag_id = "c",
+        observation_type = "c",
+        datetime = "T", # ISO 8601 format
+        latitude = "d",
+        longitude = "d",
+        location_name = "c",
+        device_status = "c",
+        observer = "c",
+        catching_method = "c",
+        age_class = "c",
+        sex = "c",
+        condition = "c",
+        mass = "d",
+        wing_length = "d",
+        additional_metric = "c",
+        observation_comments = "c"
       )
+      # Optional metadata columns need parsers only when present in the file.
+      header <- names(readr::read_delim(
+        "./data/observations.csv",
+        n_max = 0,
+        show_col_types = FALSE
+      ))
+      col_types$cols <- col_types$cols[intersect(names(col_types$cols), header)]
+      o <- readr::read_delim("./data/observations.csv", col_types = col_types)
       cli_alert_success(
         "Reading observations from {.file {file.path(directory, 'data/observations.csv')}}."
       )
