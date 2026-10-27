@@ -261,14 +261,14 @@ gldp_to_tag_single <- function(pkg, tid) {
   )
   mag_df <- meas |>
     dplyr::filter(.data$sensor %in% magnetic_sensors) |>
-    dplyr::select(.data$datetime, .data$sensor, .data$value) |>
+    dplyr::select("datetime", "sensor", "value") |>
     tidyr::pivot_wider(names_from = "sensor", values_from = "value") |>
     dplyr::rename(date = "datetime")
 
   if (nrow(mag_df) > 0) {
     missing_sensors <- setdiff(magnetic_sensors, names(mag_df))
     mag_df[missing_sensors] <- NA_real_
-    mag_df <- mag_df |> dplyr::select(.data$date, dplyr::all_of(magnetic_sensors))
+    mag_df <- mag_df |> dplyr::select("date", dplyr::all_of(magnetic_sensors))
 
     # Arrange and set timezone
     mag_df <- mag_df |> dplyr::arrange(.data$date)
