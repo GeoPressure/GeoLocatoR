@@ -74,11 +74,13 @@ resolve_zenodo_token <- function(token = NULL, sandbox = FALSE) {
 
 #' @noRd
 parse_zenodo_id <- function(id) {
-  id <- trimws(as.character(id)[1])
+  # DOIs and host names are case-insensitive; DataCite writes DOIs in upper case
+  id <- tolower(trimws(as.character(id)[1]))
   doi <- "^10\\.(?:5281|5072)/zenodo\\.(\\d+)$"
-  doi_url <- "^https?://doi\\.org/10\\.(?:5281|5072)/zenodo\\.(\\d+)$"
-  record_url <- "^https?://zenodo\\.org/records/(\\d+)/?(?:\\?.*)?(?:#.*)?$"
-  sandbox_record_url <- "^https?://sandbox\\.zenodo\\.org/records/(\\d+)/?(?:\\?.*)?(?:#.*)?$"
+  doi_url <- "^https?://(?:dx\\.)?doi\\.org/10\\.(?:5281|5072)/zenodo\\.(\\d+)/?$"
+  # Legacy record URLs use /record/ rather than /records/
+  record_url <- "^https?://(?:www\\.)?zenodo\\.org/records?/(\\d+)/?(?:\\?.*)?(?:#.*)?$"
+  sandbox_record_url <- "^https?://sandbox\\.zenodo\\.org/records?/(\\d+)/?(?:\\?.*)?(?:#.*)?$"
   record_id <- "^(\\d+)$"
 
   if (grepl(doi, id)) {
