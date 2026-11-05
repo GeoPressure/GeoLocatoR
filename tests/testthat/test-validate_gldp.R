@@ -736,3 +736,7 @@ test_that("coherence checks report a missing observations resource without error
   )
   expect_false(suppressMessages(validate_gldp_coherence(pkg)))
 })
+
+test_that("validate_gldp_profile reports a passing profile", {
+  expect_message(validate_gldp_profile(create_gldp()), "Profile checks passed")
+})
