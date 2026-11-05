@@ -5,8 +5,8 @@
 #'
 #' - `update_gldp_temporal()`: date range from `measurements$datetime`, left
 #'   unchanged when the package has no `measurements`.
-#' - `update_gldp_taxonomic()`: species vector from `tags`, optionally filtered
-#'   to tags present in `measurements`.
+#' - `update_gldp_taxonomic()`: species vector from `tags`, restricted to tags
+#'   present in `measurements` when the package has measurements.
 #' - `update_gldp_number_tags()`: counts by resource and sensor.
 #' - `update_gldp_bibliographic_citation()`: formatted citation from package
 #'   metadata.
@@ -24,6 +24,7 @@
 #' @seealso [read_gldp()] and [read_zenodo()] call this function after reading,
 #'   and the resource setters such as [tags()] and [measurements()] update
 #'   selected derived properties automatically.
+#' @order 1
 #' @export
 update_gldp <- function(pkg, ...) {
   pkg <- pkg |>
@@ -39,6 +40,7 @@ update_gldp <- function(pkg, ...) {
 #' Reorder resources to schema order
 #'
 #' @rdname update_gldp
+#' @order 2
 #' @export
 update_gldp_order_resources <- function(pkg) {
   check_gldp(pkg)
@@ -71,6 +73,7 @@ update_gldp_order_resources <- function(pkg) {
 #' Recompute package temporal coverage
 #'
 #' @rdname update_gldp
+#' @order 3
 #' @export
 update_gldp_temporal <- function(pkg) {
   check_gldp(pkg)
@@ -104,6 +107,7 @@ update_gldp_temporal <- function(pkg) {
 #' Recompute package taxonomic coverage
 #'
 #' @rdname update_gldp
+#' @order 4
 #' @export
 update_gldp_taxonomic <- function(pkg) {
   check_gldp(pkg)
@@ -145,6 +149,7 @@ update_gldp_taxonomic <- function(pkg) {
 #' Recompute tag counts by resource and sensor
 #'
 #' @rdname update_gldp
+#' @order 5
 #' @export
 update_gldp_number_tags <- function(pkg) {
   check_gldp(pkg)
@@ -192,6 +197,7 @@ update_gldp_number_tags <- function(pkg) {
 #' Recompute bibliographic citation text
 #'
 #' @rdname update_gldp
+#' @order 6
 #' @export
 update_gldp_bibliographic_citation <- function(pkg, ...) {
   check_gldp(pkg)
