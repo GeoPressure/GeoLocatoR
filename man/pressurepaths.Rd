@@ -21,7 +21,6 @@ specification.}
 \description{
 \code{pressurepaths()} gets the pressurepaths from a GeoLocator Data Package object.
 
-\verb{pressurepaths<-()} is the assignment equivalent.
-It should only be used within other functions, where the expected data
-structure can be guaranteed.
+\verb{pressurepaths<-()} is the assignment equivalent. It replaces the resource
+and casts \code{value} to the types of its schema.
 }

@@ -21,7 +21,6 @@ specification.}
 \description{
 \code{twilights()} gets the twilights from a GeoLocator Data Package object.
 
-\verb{twilights<-()} is the assignment equivalent.
-It should only be used within other functions, where the expected data
-structure can be guaranteed.
+\verb{twilights<-()} is the assignment equivalent. It replaces the resource
+and casts \code{value} to the types of its schema.
 }

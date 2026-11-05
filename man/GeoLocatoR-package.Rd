@@ -13,7 +13,7 @@ An R package to help you create and read geolocator data using the GeoLocator Da
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/GeoPressure/Geolocator}
+  \item \url{https://github.com/GeoPressure/GeoLocatoR}
   \item \url{https://geopressure.org/GeoLocatoR/}
   \item Report bugs at \url{https://github.com/GeoPressure/GeoLocatoR/issues}
 }

@@ -33,8 +33,8 @@ missing values.
 The current conversion supports pressure, light, acceleration/activity,
 temperature, and magnetic sensors.
 
-If no tags are provided, the function returns an empty tibble with the appropriate column names
-and types.
+If no tags, or no sensor tables, are provided, the function returns an empty tibble with the
+appropriate column names and types.
 }
 \seealso{
 \code{\link[=params_to_tags]{params_to_tags()}} and \code{\link[=params_to_observations]{params_to_observations()}} for related

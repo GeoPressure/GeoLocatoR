@@ -33,12 +33,16 @@ See \code{\link[=gldp_to_eml]{gldp_to_eml()}} to create an \code{eml.xml} file.
 \section{Transformation details}{
 
 Data are transformed into an \href{https://rs.gbif.org/core/dwc_occurrence}{Occurrence core}.
-This transformation combines data from three resources:
+This transformation requires four resources:
 \itemize{
 \item \href{https://geopressure.org/GeoLocator-DP/core/tags/}{\code{tags}}: metadata about the device and deployment
+\item \href{https://geopressure.org/GeoLocator-DP/core/observations/}{\code{observations}}: sex, age class and comments recorded for the bird
 \item \href{https://geopressure.org/GeoLocator-DP/geopressurer/staps/}{\code{staps}}: stationary periods with temporal information
 \item \href{https://geopressure.org/GeoLocator-DP/geopressurer/paths/}{\code{paths}}: spatial positions estimated for each stationary period
 }
+
+\href{https://geopressure.org/GeoLocator-DP/geopressurer/pressurepaths/}{\code{pressurepaths}}
+is used for elevations when present.
 
 The following terms are set from normalized package metadata
 (sourced from top-level package fields):
@@ -70,8 +74,9 @@ multiple observations and deployments.
 tracked individual.
 \item \code{occurrenceID} combines \code{ring_number}, \code{tag_id}, and \code{stap_id}.
 \item \code{occurrenceStatus} is set to \code{"present"}.
-\item \code{sex}, \code{lifeStage}, and \code{eventRemarks} are included from matching
-observations when available.
+\item \code{sex}, \code{lifeStage}, and \code{eventRemarks} are taken from the tag's observations,
+each matched to the stationary period that contains it or, failing that, to
+the nearest one within 14 days.
 \item \code{minimumElevationInMeters} and \code{maximumElevationInMeters} are estimated
 from \code{pressurepaths$altitude} when available.
 \item Reconstructed-location uncertainty uses the 95th percentile of distances

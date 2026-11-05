@@ -2,27 +2,31 @@
 % Please edit documentation in R/plot.geolocatordp.R
 \name{plot.geolocatordp}
 \alias{plot.geolocatordp}
-\title{Plot GeoLocator Data Package coverage}
+\title{Plot a GeoLocator Data Package}
 \usage{
 \method{plot}{geolocatordp}(x, type = NULL, ...)
 }
 \arguments{
 \item{x}{A GeoLocator Data Package object.}
 
-\item{type}{Type of the plot to display: \code{"coverage"} (requires \code{measurements}),
-\code{"ring"} (requires \code{observations} and \code{measurements}) or \code{"map"} (requires
-\code{paths} and \code{staps}). When \code{NULL}, the first type the package supports is used.}
+\item{type}{Type of the plot to display: \code{"coverage"} (requires \code{measurements},
+and draws \code{observations} when present), \code{"ring"} (requires \code{observations},
+\code{measurements} and \code{tags}) or \code{"map"} (requires \code{paths} and \code{staps}). When
+\code{NULL}, the first type the package supports is used.}
 
-\item{...}{Additional parameters passed to plotting functions.}
+\item{...}{Unused, for compatibility with the \code{\link[=plot]{plot()}} generic.}
 }
 \value{
-a plot, ggplotly or leaflet object.
+A ggplot2 object for \code{"coverage"} and \code{"ring"}, a leaflet map for
+\code{"map"}.
 }
 \description{
-Creates visualizations for a GeoLocator Data Package, including coverage plots
-showing data availability across time for different sensors and tags.
+Creates visualizations for a GeoLocator Data Package: the data availability
+across time for each sensor and tag, the observation history of each ring, or
+a map of the most likely paths.
 }
 \examples{
+\dontrun{
 pkg <- read_zenodo("17367319")
 
 # Plot data coverage
@@ -31,7 +35,8 @@ plot(pkg, type = "coverage")
 # Plot observation history by ring
 plot(pkg, type = "ring")
 
-# Plot map view
+# Plot map view (requires leaflet)
 plot(pkg, type = "map")
+}
 
 }

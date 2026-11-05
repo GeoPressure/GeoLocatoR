@@ -28,25 +28,22 @@ specified in the schema. Defaults to \code{FALSE}.}
 \item{replace}{If \code{TRUE}, allows an existing resource of the same name to be
 replaced.}
 
-\item{delim}{Delimiter for the CSV file(s) referenced in \code{data} (e.g. \verb{\\t}
-for a tab-separated file).
-Will be set as \code{delimiter} in the resource Table Dialect, so read functions
-know how to read the file(s).
-Ignored if \code{data} is a data frame.}
+\item{delim}{Not used: \code{\link[frictionless:add_resource]{frictionless::add_resource()}} only uses it when
+\code{data} is a path to a file, and \code{data} is always a data frame here.}
 }
 \value{
 The updated GeoLocator Data Package object with the new resource added.
 }
 \description{
 Add a standard GeoLocator-DP resource to a package. This essentially wraps
-\code{\link[frictionless:add_resource]{frictionless::add_resource()}} but with prepartions steps of the data:
+\code{\link[frictionless:add_resource]{frictionless::add_resource()}}, preparing the data first:
 \itemize{
 \item extending the schema with extra columns present in \code{data} when allowed by
 \code{fieldsMatch};
 \item adding missing schema columns to \code{data} with typed \code{NA} values when
 needed;
 \item reordering \code{data} columns to match the schema, because
-\code{\link[frictionless:add_resource]{frictionless::add_resource()}} expects fields in schema order.
+\code{\link[frictionless:add_resource]{frictionless::add_resource()}} expects fields in schema order;
 \item casting columns to schema types when \code{cast_type = TRUE}, for example
 converting strings to dates, numbers, or integers when required by the
 schema, so the stored resource is consistent with the declared schema.
