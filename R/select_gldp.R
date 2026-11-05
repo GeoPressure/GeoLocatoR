@@ -5,7 +5,7 @@
 #'
 #' Keeps or removes rows linked to selected `tag_id` values in every resource that has
 #' a `tag_id` column. Observations without `tag_id` are kept when their `ring_number`
-#' belongs to a kept tag.
+#' belongs to a kept tag. The `params` of removed tags are dropped.
 #'
 #' Use a negative selection to drop tags:
 #' `select_gldp(pkg, -"14AC")` or `select_gldp(pkg, -c("14AC", "15BC"))`.
@@ -74,6 +74,11 @@ select_gldp <- function(pkg, tag_id) {
     # Store the selected rows in memory; a resource cannot carry both data and path.
     pkg$resources[[i]][["path"]] <- NULL
   }
+  # Drop the GeoPressureR parameters of the removed tags.
+  pkg[["params"]] <- purrr::keep(
+    pkg$params,
+    \(param) !param$id %in% setdiff(available_tag_ids, keep_tag_ids)
+  )
 
   update_gldp(pkg)
 }

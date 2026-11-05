@@ -67,3 +67,23 @@ test_that("observations without tag_id follow the ring of a kept tag", {
   expect_identical(selected$ring_number, c("R1", "R1"))
   expect_identical(selected$tag_id, c("AA", NA))
 })
+
+test_that("select_gldp drops the params of removed tags", {
+  pkg <- create_gldp()
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = c("AA", "BB"),
+      ring_number = c("R1", "R2"),
+      scientific_name = "Upupa epops",
+      manufacturer = "soi",
+      model = "GDL3"
+    )
+  )
+  pkg$params <- list(list(id = "AA"), list(id = "BB"))
+
+  selected <- select_gldp(pkg, "AA")
+  expect_identical(vapply(selected$params, \(param) param$id, character(1)), "AA")
+  expect_null(select_gldp(create_gldp() |> add_gldp_resource("tags", tags(pkg)), "AA")$params)
+})
