@@ -20,7 +20,7 @@ authors:
   email: rafnuss@gmail.com
   orcid: https://orcid.org/0000-0002-8185-1020
 repository-code: https://github.com/GeoPressure/GeoLocatoR
-url: https://github.com/GeoPressure/Geolocator
+url: https://geopressure.org/GeoLocatoR/
 contact:
 - family-names: Nussbaumer
   given-names: Raphaël
