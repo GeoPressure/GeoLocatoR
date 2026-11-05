@@ -67,7 +67,7 @@ read_zenodo_download_files <- function(
   resps <- httr2::req_perform_parallel(
     reqs = reqs,
     paths = local_paths,
-    on_error = "return",
+    on_error = "continue",
     progress = FALSE,
     max_active = max_parallel
   )
