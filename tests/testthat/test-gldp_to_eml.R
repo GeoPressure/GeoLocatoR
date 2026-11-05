@@ -43,6 +43,22 @@ test_that("gldp_to_eml handles lowercase roles and title-only contributors", {
   expect_true(length(eml$dataset$creator) >= 1)
 })
 
+test_that("gldp_to_eml writes valid EML without a creator or contact role", {
+  skip_if_not_installed("EML")
+
+  tmp <- tempfile("gldp-to-eml-")
+  on.exit(unlink(tmp, recursive = TRUE))
+  pkg <- create_gldp(title = "Example package")
+  pkg$contributors <- list(
+    list(title = "Doe, Jane", givenName = "Jane", familyName = "Doe", roles = "datacollector"),
+    list(title = "Roe, Rick", givenName = "Rick", familyName = "Roe", roles = "supervisor")
+  )
+
+  eml <- suppressMessages(gldp_to_eml(pkg, tmp))
+  expect_length(eml$dataset$creator, 2)
+  expect_equal(eml$dataset$contact[[1]]$individualName$surName, "Doe")
+})
+
 test_that("gldp_to_eml writes the bounding box of a Point and a Polygon", {
   skip_if_not_installed("EML")
 
