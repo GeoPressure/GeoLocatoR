@@ -10,10 +10,15 @@
 #' 2. `"raw-tag"`: create tag objects from `data/raw-tag/` and `config.yml`,
 #'    then derive `measurements`, `tags`, `observations`, and `params`.
 #'
+#' The `ring_number`, `tag_comments` and `bird_create$scientific_name` entries
+#' of each tag in `config.yml` fill the generated `tags`.
+#'
 #' Manual data files take precedence over generated metadata:
-#' - `data/tags.csv` or `data/tags.xlsx` replaces generated `tags`;
+#' - `data/tags.csv` or `data/tags.xlsx` replaces generated `tags`. Tags missing
+#'   from the file are kept from the generated table, with a warning;
 #' - `data/observations.csv` or `data/observations.xlsx` replaces generated
-#'   `observations`.
+#'   `observations`. Generated observations take their `ring_number` from
+#'   `tags`.
 #'
 #' During automatic discovery, GeoLocatoR skips private GeoPressureTemplate
 #' entries whose names start with `"_"`: config keys, interim files, raw-tag

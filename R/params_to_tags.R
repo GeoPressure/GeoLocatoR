@@ -8,11 +8,12 @@
 #' generated during the GeoPressure workflow. See [`GeoPressureR::param_create()`
 #' ](https://geopressure.org/GeoPressureR/reference/param_create.html) for more information.
 #'
-#' @return A [tibble::tibble()] data frame with columns `tag_id`, `manufacturer`, `scientific_name`,
-#' `ring_number`, and, when available, `model` and `firmware`.
+#' @return A [tibble::tibble()] data frame with columns `tag_id` and `ring_number` (always
+#' missing), plus `manufacturer`, `scientific_name`, `model` and `firmware` when available.
 #'
-#' Manufacturer names are normalized for common GeoPressure sources, and SOI or
-#' Migrate-specific model metadata are propagated when present in the parameter
+#' @details
+#' Manufacturer names are normalised for common GeoPressure sources, and SOI or
+#' Migrate Technology model metadata are propagated when present in the parameter
 #' objects.
 #'
 #' @seealso [params_to_observations()] and [tags_to_measurements()] for related
