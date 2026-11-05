@@ -25,8 +25,8 @@
 #' The current conversion supports pressure, light, acceleration/activity,
 #' temperature, and magnetic sensors.
 #'
-#' If no tags are provided, the function returns an empty tibble with the appropriate column names
-#'  and types.
+#' If no tags, or no sensor tables, are provided, the function returns an empty tibble with the
+#' appropriate column names and types.
 #'
 #' @seealso [params_to_tags()] and [params_to_observations()] for related
 #'   conversions used when building GeoLocator-DP resources from GeoPressureR
@@ -34,16 +34,6 @@
 #'
 #' @export
 tags_to_measurements <- function(tags) {
-  if (length(tags) == 0) {
-    return(tibble::tibble(
-      tag_id = character(),
-      sensor = character(),
-      datetime = as.POSIXct(character()),
-      value = numeric(),
-      label = character()
-    ))
-  }
-
   sensor_types <- c(
     "pressure",
     "acceleration",
@@ -126,7 +116,7 @@ tags_to_measurements <- function(tags) {
           cli_abort(
             c(
               "x" = glue::glue(
-                "Type mismatch in {{.fun tags_to_measurements}} for tag {{.val {tag_id}}}, sensor {{.val {sensor}}}:"
+                "Type mismatch in {{.fun tags_to_measurements}} for tag {{.val {tag_id}}}:"
               ),
               "i" = "value column types: {.val {value_types}}",
               ">" = e$message
@@ -137,6 +127,17 @@ tags_to_measurements <- function(tags) {
       all_measurements[[i]] <- tag_df
     }
   }
+  # No tags, or tags without sensor tables, give the typed empty table.
+  if (length(all_measurements) == 0) {
+    return(tibble::tibble(
+      tag_id = character(),
+      sensor = character(),
+      datetime = as.POSIXct(character()),
+      value = numeric(),
+      label = character()
+    ))
+  }
+
   # Combine all tags
   m <- tryCatch(
     {
