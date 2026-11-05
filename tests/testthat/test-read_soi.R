@@ -84,3 +84,28 @@ test_that("read_soi() keeps undated observations only with generate_observations
   expect_identical(o$tag_id, "AAAA")
   expect_identical(o$observation_type, "equipment")
 })
+
+test_that("read_soi_directory() matches the whole GDL_ID and warns on several candidates", {
+  dir <- withr::local_tempdir()
+  dir.create(file.path(dir, "O1", "A10_2020"), recursive = TRUE)
+  dir.create(file.path(dir, "O1", "B1_2019"))
+  dir.create(file.path(dir, "O1", "B1_2020"))
+  file.create(file.path(dir, "O1", c("A1-2020.glf", "A10_2020.glf")))
+  gdl <- tibble(OrderName = "O1", GDL_ID = c("A1", "B1"))
+
+  expect_warning(gdl <- read_soi_directory(gdl, dir), "B1_2019")
+  expect_identical(
+    gdl$directory,
+    file.path(dir, "O1", c("A1-2020.glf", "B1_2020"))
+  )
+})
+
+test_that("read_soi() marks the tag as present on equipment and retrieval", {
+  gdl <- tibble(
+    GDL_ID = "AAAA",
+    UTC_Attached = as.POSIXct("2020-05-01", tz = "UTC"),
+    directory = NA_character_
+  )
+  o <- observations(suppressMessages(read_soi(gdl)))
+  expect_identical(o$device_status, c("present", "present"))
+})

@@ -18,10 +18,15 @@
 #'   `read_soi_gld(filter_col = TRUE)` does not keep: use `filter_col = FALSE`
 #'   to include them.
 #' @param directory_data Path to the directory containing SOI raw tag files or
-#'   folders, in one sub-folder per `OrderName`. Not used when `gdl` already has
-#'   a `directory` column.
+#'   folders, in one sub-folder per `OrderName`. Within it, a tag's data is the
+#'   folder, or else the `.glf` file, whose name is the `GDL_ID` alone or
+#'   followed by a non-alphanumeric separator (e.g. `A1` or `A1_2020`, but not
+#'   `A10_2020`). When several match, the alphabetically last is used, with a
+#'   warning naming the candidates. Not used when `gdl` already has
+#'   a `directory` column, which gives the data path of each tag directly.
 #' @param generate_observations A logical value. Equipment and retrieval
-#'   `observations` are always created from the dates in `gdl`. If `TRUE`, rows
+#'   `observations`, with `device_status = "present"`, are always created from
+#'   the dates in `gdl`. If `TRUE`, rows
 #'   are also created without a datetime, as placeholders to fill in; if `FALSE`,
 #'   only rows with a known datetime are kept.
 #'
@@ -88,7 +93,7 @@ read_soi <- function(
               # extension, so pass the full path of each sensor file of this tag: every
               # GeoPressureR version uses an existing path as is and skips a sensor given NA
               tag_files <- list.files(dirname(directory), full.names = TRUE)
-              tag_files <- tag_files[startsWith(basename(tag_files), GDL_ID)]
+              tag_files <- tag_files[soi_id_match(basename(tag_files), GDL_ID)]
               sensor_file <- \(ext) {
                 tag_files[grepl(glue::glue("\\.{ext}$"), tag_files, ignore.case = TRUE)][1]
               }
@@ -303,6 +308,7 @@ read_soi <- function(
           NA_real_
         },
         observation_type = "equipment",
+        device_status = "present",
         age_class = "0",
         sex = "U"
       ),
@@ -330,6 +336,7 @@ read_soi <- function(
           NA_real_
         },
         observation_type = "retrieval",
+        device_status = "present",
         age_class = "0",
         sex = "U"
       )
@@ -400,70 +407,37 @@ read_soi_directory <- function(gdl, directory_data) {
     }
 
     order_dir <- file.path(base_dir, order_name)
-    if (!dir.exists(order_dir) && order_name != "Wallis") {
+    if (!dir.exists(order_dir)) {
       return(list(
         directory = NA_character_,
         reason = glue::glue("Order directory not found: {order_dir}")
       ))
     }
 
-    # 1 find folder with tag_id name
-    folders <- if (dir.exists(order_dir)) {
-      list.dirs(order_dir, recursive = FALSE, full.names = FALSE)
-    } else {
-      character()
+    # 1 find folder named after the tag, else 2 its .glf file: outside a tag folder only
+    # a .glf file can be read, as read_soi() passes any other file as a directory
+    folders <- list.dirs(order_dir, recursive = FALSE, full.names = TRUE)
+    files <- setdiff(list.files(order_dir, full.names = TRUE), folders)
+    candidates <- folders[soi_id_match(basename(folders), gdl_id)]
+    if (length(candidates) == 0) {
+      candidates <- files[soi_id_match(basename(files), gdl_id) & grepl("\\.glf$", files)]
     }
-    matching_folders <- sort(
-      folders[startsWith(folders, as.character(gdl_id))],
-      decreasing = TRUE
-    )
-    if (length(matching_folders) == 1) {
+    if (length(candidates) == 0) {
       return(list(
-        directory = file.path(order_dir, matching_folders[1]),
-        reason = NA_character_
-      ))
-    } else if (length(matching_folders) > 1) {
-      return(list(
-        directory = file.path(order_dir, matching_folders[1]),
-        reason = NA_character_
-      ))
-    }
-
-    # 2 find file with tag_id name
-    if (order_name == "Wallis") {
-      files <- c(
-        list.files(
-          file.path(base_dir, "UpuEpoCH09/glf"),
-          recursive = FALSE,
-          full.names = TRUE
-        ),
-        list.files(
-          file.path(base_dir, "UpuEpoCH10/"),
-          recursive = FALSE,
-          full.names = TRUE
+        directory = NA_character_,
+        reason = glue::glue(
+          "No folder or .glf file named after GDL_ID {gdl_id} was found in {order_name}."
         )
-      )
-    } else {
-      files <- list.files(order_dir, recursive = FALSE, full.names = TRUE)
-    }
-
-    # Outside a tag folder only a .glf file can be read: read_soi() passes any other
-    # file as a directory, which GeoPressureR rejects
-    glf_files <- files[
-      startsWith(basename(files), as.character(gdl_id)) & grepl("\\.glf$", files)
-    ]
-    if (length(glf_files) > 0) {
-      return(list(
-        directory = glf_files[1],
-        reason = NA_character_
       ))
     }
-    list(
-      directory = NA_character_,
-      reason = glue::glue(
-        "No folder or .glf file starting with GDL_ID {gdl_id} was found in {order_name}."
-      )
-    )
+    candidates <- sort(candidates, decreasing = TRUE)
+    if (length(candidates) > 1) {
+      cli_warn(c(
+        "!" = "Several data paths match GDL_ID {.val {gdl_id}}; using {.path {candidates[1]}}.",
+        "i" = "Candidates: {.path {candidates}}."
+      ))
+    }
+    list(directory = candidates[1], reason = NA_character_)
   }
 
   # Apply directory lookup row-wise while preserving table shape
@@ -502,5 +476,19 @@ read_soi_directory <- function(gdl, directory_data) {
     ))
   }
   gdl
+}
+
+#' Match file or folder names to a SOI tag ID
+#'
+#' A name matches when it is the ID alone or the ID followed by a non-alphanumeric
+#' separator, so that `A1` does not match `A10_2020`.
+#'
+#' @param x Character vector of file or folder names.
+#' @param gdl_id A single `GDL_ID`.
+#' @return A logical vector.
+#' @noRd
+soi_id_match <- function(x, gdl_id) {
+  gdl_id <- as.character(gdl_id)
+  startsWith(x, gdl_id) & grepl("^([^[:alnum:]]|$)", substring(x, nchar(gdl_id) + 1))
 }
 # nocov end
