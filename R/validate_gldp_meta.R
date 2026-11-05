@@ -53,7 +53,7 @@ validate_gldp_meta <- function(pkg) {
 
   if (contributors_with_role == 0) {
     cli::cli_alert_warning(
-      "Missing {.field role} in {.field pkg$contributors}."
+      "Missing {.field roles} in {.field pkg$contributors}."
     )
     has_warnings <- TRUE
   }
