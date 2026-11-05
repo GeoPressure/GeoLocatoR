@@ -23,12 +23,26 @@
 #'   selected derived properties automatically.
 #' @export
 update_gldp <- function(pkg, ...) {
-  pkg <- pkg |>
-    gldp_update_order_resources() |>
+  pkg <- gldp_update_order_resources(pkg)
+
+  # Several derived fields read tags and measurements: a copy holding the
+  # file-backed ones in memory reads each file once, and pkg keeps its paths.
+  loaded <- pkg
+  for (name in intersect(c("tags", "measurements"), frictionless::resource_names(pkg))) {
+    resource <- gldp_resource(pkg, name)
+    if (!is.null(resource$path) && is.list(resource$schema)) {
+      gldp_resource(loaded, name) <- gldp_load_table(pkg, name)
+    }
+  }
+  loaded <- loaded |>
     gldp_update_temporal() |>
     gldp_update_taxonomic() |>
-    gldp_update_number_tags() |>
-    gldp_update_bibliographic_citation(...)
+    gldp_update_number_tags()
+  for (field in c("temporal", "taxonomic", "numberTags")) {
+    pkg[[field]] <- loaded[[field]]
+  }
+
+  pkg <- gldp_update_bibliographic_citation(pkg, ...)
 
   pkg
 }
