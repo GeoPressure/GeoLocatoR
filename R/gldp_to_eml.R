@@ -248,13 +248,9 @@ gldp_to_eml <- function(pkg, directory) {
   }
 
   # Dataset
-  pub_year <- NA_character_
-  if (is_non_empty_string(as.character(pkg$created %||% NA_character_)[1])) {
-    pub_year <- format(as.Date(substr(as.character(pkg$created[1]), 1, 10)), "%Y")
-  }
-  if (is.na(pub_year)) {
-    pub_year <- NULL
-  }
+  # Year of the ISO 8601 `created` date, which may also be a bare year or year-month.
+  created <- first_non_empty_string(pkg$created)
+  pub_year <- if (!is.null(created) && grepl("^[0-9]{4}", created)) substr(created, 1, 4)
 
   dataset <- list(
     title = title,

@@ -210,15 +210,10 @@ update_gldp_bibliographic_citation <- function(pkg, ...) {
 
   has_doi <- !is.null(doi) && nzchar(doi)
 
+  # Year of the ISO 8601 `created` date, which may also be a bare year or year-month.
   year_source <- first_non_empty_string(pkg$created)
-  year <- NULL
-  if (is_non_empty_string(year_source)) {
-    parsed <- suppressWarnings(as.Date(substr(year_source, 1, 10)))
-    if (!is.na(parsed)) {
-      year <- format(parsed, "%Y")
-    } else if (grepl("^[0-9]{4}", year_source)) {
-      year <- substr(year_source, 1, 4)
-    }
+  year <- if (!is.null(year_source) && grepl("^[0-9]{4}", year_source)) {
+    substr(year_source, 1, 4)
   }
 
   author <- if (!is.null(pkg$contributors)) contributors_to_persons(pkg$contributors) else NULL
