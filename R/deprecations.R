@@ -192,6 +192,7 @@ zenodo_to_gldp <- function(id, ...) {
 #' `gldp_to_zenodo()` was removed with no replacement.
 #'
 #' @param ... Unused.
+#' @return This function is defunct and always errors.
 #' @export
 gldp_to_zenodo <- function(...) {
   lifecycle::deprecate_stop(
