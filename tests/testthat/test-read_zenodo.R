@@ -282,6 +282,22 @@ test_that("read_zenodo_attach_metadata uses version DOI as pkg$id", {
   expect_identical(out$conceptid, "https://doi.org/10.5281/zenodo.1234566")
 })
 
+test_that("read_zenodo_attach_metadata keeps contributor roles as a list", {
+  pkg <- structure(list(), class = c("geolocatordp", "datapackage", "list"))
+  creator <- \(role) {
+    list(person_or_org = list(name = "Doe, Jane"), role = role, affiliations = list())
+  }
+  record <- list(
+    id = "1",
+    metadata = list(creators = list(creator(list(id = "datacollector")), creator(NULL))),
+    links = list()
+  )
+
+  out <- read_zenodo_attach_metadata(pkg, record)
+  expect_identical(out$contributors[[1]]$roles, list("datacollector"))
+  expect_null(out$contributors[[2]]$roles)
+})
+
 test_that("read_zenodo_attach_metadata computes access status and embargo", {
   pkg <- structure(list(), class = c("geolocatordp", "datapackage", "list"))
 
