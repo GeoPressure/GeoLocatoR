@@ -30,9 +30,9 @@
 #'   before the optional `force_read` step loads resource data into memory. Use
 #'   this to save memory and avoid slowdowns when working mainly with derived
 #'   GeoPressure resources such as `staps`, `paths`, `edges`, or
-#'   `pressurepaths`. The derived `temporal` coverage and the measurement
-#'   counts in `numberTags` are then left out, and `taxonomic` lists the
-#'   species of every tag.
+#'   `pressurepaths`. `temporal` then keeps the value in `datapackage.json`,
+#'   the measurement counts in `numberTags` are left out, and `taxonomic`
+#'   lists the species of every tag.
 #'
 #' @return A `geolocatordp` object.
 #'
