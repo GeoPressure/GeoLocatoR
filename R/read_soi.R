@@ -69,14 +69,6 @@ read_soi <- function(
     gdl <- read_soi_directory(gdl, directory_data)
   }
 
-  # Do not add any data if same id already presents in measurements
-  if ("measurements" %in% frictionless::resource_names(pkg)) {
-    m <- measurements(pkg)
-    gdl <- gdl |> filter(!(.data$GDL_ID %in% unique(m$tag_id)))
-  } else {
-    m <- NULL
-  }
-
   # Read tag data
   n_tags_with_data <- sum(!is.na(gdl$directory))
   cli_progress_step(
@@ -137,7 +129,7 @@ read_soi <- function(
     )
 
   # Adding measurement resource, without the tags that could not be read
-  m <- bind_rows(m, tags_to_measurements(purrr::compact(dtags)))
+  m <- tags_to_measurements(purrr::compact(dtags))
 
   if (nrow(m) > 0) {
     cli_progress_step("Add {.field measurements} to {.pkg pkg}")
@@ -149,17 +141,8 @@ read_soi <- function(
     )
   }
 
-  # Only add tags and observations data to the tag_id not yet present in tag
-  if ("tags" %in% frictionless::resource_names(pkg)) {
-    t <- tags(pkg)
-    gdl_to <- gdl |> filter(!(.data$GDL_ID %in% t$tag_id))
-  } else {
-    t <- NULL
-    gdl_to <- gdl
-  }
-
   # Compute tags.csv from gdl table
-  if (nrow(gdl_to) == 0) {
+  if (nrow(gdl) == 0) {
     t_gdl <- tibble(
       tag_id = character(),
       manufacturer = character(),
@@ -172,7 +155,7 @@ read_soi <- function(
       tag_comments = character()
     )
   } else {
-    t_gdl <- gdl_to |>
+    t_gdl <- gdl |>
       rowwise() |>
       mutate(
         attachment_type = {
@@ -279,54 +262,42 @@ read_soi <- function(
       )
   }
 
-  t <- bind_rows(t, t_gdl)
-
-  if (nrow(t) > 0) {
+  if (nrow(t_gdl) > 0) {
     cli_progress_step("Add {.field tags} to {.pkg pkg}")
     pkg <- add_gldp_resource(
       pkg,
       "tags",
-      t,
+      t_gdl,
       replace = TRUE
     )
   }
 
-  if ("observations" %in% frictionless::resource_names(pkg)) {
-    o <- observations(pkg)
-  } else {
-    o <- NULL
-  }
-
-  # Adding sensor resource
+  # Equipment and retrieval observations from the attachment and removal records
   o_gdl <- bind_rows(
-    gdl_to |>
+    gdl |>
       transmute(
-        ring_number = if ("RingNumber" %in% names(gdl_to)) {
+        ring_number = if ("RingNumber" %in% names(gdl)) {
           .data$RingNumber
         } else {
           NA_character_
         },
-        tag_id = if ("GDL_ID" %in% names(gdl_to)) {
-          .data$GDL_ID
-        } else {
-          NA_character_
-        },
-        datetime = if ("UTC_Attached" %in% names(gdl_to)) {
+        tag_id = .data$GDL_ID,
+        datetime = if ("UTC_Attached" %in% names(gdl)) {
           .data$UTC_Attached
         } else {
           as.POSIXct(NA)
         },
-        location_name = if ("SiteAttached" %in% names(gdl_to)) {
+        location_name = if ("SiteAttached" %in% names(gdl)) {
           .data$SiteAttached
         } else {
           NA_character_
         },
-        longitude = if ("LongitudeAttached" %in% names(gdl_to)) {
+        longitude = if ("LongitudeAttached" %in% names(gdl)) {
           .data$LongitudeAttached
         } else {
           NA_real_
         },
-        latitude = if ("LatitudeAttached" %in% names(gdl_to)) {
+        latitude = if ("LatitudeAttached" %in% names(gdl)) {
           .data$LatitudeAttached
         } else {
           NA_real_
@@ -335,29 +306,25 @@ read_soi <- function(
         age_class = "0",
         sex = "U"
       ),
-    gdl_to |>
+    gdl |>
       transmute(
-        ring_number = if ("RingNumber" %in% names(gdl_to)) {
+        ring_number = if ("RingNumber" %in% names(gdl)) {
           .data$RingNumber
         } else {
           NA_character_
         },
-        tag_id = if ("GDL_ID" %in% names(gdl_to)) {
-          .data$GDL_ID
-        } else {
-          NA_character_
-        },
-        datetime = if ("UTC_Removed" %in% names(gdl_to)) {
+        tag_id = .data$GDL_ID,
+        datetime = if ("UTC_Removed" %in% names(gdl)) {
           .data$UTC_Removed
         } else {
           as.POSIXct(NA)
         },
-        longitude = if ("LongitudeRemoved" %in% names(gdl_to)) {
+        longitude = if ("LongitudeRemoved" %in% names(gdl)) {
           .data$LongitudeRemoved
         } else {
           NA_real_
         },
-        latitude = if ("LatitudeRemoved" %in% names(gdl_to)) {
+        latitude = if ("LatitudeRemoved" %in% names(gdl)) {
           .data$LatitudeRemoved
         } else {
           NA_real_
@@ -372,14 +339,12 @@ read_soi <- function(
     o_gdl <- o_gdl |> filter(!is.na(.data$datetime))
   }
 
-  o <- bind_rows(o, o_gdl)
-
-  if (nrow(o) > 0) {
+  if (nrow(o_gdl) > 0) {
     cli_progress_step("Add {.field observations} to {.pkg pkg}")
     pkg <- add_gldp_resource(
       pkg,
       "observations",
-      o,
+      o_gdl,
       replace = TRUE
     )
   }
