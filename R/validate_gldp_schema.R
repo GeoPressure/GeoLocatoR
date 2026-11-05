@@ -477,23 +477,18 @@ check_type <- function(value, type, field) {
     return(TRUE)
   }
 
-  type_map <- get_type_map()
-
-  valid <- TRUE
-  # Check if the expected type is in the type_map
-  if (type %in% names(type_map)) {
-    type_check_result <- type_map[[type]](value)
-    if (!all(type_check_result)) {
-      cli_alert_danger(
-        "Type mismatch for {.field {field}}: Expected `{type}`, but got
-                       `{typeof(value)}`."
-      )
-      valid <- FALSE
-    }
-  } else {
+  if (!(type %in% names(get_type_map()))) {
     cli_alert_danger("Unknown expected type `{type}` for {.field {field}}.")
-    valid <- FALSE
+    return(FALSE)
   }
 
-  valid
+  if (!all(check_type_silent(value, type))) {
+    cli_alert_danger(
+      "Type mismatch for {.field {field}}: Expected `{type}`, but got
+                       `{typeof(value)}`."
+    )
+    return(FALSE)
+  }
+
+  TRUE
 }
