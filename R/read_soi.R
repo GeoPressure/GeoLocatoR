@@ -83,10 +83,23 @@ read_soi <- function(
         tryCatch(
           {
             if (grepl("\\.glf$", directory)) {
+              # The folder can hold other tags' files, which GeoPressureR would pick by
+              # extension, so pass the full path of each sensor file of this tag: every
+              # GeoPressureR version uses an existing path as is and skips a sensor given NA
+              tag_files <- list.files(dirname(directory), full.names = TRUE)
+              tag_files <- tag_files[startsWith(basename(tag_files), GDL_ID)]
+              sensor_file <- \(ext) {
+                tag_files[grepl(glue::glue("\\.{ext}$"), tag_files, ignore.case = TRUE)][1]
+              }
               GeoPressureR::tag_create(
                 id = GDL_ID,
                 directory = dirname(directory),
-                light_file = basename(directory),
+                light_file = directory,
+                pressure_file = sensor_file("pressure"),
+                acceleration_file = sensor_file("acceleration"),
+                temperature_external_file = sensor_file("(air)?temperature"),
+                temperature_internal_file = sensor_file("bodytemperature"),
+                magnetic_file = sensor_file("magnetic"),
                 assert_pressure = FALSE, # Allow tag to not have pressure data
                 quiet = TRUE
               )
