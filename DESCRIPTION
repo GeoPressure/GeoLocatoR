@@ -40,13 +40,10 @@ Suggests:
     DBI,
     knitr,
     leaflet,
-    quarto,
     readxl,
     rstudioapi,
-    rmarkdown,
     spelling,
     testthat (>= 3.0.0),
-    tidyverse,
     EML,
     uuid
 Remotes: 
