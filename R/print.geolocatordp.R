@@ -24,7 +24,7 @@ print.geolocatordp <- function(x, ...) {
   cli::cli_h3("Metadata")
   # Through cli like the rest of the output, so that it keeps its place when captured
   cli_text(col_silver(format_inline(
-    "{.strong Note}: All {.field green} texts are fields of `pkg` which can be accessed with `pkg${.field field}`)."
+    "{.strong Note}: All {.field green} texts are fields of `pkg` which can be accessed with `pkg${.field field}`."
   )))
   if (isTRUE(x$is_draft)) {
     cli_bullets(c("!" = "{.field status}: {.strong draft}"))

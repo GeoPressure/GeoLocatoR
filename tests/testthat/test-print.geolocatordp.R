@@ -49,4 +49,5 @@ test_that("print.geolocatordp prints the field note in order with the other line
   out <- cli::cli_fmt(print(pkg))
   expect_lt(grep("Metadata", out), grep("Note", out))
   expect_lt(grep("Note", out), grep("title", out))
+  expect_true(any(grepl("`pkg$field`.", out, fixed = TRUE)))
 })
