@@ -71,6 +71,8 @@ plot.geolocatordp <- function(x, type = NULL, ...) {
 plot_pkg_coverage <- function(x) {
   m <- measurements(x) |>
     mutate(
+      # Group the sensors read from one GeoPressureR sensor table: the acceleration and
+      # magnetic axes come from `magnetic`, the mean z acceleration with `activity`
       sensor = case_when(
         sensor %in%
           c(
@@ -79,10 +81,10 @@ plot_pkg_coverage <- function(x) {
             "magnetic_z",
             "acceleration_x",
             "acceleration_y",
-            "acceleration_z",
-            "mean_acceleration_z"
+            "acceleration_z"
           ) ~
           "magnetic",
+        sensor == "mean_acceleration_z" ~ "activity",
         TRUE ~ sensor # Keep other sensor names unchanged
       )
     ) |>

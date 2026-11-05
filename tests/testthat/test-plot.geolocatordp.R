@@ -104,3 +104,11 @@ test_that("plot.geolocatordp plots coverage without observations, and asks tags 
   expect_no_warning(ggplot2::ggplot_build(p))
   expect_error(plot(drop_resource(pkg, "tags"), "ring"), "needs .*tags")
 })
+
+test_that("plot.geolocatordp shows the mean z acceleration with activity", {
+  p <- plot(local_plot_pkg(), "coverage")
+
+  expect_setequal(unique(p$data$sensor), c("pressure", "activity", "magnetic"))
+  activity_dates <- p$data$date[p$data$tag_id == "T1" & p$data$sensor == "activity"]
+  expect_identical(sort(activity_dates), as.Date(c("2020-02-02", "2020-02-03")))
+})
