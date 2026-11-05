@@ -5,8 +5,11 @@
 #' `observations` tibble following the GeoLocator Data Package structure.
 #'
 #' One `equipment` row and one `retrieval` row are generated per parameter
-#' object. When available, crop dates are used as observation datetimes and
-#' known stationary locations are used to populate the first and last locations.
+#' object. When available, crop dates give the observation dates: data start at
+#' the midnight after the equipment day, so the equipment date is the day before
+#' `crop_start`, and data end at the midnight starting the retrieval day, so the
+#' retrieval date is `crop_end`. Both are read as dates only. Known stationary
+#' locations are used to populate the first and last locations.
 #'
 #' @param params A list of GeoPressureR parameter objects. These parameters should have been
 #' generated during the GeoPressure workflow. See [`GeoPressureR::param_create()`
@@ -34,10 +37,12 @@ params_to_observations <- function(params) {
         observation_comments = "Automatically computed with `params_to_observations()`"
       )
 
+      # Inverse of create_geopressuretemplate(), which crops from the midnight after
+      # the equipment day, so that a read-create-read cycle keeps the same dates.
       if (!is.null(param$tag_create$crop_start)) {
         oe <- o0 |>
           mutate(
-            datetime = as.POSIXct(param$tag_create$crop_start, tz = "UTC"),
+            datetime = as.POSIXct(as.Date(param$tag_create$crop_start) - 1),
             observation_type = "equipment"
           )
       } else {
@@ -50,7 +55,7 @@ params_to_observations <- function(params) {
       if (!is.null(param$tag_create$crop_end)) {
         or <- o0 |>
           mutate(
-            datetime = as.POSIXct(param$tag_create$crop_end, tz = "UTC"),
+            datetime = as.POSIXct(as.Date(param$tag_create$crop_end)),
             observation_type = "retrieval"
           )
       } else {

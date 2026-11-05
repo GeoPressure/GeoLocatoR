@@ -250,3 +250,24 @@ test_that("unlabelled tags are exported for labelling, not as final labels", {
   expect_true(file.exists("data/tag-label/B.csv"))
   expect_false(file.exists("data/tag-label/B-labeled.csv"))
 })
+
+test_that("crop dates survive a read-create-read cycle", {
+  pkg <- template_config_pkg()
+  config <- template_config_write(pkg)
+  expect_identical(config$A$tag_create$crop_start, "2020-01-01")
+
+  # Observations read back from the config give the same crop dates again
+  o <- params_to_observations(list(list(id = "A", tag_create = config$A$tag_create)))
+  expect_equal(
+    o$datetime,
+    observations(pkg)$datetime[observations(pkg)$tag_id == "A"]
+  )
+  o_pkg <- observations(pkg)
+  o_pkg$datetime[o_pkg$tag_id == "A"] <- o$datetime
+  pkg <- add_gldp_resource(pkg, "observations", o_pkg, replace = TRUE)
+  config2 <- template_config_write(pkg)
+  expect_identical(
+    config2$A$tag_create[c("crop_start", "crop_end")],
+    config$A$tag_create[c("crop_start", "crop_end")]
+  )
+})

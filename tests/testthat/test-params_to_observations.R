@@ -17,3 +17,9 @@ test_that("params_to_observations accepts the default known of GeoPressureR", {
   o <- params_to_observations(list(param))
   expect_equal(o$longitude, c(NA_real_, NA_real_))
 })
+
+test_that("params_to_observations reads the equipment date as the day before crop_start", {
+  param <- list(id = "A", tag_create = list(crop_start = "2020-01-02", crop_end = "2020-03-01"))
+  o <- params_to_observations(list(param))
+  expect_equal(o$datetime, as.POSIXct(c("2020-01-01", "2020-03-01"), tz = "UTC"))
+})
