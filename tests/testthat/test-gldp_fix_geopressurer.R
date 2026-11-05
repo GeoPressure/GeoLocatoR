@@ -119,7 +119,10 @@ test_that("gldp_fix_soi_axes() converts x/y from the hardware version", {
   # hw <= 2.3: new = -old on x and y.
   expect_message(pkg <- gldp_fix_soi_axes(make_mag_pkg("GDL3pam-v2.3")), "Converted")
   expect_equal(unname(mag_values(pkg)), c(-1, -2, 3, -4, -5, 6))
-  expect_equal(pkg$params, list(list(id = "AA", mag_axis = c("right", "forward", "down"))))
+  expect_equal(
+    pkg$params,
+    list(list(id = "AA", tag_create = list(mag_axis = c("right", "forward", "down"))))
+  )
   expect_equal(measurements(pkg)$value[measurements(pkg)$sensor == "pressure"], 1000)
 
   # hw >= 2.4: new x = -old y, new y = -old x.
@@ -132,9 +135,21 @@ test_that("gldp_fix_soi_axes() prefers the mag_axis and version saved in params"
   params <- list(list(id = "AA", mag_axis = c("backward", "left", "down"), other = 1))
   pkg <- suppressMessages(gldp_fix_soi_axes(make_mag_pkg("GDL3pam-v2.3", params)))
   expect_equal(unname(mag_values(pkg)), c(-2, -1, 3, -5, -4, 6))
-  # The params entry is updated, not replaced.
-  expect_equal(pkg$params[[1]]$mag_axis, c("right", "forward", "down"))
+  # The params entry is updated to the GeoPressureR 3.8.0 layout, not replaced.
+  expect_equal(pkg$params[[1]]$tag_create$mag_axis, c("right", "forward", "down"))
+  expect_null(pkg$params[[1]]$mag_axis)
   expect_equal(pkg$params[[1]]$other, 1)
+
+  # A mapping recorded by GeoPressureR >= 3.8.0 (here a reversed mount) is already applied.
+  params <- list(list(id = "AA", tag_create = list(mag_axis = c("left", "backward", "down"))))
+  pkg <- gldp_fix_soi_axes(make_mag_pkg("GDL3pam-v2.3", params))
+  expect_equal(unname(mag_values(pkg)), c(1, 2, 3, 4, 5, 6))
+  expect_equal(pkg$params[[1]]$tag_create$mag_axis, c("left", "backward", "down"))
+
+  # The hardware version is read from the GeoPressureR 3.8.0 settings too.
+  params <- list(list(id = "AA", tag_create = list(settings = list(model = "GDL3pam_V2.4"))))
+  pkg <- suppressMessages(gldp_fix_soi_axes(make_mag_pkg(NA_character_, params)))
+  expect_equal(unname(mag_values(pkg)), c(-2, -1, 3, -5, -4, 6))
 
   # Data from GeoPressureR >= 3.8.0 are already in the new frame.
   params <- list(list(id = "AA", GeoPressureR_version = package_version("3.8.0")))
@@ -175,6 +190,45 @@ test_that("the recorded SOI axis mapping survives write_gldp() and read_gldp()",
   on.exit(unlink(dir, recursive = TRUE))
   suppressMessages(write_gldp(pkg, dir))
   pkg2 <- suppressMessages(suppressWarnings(read_gldp(file.path(dir, "datapackage.json"))))
-  expect_equal(pkg2$params[[1]]$mag_axis, c("right", "forward", "down"))
+  expect_equal(pkg2$params[[1]]$tag_create$mag_axis, c("right", "forward", "down"))
   expect_equal(unname(mag_values(pkg2)), c(-1, -2, 3, -4, -5, 6))
+})
+
+test_that("gldp_params_migrate() moves old param keys to tag_create$settings", {
+  params <- list(
+    list(
+      id = "A",
+      soi_settings = list(HWVersion = "GDL3pam_V2.3", SWVersion = "1.0", Other = 1),
+      drift = 2.5,
+      tag_create = list(manufacturer = "soi")
+    ),
+    list(id = "B", migratec_model = "13.2061.8"),
+    list(id = "C", tag_create = list(settings = list(model = "x")))
+  )
+  migrated <- gldp_params_migrate(params)
+  expect_equal(
+    migrated[[1]],
+    list(
+      id = "A",
+      tag_create = list(
+        manufacturer = "soi",
+        settings = list(
+          HWVersion = "GDL3pam_V2.3",
+          SWVersion = "1.0",
+          Other = 1,
+          model = "GDL3pam_V2.3",
+          firmware = "1.0",
+          clock_drift = 2.5
+        )
+      )
+    )
+  )
+  expect_equal(
+    migrated[[2]],
+    list(id = "B", tag_create = list(settings = list(model = "13.2061.8")))
+  )
+  expect_equal(migrated[[3]], params[[3]])
+  expect_equal(gldp_params_migrate(migrated), migrated)
+  # Tags are unchanged by the migration.
+  expect_equal(params_to_tags(migrated), params_to_tags(params))
 })
