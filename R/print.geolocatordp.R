@@ -24,7 +24,7 @@ print.geolocatordp <- function(x, ...) {
   cli::cli_h3("Metadata")
   cat_line(
     format_inline(
-      "{.strong Note}: All {.field green} texts are fields of `pkg` which can be accessed with `pkg${.field field}`)."
+      "{.strong Note}: All {.field green} texts are fields of `pkg` which can be accessed with `pkg${.field field}`."
     ),
     col = "silver"
   )
