@@ -237,3 +237,19 @@ test_that("generated observations take the ring number of their tag", {
   pkg <- suppressMessages(read_geopressuretemplate(directory, from = "interim"))
   expect_identical(observations(pkg)$ring_number, c("R1", "R1"))
 })
+
+test_that("xlsx metadata is parsed by column name", {
+  skip_if_not_installed("readxl")
+  directory <- tempfile("template-xlsx-")
+  dir.create(file.path(directory, "data"), recursive = TRUE)
+  on.exit(unlink(directory, recursive = TRUE))
+  file.copy(
+    test_path("fixtures", "geopressuretemplate", c("tags.xlsx", "observations.xlsx")),
+    file.path(directory, "data")
+  )
+  pkg <- suppressMessages(read_geopressuretemplate(directory, from = "interim"))
+  expect_identical(tags(pkg)$ring_number, "002")
+  expect_identical(tags(pkg)$weight, 1.2)
+  expect_identical(observations(pkg)$mass, 30)
+  expect_equal(observations(pkg)$datetime, as.POSIXct("2020-01-01 06:00:00", tz = "UTC"))
+})
