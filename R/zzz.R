@@ -215,6 +215,10 @@ cast_table <- function(data, schema) {
     type <- schema_types[i]
 
     if (field %in% names(data)) {
+      # Cast factors from their labels: as.numeric() would return level codes.
+      if (is.factor(data[[field]])) {
+        data[[field]] <- as.character(data[[field]])
+      }
       if (type == "string") {
         data[[field]] <- as.character(data[[field]])
       } else if (type == "number") {
@@ -227,7 +231,13 @@ cast_table <- function(data, schema) {
       } else if (type == "date") {
         data[[field]] <- as.Date(data[[field]])
       } else if (type == "datetime") {
-        data[[field]] <- as.POSIXct(data[[field]], tz = "UTC")
+        # The default formats read ISO 8601 "2020-01-01T12:30:00Z" as a date only,
+        # so its "T" separator is replaced by the space they expect.
+        value <- data[[field]]
+        if (is.character(value)) {
+          value <- sub("T", " ", value, fixed = TRUE)
+        }
+        data[[field]] <- as.POSIXct(value, tz = "UTC")
       } else if (type == "time") {
         # For time fields, convert to character if not already
         if (!is.character(data[[field]])) {
