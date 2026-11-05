@@ -359,8 +359,9 @@ read_geopressuretemplate <- function(
       for (field in c("ring_number", "tag_comments")) {
         values <- tibble::tibble(
           tag_id = project_files$config_ids,
-          value = purrr::map_chr(raw_config[project_files$config_ids], \(x) {
-            x[[field]] %||% NA_character_
+          # Unquoted ring numbers are read from YAML as numbers.
+          value = purrr::map_chr(unname(raw_config[project_files$config_ids]), \(x) {
+            as.character(x[[field]] %||% NA)
           })
         ) |>
           filter(!is.na(.data$value))

@@ -200,3 +200,26 @@ test_that("interim import keeps simulated pressurepaths", {
   expect_identical(unique(pressurepaths(pkg)$type), "simulation")
   expect_equal(pressurepaths(pkg)$j, c(1, 2))
 })
+
+# Minimal interim project for tag AA, with an optional config.yml.
+template_interim <- function(config = NULL) {
+  directory <- tempfile("template-interim-")
+  dir.create(file.path(directory, "data", "interim"), recursive = TRUE)
+  param <- list(id = "AA", tag_create = list(manufacturer = "soi", crop_start = "2020-01-01"))
+  tag <- list(
+    param = param,
+    pressure = data.frame(date = as.POSIXct("2020-01-01", tz = "UTC"), value = 1000)
+  )
+  save(param, tag, file = file.path(directory, "data", "interim", "AA.RData"))
+  if (!is.null(config)) {
+    writeLines(config, file.path(directory, "config.yml"))
+  }
+  directory
+}
+
+test_that("numeric ring numbers in config.yml are read as text", {
+  directory <- template_interim(c("AA:", "  ring_number: 12345"))
+  on.exit(unlink(directory, recursive = TRUE))
+  pkg <- suppressMessages(read_geopressuretemplate(directory, from = "interim"))
+  expect_identical(tags(pkg)$ring_number, "12345")
+})
