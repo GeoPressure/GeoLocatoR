@@ -9,7 +9,14 @@
       class = "gldp_error_resource_not_found"
     )
   }
-  gldp_read_resource(x, resource_name = resource_name)
+  data <- gldp_read_resource(x, resource_name = resource_name)
+  # A file-backed table is cast like the tables read_gldp() loads, so the result
+  # does not depend on `force_read` (frictionless reads enums as factors).
+  resource <- gldp_resource(x, resource_name)
+  if (!is.null(resource$path)) {
+    data <- cast_table(data, resource$schema)
+  }
+  data
 }
 
 .set_resource_data <- function(x, value, resource_name, post = identity) {

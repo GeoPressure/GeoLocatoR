@@ -150,3 +150,27 @@ test_that("accessors give an instructive error for a missing resource", {
   expect_error(measurements(pkg), class = "gldp_error_resource_not_found")
   expect_error(measurements(pkg), "no .*measurements")
 })
+
+test_that("accessors return the same column types for file-backed and loaded tables", {
+  # frictionless reads enum fields such as `sensor` as factors.
+  directory <- tempfile("accessors-lazy-")
+  on.exit(unlink(directory, recursive = TRUE), add = TRUE)
+  pkg <- add_gldp_resource(
+    create_gldp(),
+    "measurements",
+    data.frame(
+      tag_id = "A",
+      sensor = "pressure",
+      datetime = as.POSIXct("2020-01-01", tz = "UTC"),
+      value = 1000,
+      label = NA_character_
+    )
+  )
+  write_gldp(pkg, directory)
+
+  lazy <- measurements(read_gldp(directory, force_read = FALSE))
+  loaded <- measurements(read_gldp(directory))
+
+  expect_identical(lapply(lazy, class), lapply(loaded, class))
+  expect_identical(lazy$sensor, "pressure")
+})
