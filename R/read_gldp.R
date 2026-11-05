@@ -86,6 +86,26 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
     if (!is.null(r[["$schema"]])) {
       r[["$schema"]] <- gsub("Rafnuss", "GeoPressure", r[["$schema"]], fixed = TRUE)
     }
+    # A GeoLocator-DP table schema given by URL is taken from the bundled
+    # schemas, so that it is read offline and can be cast and matched by name.
+    if (is.character(r$schema)) {
+      m <- regmatches(
+        r$schema,
+        regexec(
+          "GeoLocator-DP/(?:refs/tags/)?(v[0-9]+\\.[0-9]+)/([a-z]+)-table-schema\\.json$",
+          r$schema,
+          perl = TRUE
+        )
+      )[[1]]
+      if (length(m) == 3) {
+        r[["schema"]] <- gldp_resource_schema(m[2], m[3])
+      }
+    }
+    # frictionless 1.3.0 only reads a table with the Data Package v1 `profile`,
+    # which `type: "table"` replaces from GeoLocator-DP v1.1.
+    if (identical(r$type, "table") && is.null(r$profile)) {
+      r[["profile"]] <- "tabular-data-resource"
+    }
     r
   })
 
