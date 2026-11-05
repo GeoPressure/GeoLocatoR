@@ -95,6 +95,17 @@ test_that("gldp_to_eml does not use a person's name as organization", {
   expect_equal(creators[[2]]$organizationName, "Bird Institute")
 })
 
+test_that("gldp_to_eml reads the publication year of a partial date", {
+  skip_if_not_installed("EML")
+
+  tmp <- tempfile("gldp-to-eml-")
+  on.exit(unlink(tmp, recursive = TRUE))
+  pkg <- create_gldp(title = "Example package", created = "2024-06")
+  pkg$contributors <- list(list(title = "Doe, Jane", roles = "researcher"))
+
+  expect_equal(suppressMessages(gldp_to_eml(pkg, tmp))$dataset$pubDate, "2024")
+})
+
 test_that("gldp_to_eml writes the bounding box of a Point and a Polygon", {
   skip_if_not_installed("EML")
 

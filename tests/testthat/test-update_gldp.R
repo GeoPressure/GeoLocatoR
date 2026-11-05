@@ -89,3 +89,16 @@ test_that("update_gldp_number_tags counts mean_acceleration_z as activity", {
   out <- update_gldp_number_tags(pkg)
   expect_equal(out$numberTags$activity, expected_activity)
 })
+
+test_that("update_gldp_bibliographic_citation reads the year of a partial date", {
+  for (created in c("2024", "2024-06", "2024-06-01T10:00:00Z")) {
+    pkg <- create_gldp(title = "Example", created = created)
+    expect_match(
+      update_gldp_bibliographic_citation(pkg)$bibliographicCitation,
+      "(2024)",
+      fixed = TRUE
+    )
+  }
+  pkg <- create_gldp(title = "Example", created = "June 2024")
+  expect_match(update_gldp_bibliographic_citation(pkg)$bibliographicCitation, "Example")
+})
