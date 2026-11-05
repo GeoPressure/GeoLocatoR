@@ -33,8 +33,13 @@ print.geolocatordp <- function(x, ...) {
   }
 
   bullets(x, "title")
+  # Labelled by its field name: `id` is a DOI for a Zenodo package, but can be any identifier
   if (has_value(x$id)) {
-    cli_bullets(c("*" = "{.field doi}: {.url {x$id}}"))
+    if (grepl("^https?://", x$id)) {
+      cli_bullets(c("*" = "{.field id}: {.url {x$id}}"))
+    } else {
+      cli_bullets(c("*" = "{.field id}: {.val {x$id}}"))
+    }
   }
 
   if (has_value(x$contributors)) {
