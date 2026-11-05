@@ -205,7 +205,8 @@ contributors_to_persons <- function(contributors) {
 #' @noRd
 cast_table <- function(data, schema) {
   schema_fields <- schema_field_names(schema)
-  schema_types <- sapply(schema$fields, \(x) x$type)
+  # A field without `type` is `any`, the Table Schema default.
+  schema_types <- vapply(schema$fields, \(x) x$type %||% "any", character(1))
 
   for (i in seq_along(schema_fields)) {
     field <- schema_fields[i]
@@ -258,7 +259,8 @@ cast_table <- function(data, schema) {
       } else if (type == "list") {
         # Data Package v2 `list` fields are read as character by frictionless
         data[[field]] <- as.character(data[[field]])
-      } else {
+      } else if (type != "any") {
+        # `any` columns are left as they are.
         cli_warn(c(
           "!" = "No casting for {.field {field}} of type {.val {type}}."
         ))
