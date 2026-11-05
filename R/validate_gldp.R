@@ -172,7 +172,7 @@ validate_gldp_profile <- function(pkg) {
 #' @noRd
 validate_gldp_resources <- function(pkg) {
   pkg <- gldp_materialize_tables(pkg)
-  pkg <- update_gldp_order_resources(pkg)
+  pkg <- gldp_update_order_resources(pkg)
 
   valid <- TRUE
 
@@ -189,8 +189,8 @@ validate_gldp_resources <- function(pkg) {
     resource <- pkg$resources[[i]]
 
     # `type: "table"` is the Data Package v2 spelling, `profile:
-    # "tabular-data-resource"` the v1 one. Accept either so packages written by
-    # frictionless < 2.0 keep validating.
+    # "tabular-data-resource"` the v1 one. Accept either so packages written with
+    # GeoLocatoR < 1.4.0 (frictionless 1.x) keep validating.
     is_tabular_resource <- (identical(resource$type, "table") ||
       identical(resource$profile, "tabular-data-resource")) &&
       is.list(resource$schema) &&
