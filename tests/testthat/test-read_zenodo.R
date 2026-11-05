@@ -31,6 +31,16 @@ test_that("parse_zenodo_id supports Zenodo Sandbox record URLs", {
     parse_zenodo_id("https://sandbox.zenodo.org/records/470406?x=1"),
     "470406"
   )
+
+  # Upper-case DOIs, dx.doi.org, a trailing slash, www. and legacy /record/ URLs
+  ids <- c(
+    "10.5281/ZENODO.470406",
+    "https://dx.doi.org/10.5281/zenodo.470406",
+    "https://doi.org/10.5281/zenodo.470406/",
+    "https://www.zenodo.org/records/470406",
+    "https://zenodo.org/record/470406"
+  )
+  expect_identical(purrr::map_chr(ids, parse_zenodo_id), rep("470406", length(ids)))
 })
 
 test_that("read_zenodo_fetch_record does not require token for request construction", {
