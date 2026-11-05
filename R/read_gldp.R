@@ -10,6 +10,11 @@
 #' 5. upgrades older package versions when needed;
 #' 6. recomputes derived package properties with [update_gldp()].
 #'
+#' Upgrading a package older than GeoLocator-DP v1.3 converts the SOI magnetic
+#' and acceleration x/y stored by GeoPressureR < 3.8.0 to the forward-right-down
+#' frame of v1.3, when the params of the tag record the mapping that was
+#' applied. Tags whose frame is unknown are left as stored, with a warning.
+#'
 #' When present, the `datapackages` provenance catalogue is restored as a tibble,
 #' with one row per source package, as returned by [merge_gldp()].
 #'
@@ -23,8 +28,9 @@
 #'   a table schema keep their `path`.
 #'   Some tables are loaded even when `FALSE`, because their upgrade changes
 #'   values and cannot operate on file paths alone: every table of a package
-#'   older than GeoLocator-DP v1.0, and `pressurepaths` and `observations` of
-#'   a v1.0 or v1.1 package.
+#'   older than GeoLocator-DP v1.0, `pressurepaths` and `observations` of
+#'   a v1.0 or v1.1 package, and `measurements` of a package older than v1.3
+#'   whose SOI magnetic axes are converted.
 #' @param drop_measurements `r lifecycle::badge("experimental")` If `TRUE`,
 #'   drops the `measurements` resource after reading `datapackage.json` and
 #'   before the optional `force_read` step loads resource data into memory. Use
@@ -226,8 +232,9 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
 
   # Conversion
   pkg <- upgrade_gldp(pkg)
-  # Data written by buggy GeoPressureR versions are repaired whatever the GeoLocator-DP version.
-  pkg <- gldp_fix_geopressurer(pkg)
+  # Moving param keys to the GeoPressureR 3.8.0 layout changes no data, so it is
+  # safe on packages of any version.
+  pkg[["params"]] <- gldp_params_migrate(pkg$params)
 
   pkg <- update_gldp(pkg)
 

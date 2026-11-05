@@ -1,8 +1,9 @@
-#' Repair data written by GeoPressureR bugs
+#' Repair data written by GeoPressureR < 3.8.0
 #'
 #' @description
-#' Runs [gldp_fix_edges_gs()], [gldp_fix_soi_axes()] and
-#' [gldp_params_migrate()]. All are idempotent: repaired edges are consistent,
+#' Runs `gldp_fix_edges_gs()`, `gldp_fix_soi_axes()` and
+#' `gldp_params_migrate()`. Each changes data only on the evidence recorded in
+#' the params of a tag and is idempotent: repaired edges are consistent,
 #' converted tags record `param$tag_create$mag_axis` and migrated params have no
 #' old key left.
 #'
@@ -17,13 +18,14 @@ gldp_fix_geopressurer <- function(pkg) {
   pkg
 }
 
+
 #' Move GeoPressureR < 3.8.0 param keys to the GeoPressureR 3.8.0 layout
 #'
 #' @description
 #' GeoPressureR 3.8.0 stores the logger settings in `param$tag_create$settings`
 #' with normalised `model`, `firmware` and `clock_drift`, instead of
 #' `param$soi_settings`, `param$migratec_model` and `param$drift`. The old
-#' `param$mag_axis` is moved by [gldp_fix_soi_axes()], as it marks data in the
+#' `param$mag_axis` is moved by `gldp_fix_soi_axes()`, as it marks data in the
 #' old frame.
 #'
 #' @param params A list of GeoPressureR parameter objects.
@@ -117,7 +119,7 @@ gldp_edges_gs_mismatch <- function(edges, staps = NULL) {
 #' @description
 #' Recomputes `gs_u` and `gs_v` from `distance`, `bearing` (0 = north,
 #' clockwise) and the flight duration on the rows flagged by
-#' [gldp_edges_gs_mismatch()], and sets their `ws_u` and `ws_v` to missing:
+#' `gldp_edges_gs_mismatch()`, and sets their `ws_u` and `ws_v` to missing:
 #' the wind can only be recomputed from the original wind files.
 #'
 #' @param pkg A GeoLocator Data Package object.
@@ -160,12 +162,15 @@ gldp_fix_edges_gs <- function(pkg, quiet = FALSE) {
   pkg
 }
 
+
 #' Signed permutation applied by GeoPressureR `mag_axes()`
 #'
 #' @description
-#' Reproduces how GeoPressureR maps the raw SOI axes to forward-right-down for
-#' a given `mag_axis`: row k of the matrix gives the raw axis (and sign) that
-#' becomes stored axis k.
+#' Reproduces how GeoPressureR 3.4.1 to 3.7.x maps the raw SOI axes for a given
+#' `mag_axis`: row k of the matrix gives the raw axis (and sign) stored as axis
+#' k. GeoPressureR 3.8.0 inverts the permutation first, which only matters for
+#' 3-cycles: the mappings recorded by GeoPressureR 3.4.1 to 3.7.x and
+#' `c("right", "forward", "down")` are their own inverse.
 #'
 #' @param mag_axis A character vector of length 3 such as
 #'   `c("left", "backward", "down")`.
@@ -180,100 +185,85 @@ gldp_mag_axis_matrix <- function(mag_axis) {
   m
 }
 
-#' Axis convention used to store the SOI magnetic data of each tag
+#' Stored axis mapping of SOI magnetic and acceleration data
 #'
 #' @description
-#' GeoPressureR 3.8.0 maps the raw SOI axes as forward = raw y and right = raw x
-#' for all hardware (`mag_axis = c("right", "forward", "down")`). Earlier
-#' versions used `c("left", "backward", "down")` for hardware <= 2.3 and
-#' `c("backward", "left", "down")` above, recorded in `param$mag_axis`.
-#' GeoPressureR 3.8.0 records the mapping it applied, possibly chosen by the
-#' user for a reversed tag, in `param$tag_create$mag_axis`: such data are
-#' already in the new frame. Otherwise the convention is taken from the
-#' hardware version in the params settings or in `tags$model`.
+#' GeoPressureR >= 3.8.0 maps the raw SOI axes to forward = raw y, right = raw
+#' x, down = raw z (`mag_axis = c("right", "forward", "down")`), the frame of
+#' GeoLocator-DP v1.3, and records the mapping it applied, possibly a reversed
+#' mount chosen by the user, in `param$tag_create$mag_axis`. GeoPressureR 3.4.1
+#' to 3.7.x applied a hardware-dependent mapping recorded in `param$mag_axis`.
+#'
+#' Without either record, or a GeoPressureR version >= 3.8.0, the frame is
+#' unknown and no mapping is guessed: GeoPressureR < 3.4.1 stored raw counts
+#' with the magnetic and acceleration sensors swapped, GeoPressureR 3.4.1 to
+#' 3.7.x only exported x/y data after recording `param$mag_axis`, and data
+#' without params may come from any software.
+#'
+#' `measurements` is only read when params leave a SOI tag outside the
+#' GeoPressureR 3.8.0 frame.
 #'
 #' @param pkg A GeoLocator Data Package object.
-#' @return A named list by tag id of tags with magnetic or acceleration x/y
-#'   data. Each element is the `mag_axis` of the stored data relative to the
-#'   GeoPressureR 3.8.0 frame (`c("right", "forward", "down")` when there is
-#'   nothing to convert), or `NULL` when it cannot be decided.
+#' @return A named list by tag id of the SOI tags with magnetic or acceleration
+#'   x/y data that are not in the GeoPressureR 3.8.0 frame. Each element is the
+#'   `mag_axis` the data are stored with, or `NULL` when it is unknown.
 #' @noRd
 gldp_soi_mag_axis <- function(pkg) {
-  if (!"measurements" %in% frictionless::resource_names(pkg)) {
+  if (!all(c("tags", "measurements") %in% frictionless::resource_names(pkg))) {
     return(list())
   }
-  m <- gldp_read_resource(pkg, "measurements")
-  ids <- unique(as.character(m$tag_id[
-    m$sensor %in%
-      c(
-        "magnetic_x",
-        "magnetic_y",
-        "acceleration_x",
-        "acceleration_y"
-      )
-  ]))
-  t <- if ("tags" %in% frictionless::resource_names(pkg)) gldp_read_resource(pkg, "tags")
+  params <- purrr::keep(pkg$params %||% list(), \(p) !is.null(p$id))
+  params <- purrr::set_names(params, purrr::map_chr(params, \(p) as.character(p$id)))
+  t <- gldp_read_resource(pkg, "tags")
   # Only SOI tags are mapped by GeoPressureR. Published packages also spell it
   # "Swiss Ornithological Institue"; tags of unknown manufacturer are kept.
   soi <- is.na(t$manufacturer) |
     grepl("^swiss ornith|^soi$|^unknown$", t$manufacturer, ignore.case = TRUE)
-  other <- t$tag_id[!soi]
-  ids <- setdiff(ids, other)
-  params <- purrr::keep(pkg$params %||% list(), \(p) !is.null(p$id))
-  params <- purrr::set_names(params, purrr::map_chr(params, \(p) as.character(p$id)))
 
-  purrr::set_names(ids) |>
+  new_frame <- c("right", "forward", "down")
+  mag_axis <- purrr::set_names(as.character(t$tag_id[soi])) |>
     purrr::map(\(id) {
       p <- params[[id]]
-      new_frame <- !is.null(p$tag_create$mag_axis) ||
-        (!is.null(p$GeoPressureR_version) && package_version(p$GeoPressureR_version) >= "3.8.0")
-      if (new_frame) {
-        return(c("right", "forward", "down"))
+      version <- p$GeoPressureR_version
+      if (
+        !is.null(p$tag_create$mag_axis) ||
+          (!is.null(version) && package_version(version) >= "3.8.0")
+      ) {
+        return(new_frame)
       }
-      if (!is.null(p$mag_axis)) {
-        return(as.character(p$mag_axis))
-      }
-      # The hardware version ends the model: "GDL3pam-v2.3", "GDL3pam_V2.4", "HW_GDL3pam_V2.3".
-      model <- c(
-        p$tag_create$settings$model,
-        p$soi_settings[["HW Version"]],
-        p$soi_settings$HWVersion,
-        t$model[t$tag_id %in% id]
-      )
-      hw <- suppressWarnings(as.numeric(sub(
-        ".*[^0-9.]([0-9]+\\.[0-9]+)\\D*$",
-        "\\1",
-        glue::glue(" {model}")
-      )))
-      hw <- hw[!is.na(hw)][1]
-      if (is.na(hw)) {
-        return(NULL)
-      }
-      if (hw <= 2.3) c("left", "backward", "down") else c("backward", "left", "down")
-    })
+      p$mag_axis
+    }) |>
+    purrr::discard(\(a) identical(as.character(a), new_frame))
+  if (length(mag_axis) == 0) {
+    return(list())
+  }
+
+  m <- gldp_read_resource(pkg, "measurements")
+  xy <- as.character(m$tag_id[
+    m$sensor %in% c("magnetic_x", "magnetic_y", "acceleration_x", "acceleration_y")
+  ])
+  mag_axis[names(mag_axis) %in% xy]
 }
 
 #' Convert SOI magnetic and acceleration axes to the GeoPressureR 3.8.0 frame
 #'
 #' @description
 #' Rewrites `magnetic_x/y/z` and `acceleration_x/y/z` of the tags whose stored
-#' axis convention is known (see [gldp_soi_mag_axis()]) to forward = raw y,
-#' right = raw x, down = raw z. Intensity and inclination are unchanged. Tags
-#' whose convention cannot be decided are left unchanged and reported.
+#' mapping is recorded in params (see `gldp_soi_mag_axis()`) to forward = raw
+#' y, right = raw x, down = raw z, and records
+#' `param$tag_create$mag_axis = c("right", "forward", "down")` in their params,
+#' so that they are converted once. Tags whose frame is unknown are left as
+#' stored and named in one warning.
 #'
 #' @param pkg A GeoLocator Data Package object.
-#' @param quiet If `FALSE`, report converted and undecided tags.
-#' @return `pkg` with converted `measurements`.
+#' @return `pkg` with converted `measurements` and params.
 #' @noRd
-gldp_fix_soi_axes <- function(pkg, quiet = FALSE) {
+gldp_fix_soi_axes <- function(pkg) {
   mag_axis <- gldp_soi_mag_axis(pkg)
-  undecided <- names(purrr::keep(mag_axis, is.null))
+  new_frame <- c("right", "forward", "down")
   # new = P_new raw and stored = P_old raw, so new = P_new P_old' stored.
   conversion <- purrr::compact(mag_axis) |>
-    purrr::map(\(a) {
-      gldp_mag_axis_matrix(c("right", "forward", "down")) %*% t(gldp_mag_axis_matrix(a))
-    }) |>
-    purrr::discard(\(cv) all(cv == diag(3)))
+    purrr::map(\(a) gldp_mag_axis_matrix(new_frame) %*% t(gldp_mag_axis_matrix(a)))
 
   if (length(conversion) > 0) {
     pkg <- mutate_resource(pkg, "measurements", \(d) {
@@ -294,52 +284,41 @@ gldp_fix_soi_axes <- function(pkg, quiet = FALSE) {
       d$sensor <- sensor
       d
     })
-  }
-  # The data cannot tell which frame they are in: recording the new mapping
-  # makes a second read a no-op.
-  pkg <- gldp_params_set_mag_axis(pkg, names(purrr::compact(mag_axis)))
-
-  if (!quiet && length(conversion) > 0) {
+    # The data cannot tell which frame they are in: recording the new mapping
+    # makes a later conversion a no-op.
+    pkg[["params"]] <- purrr::map(pkg$params, \(p) {
+      if (as.character(p$id %||% NA) %in% names(conversion)) {
+        p$tag_create$mag_axis <- new_frame
+        p$mag_axis <- NULL
+      }
+      p
+    })
     cli_inform(c(
       "!" = "Converted the magnetic and acceleration x/y of {length(conversion)} SOI \\
-      tag{?s} to forward = raw y, right = raw x, as in GeoPressureR 3.8.0: \\
-      {.val {names(conversion)}}.",
+      tag{?s} from the axis mapping recorded in {.field mag_axis} by GeoPressureR < 3.8.0 to \\
+      forward = raw y, right = raw x: {.val {names(conversion)}}.",
       "i" = "See {.url https://github.com/GeoPressure/GeoPressureR/pull/187}.",
-      "i" = "Save the corrected package with {.fun write_gldp} and re-upload it."
+      "i" = "Save the converted package with {.fun write_gldp}."
     ))
   }
-  if (!quiet && length(undecided) > 0) {
-    cli_warn(c(
-      "!" = "Could not decide the axis convention of {length(undecided)} tag{?s} with \\
-      magnetic data: {.val {undecided}}.",
-      "i" = "Their x/y axes may be in the frame of GeoPressureR < 3.8.0."
-    ))
-  }
-  pkg
-}
 
-#' Record the GeoPressureR 3.8.0 axis mapping in params
-#'
-#' @param pkg A GeoLocator Data Package object.
-#' @param ids Tag ids whose SOI axes are in the new frame.
-#' @return `pkg` with `tag_create$mag_axis = c("right", "forward", "down")` in
-#'   the params of `ids` that have none, and the old `mag_axis` removed. A params
-#'   entry is added for tags without one.
-#' @noRd
-gldp_params_set_mag_axis <- function(pkg, ids) {
-  params <- pkg$params %||% list()
-  param_ids <- purrr::map_chr(params, \(p) as.character(p$id %||% NA))
-  for (id in ids) {
-    i <- match(id, param_ids)
-    if (is.na(i)) {
-      params <- c(params, list(list(id = id)))
-      i <- length(params)
-    }
-    # A mapping recorded by GeoPressureR >= 3.8.0 is kept: it may be a reversed mount.
-    params[[i]]$tag_create$mag_axis <- params[[i]]$tag_create$mag_axis %||%
-      c("right", "forward", "down")
-    params[[i]]$mag_axis <- NULL
+  unknown <- names(purrr::keep(mag_axis, is.null))
+  if (length(unknown) > 0) {
+    swapped <- names(purrr::keep(
+      gldp_geopressurer_version(pkg)[unknown],
+      \(v) !is.na(v) && package_version(v) < "3.4.1"
+    ))
+    cli_warn(c(
+      "!" = "The axis frame of the magnetic and acceleration x/y of {length(unknown)} SOI \\
+      tag{?s} is unknown; data left as stored: {.val {unknown}}.",
+      "i" = "GeoLocator-DP v1.3 expects forward, right and down axes, as written by \\
+      GeoPressureR >= 3.8.0. Their params record no axis mapping.",
+      "i" = if (length(swapped) > 0) {
+        "GeoPressureR < 3.4.1, used for {.val {swapped}}, stored the raw magnetic and \\
+        acceleration data swapped and uncalibrated \\
+        ({.url https://github.com/GeoPressure/GeoPressureR/commit/b1099c96})."
+      }
+    ))
   }
-  pkg[["params"]] <- params
   pkg
 }

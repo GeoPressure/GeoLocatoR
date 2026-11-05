@@ -146,6 +146,14 @@ read_soi <- function(
     )
   }
 
+  # Only the axis mapping GeoPressureR applied to the magnetic data is kept from
+  # the params: it tells later readers that the data are in the forward-right-down frame.
+  pkg[["params"]] <- purrr::compact(dtags) |>
+    purrr::keep(\(tag) !is.null(tag$param$tag_create$mag_axis)) |>
+    purrr::map(\(tag) {
+      list(id = tag$param$id, tag_create = list(mag_axis = tag$param$tag_create$mag_axis))
+    })
+
   # Compute tags.csv from gdl table
   if (nrow(gdl) == 0) {
     t_gdl <- tibble(
@@ -354,14 +362,6 @@ read_soi <- function(
       o_gdl,
       replace = TRUE
     )
-  }
-
-  # read_soi() keeps no params, so the SOI axis frame is that of the installed
-  # GeoPressureR: forward = raw y from 3.8.0, the hardware-based mapping before.
-  if (utils::packageVersion("GeoPressureR") < "3.8.0") {
-    pkg <- gldp_fix_soi_axes(pkg, quiet = TRUE)
-  } else {
-    pkg <- gldp_params_set_mag_axis(pkg, names(gldp_soi_mag_axis(pkg)))
   }
 
   # Update metadata

@@ -379,13 +379,12 @@ validate_gldp_geopressure_coherence <- function(pkg) {
   }
 
   # GeoPressureR < 3.8.0 stored SOI magnetic and acceleration x/y in another frame.
-  old_axis <- gldp_soi_mag_axis(pkg) |>
-    purrr::discard(\(a) identical(a, c("right", "forward", "down")))
+  old_axis <- gldp_soi_mag_axis(pkg)
   if (length(old_axis) > 0) {
     cli_alert_warning(
-      "The magnetic and acceleration x/y of {length(old_axis)} SOI tag{?s} may be in the \\
-      frame of GeoPressureR < 3.8.0: {.val {names(old_axis)}}. {.fun read_gldp} converts them \\
-      ({.url https://github.com/GeoPressure/GeoPressureR/pull/187})."
+      "The magnetic and acceleration x/y of {length(old_axis)} SOI tag{?s} may not be in \\
+      the forward-right-down frame: their params record no {.field tag_create$mag_axis}: \\
+      {.val {names(old_axis)}} ({.url https://github.com/GeoPressure/GeoPressureR/pull/187})."
     )
   }
 

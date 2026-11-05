@@ -18,8 +18,9 @@ removed. The \code{measurements} resource is read last, and resources without
 a table schema keep their \code{path}.
 Some tables are loaded even when \code{FALSE}, because their upgrade changes
 values and cannot operate on file paths alone: every table of a package
-older than GeoLocator-DP v1.0, and \code{pressurepaths} and \code{observations} of
-a v1.0 or v1.1 package.}
+older than GeoLocator-DP v1.0, \code{pressurepaths} and \code{observations} of
+a v1.0 or v1.1 package, and \code{measurements} of a package older than v1.3
+whose SOI magnetic axes are converted.}
 
 \item{drop_measurements}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}} If \code{TRUE},
 drops the \code{measurements} resource after reading \code{datapackage.json} and
@@ -44,6 +45,11 @@ The function:
 \item upgrades older package versions when needed;
 \item recomputes derived package properties with \code{\link[=update_gldp]{update_gldp()}}.
 }
+
+Upgrading a package older than GeoLocator-DP v1.3 converts the SOI magnetic
+and acceleration x/y stored by GeoPressureR < 3.8.0 to the forward-right-down
+frame of v1.3, when the params of the tag record the mapping that was
+applied. Tags whose frame is unknown are left as stored, with a warning.
 
 When present, the \code{datapackages} provenance catalogue is restored as a tibble,
 with one row per source package, as returned by \code{\link[=merge_gldp]{merge_gldp()}}.
