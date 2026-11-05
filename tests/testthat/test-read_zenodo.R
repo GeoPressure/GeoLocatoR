@@ -242,7 +242,7 @@ test_that("read_zenodo can read from Zenodo Sandbox", {
     skip("Set RUN_ZENODO_SANDBOX_TESTS=true to run Zenodo Sandbox integration tests.")
   }
 
-  token <- Sys.getenv("ZENODO_SANDBOX_TOKEN", unset = "")
+  token <- Sys.getenv("ZENODO_TOKEN_SANDBOX", unset = "")
   if (!nzchar(token)) {
     token <- NULL
   }
