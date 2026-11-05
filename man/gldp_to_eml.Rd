@@ -42,6 +42,8 @@ including those with role \code{"RightsHolder"}.
 \item \code{packageId}: Package identifier. If no ID is
 provided, a UUID is generated. As a result, no new DOI will be created when
 publishing to GBIF if the package ID contains a DOI.
+\item \code{system}: \code{"https://doi.org"} when the package ID is a DOI (bare or as a
+\code{doi.org} URL), \code{"uuid"} otherwise.
 }
 
 Coverage information:
