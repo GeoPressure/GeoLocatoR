@@ -235,8 +235,21 @@ plot_pkg_map <- function(x) {
   p <- paths(x) |>
     filter(.data$type == "most_likely") |>
     left_join(staps(x), by = c("stap_id", "tag_id"))
+  if (nrow(p) == 0) {
+    cli_abort(
+      "{.code type = \"map\"} draws the {.val most_likely} {.field paths}, which this package does not have."
+    )
+  }
 
-  p$duration <- GeoPressureR::stap2duration(p)
+  # Marker radius from 3 to 12 by log duration, on one scale for all tags, and a single
+  # size when all durations are equal
+  log_duration <- log1p(GeoPressureR::stap2duration(p))
+  log_range <- range(log_duration, na.rm = TRUE)
+  p$radius <- if (diff(log_range) > 0) {
+    3 + (log_duration - log_range[1]) / diff(log_range) * 9
+  } else {
+    7.5
+  }
 
   # Generate a color palette for unique tag IDs
   tag_ids <- unique(p$tag_id)
@@ -277,15 +290,7 @@ plot_pkg_map <- function(x) {
         lat = ~lat,
         data = pid,
         color = color_palette(tag),
-        radius = ~ {
-          # linear rescaling from log1p(duration) to range 3-12
-          x <- log1p(duration)
-          min_r <- 3
-          max_r <- 12
-          min_x <- min(x, na.rm = TRUE)
-          max_x <- max(x, na.rm = TRUE)
-          (x - min_x) / (max_x - min_x) * (max_r - min_r) + min_r
-        },
+        radius = ~radius,
         fillOpacity = 0.8,
         popup = ~ glue::glue("Tag ID: {tag_id}<br>stap #{stap_id}")
       )
