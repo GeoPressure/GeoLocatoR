@@ -66,3 +66,15 @@ test_that("print.geolocatordp reports access and community only for a Zenodo pac
   out <- cli::cli_fmt(print(pkg))
   expect_true(any(grepl("access: Open access", out, fixed = TRUE)))
 })
+
+test_that("print.geolocatordp labels the package identifier by its field name", {
+  pkg <- create_gldp()
+  pkg[["id"]] <- "my-local-package"
+  out <- cli::cli_fmt(print(pkg))
+  expect_true(any(grepl('id: "my-local-package"', out, fixed = TRUE)))
+  expect_false(any(grepl("doi:", out, fixed = TRUE)))
+
+  pkg[["id"]] <- "https://doi.org/10.5281/zenodo.1"
+  out <- cli::cli_fmt(print(pkg))
+  expect_true(any(grepl("id: <https://doi.org/10.5281/zenodo.1>", out, fixed = TRUE)))
+})
