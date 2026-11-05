@@ -316,6 +316,10 @@ gldp_to_tag_single <- function(pkg, tid) {
       if ("twilight" %in% names(twilight_data)) {
         twilight_data$twilight <- as.POSIXct(twilight_data$twilight, tz = "UTC")
       }
+      # GeoPressureR drops incomplete twilight rows, so an empty label must be "" rather than NA.
+      if ("label" %in% names(twilight_data)) {
+        twilight_data$label <- dplyr::coalesce(twilight_data$label, "")
+      }
 
       tag[["twilight"]] <- as.data.frame(twilight_data)
     }
