@@ -87,3 +87,34 @@ test_that("select_gldp drops the params of removed tags", {
   expect_identical(vapply(selected$params, \(param) param$id, character(1)), "AA")
   expect_null(select_gldp(create_gldp() |> add_gldp_resource("tags", tags(pkg)), "AA")$params)
 })
+
+test_that("observations without tag_id or ring_number are not kept", {
+  pkg <- create_gldp()
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = c("AA", "BB"),
+      ring_number = c(NA, "R2"),
+      scientific_name = "Upupa epops",
+      manufacturer = "soi",
+      model = "GDL3"
+    )
+  )
+  pkg <- add_gldp_resource(
+    pkg,
+    "observations",
+    data.frame(
+      ring_number = NA_character_,
+      tag_id = c("AA", NA),
+      observation_type = c("equipment", "capture"),
+      datetime = as.POSIXct("2020-01-01", tz = "UTC"),
+      latitude = 46,
+      longitude = 7,
+      age_class = "4",
+      sex = "M"
+    )
+  )
+
+  expect_identical(observations(select_gldp(pkg, "AA"))$tag_id, "AA")
+})

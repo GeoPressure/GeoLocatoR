@@ -50,7 +50,7 @@ select_gldp <- function(pkg, tag_id) {
   }
 
   keep_tag_ids <- if (exclude) setdiff(available_tag_ids, tag_id) else tag_id
-  keep_rings <- tags_data$ring_number[tags_data$tag_id %in% keep_tag_ids]
+  keep_rings <- stats::na.omit(tags_data$ring_number[tags_data$tag_id %in% keep_tag_ids])
 
   for (i in seq_along(pkg$resources)) {
     data <- pkg$resources[[i]]$data
