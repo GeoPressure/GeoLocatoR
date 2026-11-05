@@ -159,3 +159,14 @@ test_that("generated config rebuilds known from observations rather than params"
   config <- template_config_write(pkg)
   expect_equal(unlist(config$A$tag_set_map$known$stap_id), c(1, -1))
 })
+
+test_that("generated config does not apply the clock drift a second time", {
+  pkg <- template_config_pkg()
+  param <- param_create("A", default = TRUE)
+  param$tag_create$time_drift <- 0.5
+  param$tag_create$time_reference <- as.POSIXct("2020-01-01", tz = "UTC")
+  pkg[["params"]] <- list(param)
+  config <- template_config_write(pkg)
+  expect_null(config$A$tag_create$time_drift)
+  expect_null(config$A$tag_create$time_reference)
+})
