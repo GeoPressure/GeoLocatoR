@@ -208,6 +208,23 @@ test_that("validate_gldp_resources reports custom and params resources without f
   expect_message(expect_false(validate_gldp_resources(pkg)), "not a tabular resource")
 })
 
+test_that("validate_gldp_table reads Table Schema fields, not JSON-Schema properties", {
+  # A Table Schema `format` says how a column is parsed, and a field without
+  # `type` is `any`: neither should fail a valid table.
+  schema <- list(
+    name = "custom",
+    fieldsMatch = "equal",
+    fields = list(
+      list(name = "date", type = "date", format = "default"),
+      list(name = "note", constraints = list(required = FALSE))
+    )
+  )
+  expect_true(suppressMessages(validate_gldp_table(
+    data.frame(date = as.Date("2020-01-01"), note = "a"),
+    schema
+  )))
+})
+
 test_that("validate_gldp_meta checks missing title", {
   local_mocked_bindings(
     resources = function(x) character(0),

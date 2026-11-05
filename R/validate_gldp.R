@@ -19,7 +19,7 @@
 #'    are not modified.
 #'    Resources are checked against their schema: columns must match the
 #'    `fieldsMatch` rule, and each column must satisfy its declared constraints
-#'    such as type, format, requiredness, uniqueness, allowed values, patterns,
+#'    such as type, requiredness, uniqueness, allowed values, patterns,
 #'    and numeric or length limits. Rows must be unique on the schema `primaryKey`.
 #'    The tables GeoLocator-DP defines (`tags`, `observations`, ...) must be tabular
 #'    resources with a table schema. The `params` resource and custom resources are
@@ -261,7 +261,10 @@ validate_gldp_table <- function(data, schema, name = schema$name) {
     }
 
     field_name <- glue::glue("{name}${field}")
-    prop <- resolve_prop(data[[field]], prop, defs = NULL, field = field_name)
+    # A Table Schema `format` (`default`, `any`, a strptime pattern) says how the
+    # reader parses a column; it is not one of the JSON-Schema formats checked for
+    # the profile. A field without `type` is `any`, so no type is inferred either.
+    prop$format <- NULL
 
     valid <- valid & validate_gldp_item(data[[field]], prop, field_name)
   }
