@@ -19,17 +19,19 @@
 #' - `param`: parameter object (see [`GeoPressureR::param_create()`])
 #' - `pressure`: data.frame with columns `date` and `value`, plus `label` and `stap_id` when
 #'   labels are available
-#' - `light`: data.frame with columns `date` and `value` (if light data available)
+#' - `light`: data.frame with columns `date` and `value`, plus `stap_id` when labels are available
+#'   (if light data available)
 #' - `acceleration`: data.frame with columns `date`, `value` (activity measure), and optionally
 #'   `mean_acceleration_z`, `label`, and `stap_id` (when labels are available)
 #' - `temperature_external`: data.frame with columns `date` and `value`
 #'   (if external temperature data available)
 #' - `temperature_internal`: data.frame with columns `date` and `value`
 #'   (if internal temperature data available)
-#' - `magnetic`: data.frame with columns `date`, `magnetic_x`, `magnetic_y`, `magnetic_z`
-#'   (if magnetic data available)
-#' - `stap`: data.frame with columns `stap_id`, `start`, `end`, and optionally `known_lat`,
-#'   `known_lon`, `include` (if stationary periods defined)
+#' - `magnetic`: data.frame with columns `date`, `magnetic_x`, `magnetic_y`, `magnetic_z`,
+#'   `acceleration_x`, `acceleration_y`, `acceleration_z`, plus `stap_id` when labels are
+#'   available (if magnetic or raw acceleration data available)
+#' - `stap`: data.frame with columns `stap_id`, `start`, `end`, and optionally `known_lat` and
+#'   `known_lon` (if stationary periods defined)
 #' - `twilight`: data.frame with columns `twilight`, `rise`, and optionally `label`
 #'   (if twilight data available)
 #'
@@ -39,7 +41,7 @@
 #' - Filtering measurements by `tag_id`
 #' - Reshaping data from long format (measurements) to wide format (sensor-specific data.frames)
 #' - Combining related sensors (e.g., `activity` and `mean_acceleration_z` into `acceleration`;
-#'   `magnetic_x/y/z` into `magnetic`)
+#'   `magnetic_x/y/z` and `acceleration_x/y/z` into `magnetic`)
 #' - Adding stationary period (`stap`) data if available in the package
 #' - Adding twilight data if available in the package
 #' - Setting appropriate parameter values from GLDP metadata
@@ -50,15 +52,16 @@
 #' - `activity` + `mean_acceleration_z` → `acceleration` (date, value, mean_acceleration_z, label) where value = activity
 #' - `temperature_external` → `temperature_external` (date, value)
 #' - `temperature_internal` → `temperature_internal` (date, value)
-#' - `magnetic_x/y/z` → `magnetic` (date, magnetic_x, magnetic_y, magnetic_z)
+#' - `magnetic_x/y/z` + `acceleration_x/y/z` → `magnetic` (date, magnetic_x/y/z, acceleration_x/y/z)
 #'
 #' **Additional data extracted:**
 #' - `params.json` → `tag$param` when it contains parameters for the tag
-#' - `staps` table → `tag$stap` (stap_id, start, end, known_lat, known_lon, include)
+#' - `staps` table → `tag$stap` (stap_id, start, end, known_lat, known_lon)
 #' - `twilights` table → `tag$twilight` (twilight, rise, label)
 #'
-#' Note that the resulting `tag` object will have `manufacturer = "datapackage"` in its
-#' parameters, consistent with how GeoPressureR handles data from GeoLocator Data Packages.
+#' When the package has no saved parameters for the tag, `tag$param$tag_create$manufacturer`
+#' is set to `"datapackage"` to record where the data came from. It is not a manufacturer that
+#' [`GeoPressureR::tag_create()`] accepts, so the tag cannot be re-created from these parameters.
 #'
 #' @examples
 #' \dontrun{
