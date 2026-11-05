@@ -216,6 +216,20 @@ test_that("generated config keeps the param crop dates without equipment or retr
   expect_identical(config$A$tag_create$crop_end, "2020-02-01")
 })
 
+test_that("generated config uses the earliest equipment and the latest retrieval", {
+  pkg <- template_config_pkg()
+  o <- observations(pkg)
+  a <- o[o$tag_id == "A" & o$observation_type %in% c("equipment", "retrieval"), ]
+  a$datetime <- a$datetime + ifelse(a$observation_type == "equipment", 86400 * 3, -86400 * 3)
+  pkg <- add_gldp_resource(pkg, "observations", rbind(o, a), replace = TRUE)
+  expect_warning(config <- template_config_write(pkg), "earliest equipment")
+  first <- min(o$datetime[o$tag_id == "A" & o$observation_type == "equipment"])
+  last <- max(o$datetime[o$tag_id == "A" & o$observation_type == "retrieval"])
+  expect_identical(config$A$tag_create$crop_start, format(first + 86400, "%Y-%m-%d"))
+  expect_identical(config$A$tag_create$crop_end, format(last, "%Y-%m-%d"))
+  expect_identical(sum(unlist(config$A$tag_set_map$known$stap_id) %in% c(1, -1)), 2L)
+})
+
 test_that("README is written from a plain-text description", {
   directory <- tempfile("template-readme-")
   dir.create(directory)

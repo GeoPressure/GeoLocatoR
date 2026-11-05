@@ -490,6 +490,20 @@ create_geopressuretemplate_config <- function(pkg) {
           sex = .data$sex
         )
 
+      # A tag has one equipment and one retrieval: keep the earliest and the latest.
+      equipment <- which(k$stap_id == 1)
+      retrieval <- which(k$stap_id == -1)
+      if (length(equipment) > 1 || length(retrieval) > 1) {
+        cli_warn(
+          "Tag {.val {tag_id}} has {length(equipment)} equipment and {length(retrieval)} \\
+          retrieval observations; using the earliest equipment and the latest retrieval."
+        )
+        dated <- !is.na(k$datetime)
+        first_equipment <- utils::head(c(equipment[dated[equipment]], equipment), 1)
+        last_retrieval <- utils::tail(c(retrieval, retrieval[dated[retrieval]]), 1)
+        k <- k[k$stap_id == 0 | seq_len(nrow(k)) %in% c(first_equipment, last_retrieval), ]
+      }
+
       # Add sex if unique and defined (i.e., not U)
       usex <- unique(k$sex)
       usex <- usex[!is.na(usex)]
