@@ -21,10 +21,14 @@
 #'
 #' @section Transformation details:
 #' Data are transformed into an [Occurrence core](https://rs.gbif.org/core/dwc_occurrence).
-#' This transformation combines data from three resources:
+#' This transformation requires four resources:
 #' - [`tags`](https://geopressure.org/GeoLocator-DP/core/tags/): metadata about the device and deployment
+#' - [`observations`](https://geopressure.org/GeoLocator-DP/core/observations/): sex, age class and comments recorded for the bird
 #' - [`staps`](https://geopressure.org/GeoLocator-DP/geopressurer/staps/): stationary periods with temporal information
 #' - [`paths`](https://geopressure.org/GeoLocator-DP/geopressurer/paths/): spatial positions estimated for each stationary period
+#'
+#' [`pressurepaths`](https://geopressure.org/GeoLocator-DP/geopressurer/pressurepaths/)
+#' is used for elevations when present.
 #'
 #' The following terms are set from normalized package metadata
 #' (sourced from top-level package fields):
@@ -53,8 +57,9 @@
 #'   tracked individual.
 #' - `occurrenceID` combines `ring_number`, `tag_id`, and `stap_id`.
 #' - `occurrenceStatus` is set to `"present"`.
-#' - `sex`, `lifeStage`, and `eventRemarks` are included from matching
-#'   observations when available.
+#' - `sex`, `lifeStage`, and `eventRemarks` are taken from the tag's observations,
+#'   each matched to the stationary period that contains it or, failing that, to
+#'   the nearest one within 14 days.
 #' - `minimumElevationInMeters` and `maximumElevationInMeters` are estimated
 #'   from `pressurepaths$altitude` when available.
 #' - Reconstructed-location uncertainty uses the 95th percentile of distances
