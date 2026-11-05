@@ -84,7 +84,8 @@ gldp_to_eml <- function(pkg, directory) {
     is_html_like <- grepl("<[^>]+>|&[A-Za-z#0-9]+;", x, perl = TRUE)
     x[is_html_like] <- vapply(
       x[is_html_like],
-      \(value) rvest::read_html(value) |> rvest::html_text2(),
+      # Wrap in a tag so that text without one is not read as a file path.
+      \(value) rvest::read_html(glue::glue("<div>{value}</div>")) |> rvest::html_text2(),
       character(1),
       USE.NAMES = FALSE
     )

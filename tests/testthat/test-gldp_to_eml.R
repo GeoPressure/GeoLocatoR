@@ -175,3 +175,12 @@ test_that("gldp_to_eml returns the EML list without writing for a NULL directory
   expect_equal(eml$dataset$title, "Example package")
   expect_length(list.files(), 0)
 })
+
+test_that("gldp_to_eml decodes HTML entities in text without tags", {
+  skip_if_not_installed("EML")
+
+  pkg <- create_gldp(title = "Hoopoe &amp; friends")
+  pkg$contributors <- list(list(title = "Doe, Jane", givenName = "Jane", familyName = "Doe"))
+  eml <- gldp_to_eml(pkg, NULL)
+  expect_equal(eml$dataset$title, "Hoopoe & friends")
+})
