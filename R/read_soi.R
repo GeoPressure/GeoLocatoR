@@ -356,6 +356,14 @@ read_soi <- function(
     )
   }
 
+  # read_soi() keeps no params, so the SOI axis frame is that of the installed
+  # GeoPressureR: forward = raw y from 3.8.0, the hardware-based mapping before.
+  if (utils::packageVersion("GeoPressureR") < "3.8.0") {
+    pkg <- gldp_fix_soi_axes(pkg, quiet = TRUE)
+  } else if (length(gldp_soi_mag_axis(pkg)) > 0) {
+    pkg[["soiMagAxis"]] <- c("right", "forward", "down")
+  }
+
   # Update metadata
   pkg <- pkg |>
     gldp_update_taxonomic() |>

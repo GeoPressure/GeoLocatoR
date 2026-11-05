@@ -562,6 +562,8 @@ read_geopressuretemplate <- function(
 
     # Store params as a top-level pkg property (serialized to params.json when writing package).
     pkg$params <- normalize_gldp_params(params)
+    # Interim files may come from GeoPressureR versions with known bugs; params tell which.
+    pkg <- gldp_fix_geopressurer(pkg)
 
     if (added_any) {
       pkg <- pkg |>

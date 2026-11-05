@@ -356,6 +356,38 @@ validate_gldp_geopressure_coherence <- function(pkg) {
     if (unusual_speed) {
       cli_alert_warning("We detected unusual speed for edges.")
     }
+
+    # GeoPressureR 3.2.0 to 3.7.0 assigned gs/ws of simulated edges to the wrong flight.
+    staps_data <- if ("staps" %in% resource_names) staps(pkg)
+    mismatch <- gldp_edges_gs_mismatch(edges_data, staps_data)
+    n_checked <- sum(!is.na(mismatch))
+    if (any(mismatch, na.rm = TRUE)) {
+      buggy <- names(
+        gldp_geopressurer_version(pkg) |>
+          purrr::keep(\(v) package_version(v) >= "3.2.0" & package_version(v) < "3.7.1")
+      )
+      cli_alert_warning(
+        "{sum(mismatch, na.rm = TRUE)} of {n_checked} checked simulated {.field edges} \\
+        row{?s} ({round(100 * mean(mismatch, na.rm = TRUE))}%) have a groundspeed that does \\
+        not match {.field distance} over the flight duration, as written by GeoPressureR \\
+        3.2.0 to 3.7.0. Their {.field ws_u}/{.field ws_v} are also wrong."
+      )
+      if (length(buggy) > 0) {
+        cli_alert_info("Tags created with GeoPressureR 3.2.0 to 3.7.0: {.val {buggy}}.")
+      }
+    }
+  }
+
+  # GeoPressureR < 3.8.0 stored SOI magnetic and acceleration x/y in another frame.
+  if (is.null(pkg[["soiMagAxis"]])) {
+    old_axis <- gldp_soi_mag_axis(pkg) |>
+      purrr::discard(\(a) identical(a, c("right", "forward", "down")))
+    if (length(old_axis) > 0) {
+      cli_alert_warning(
+        "The magnetic and acceleration x/y of {length(old_axis)} SOI tag{?s} may be in the \\
+        frame of GeoPressureR < 3.8.0: {.val {names(old_axis)}}. {.fun read_gldp} converts them."
+      )
+    }
   }
 
   # Check that child foreign key values are present in parent resources.

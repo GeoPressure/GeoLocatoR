@@ -226,6 +226,8 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
 
   # Conversion
   pkg <- upgrade_gldp(pkg)
+  # Data written by buggy GeoPressureR versions are repaired whatever the GeoLocator-DP version.
+  pkg <- gldp_fix_geopressurer(pkg)
 
   pkg <- update_gldp(pkg)
 
