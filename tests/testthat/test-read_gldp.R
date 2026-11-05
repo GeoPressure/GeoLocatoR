@@ -77,6 +77,37 @@ test_that("read_gldp identifies an unreadable resource", {
   )
 })
 
+test_that("read_gldp leaves resources that are not tables on their path", {
+  # The profile allows custom resources and a `params` resource. They have no
+  # table schema, so they cannot be read as tables.
+  source_dir <- tempfile("read-custom-source-")
+  directory <- tempfile("read-custom-")
+  on.exit(unlink(c(source_dir, directory), recursive = TRUE), add = TRUE)
+  dir.create(source_dir)
+  writeLines("A note", file.path(source_dir, "notes.txt"))
+
+  pkg <- add_gldp_resource(
+    create_gldp(),
+    "tags",
+    data.frame(
+      tag_id = "A",
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "test",
+      model = "test"
+    )
+  )
+  pkg[["resources"]] <- c(pkg[["resources"]], list(list(name = "notes", path = "notes.txt")))
+  attr(pkg, "directory") <- source_dir
+  write_gldp(pkg, directory)
+
+  pkg_back <- read_gldp(directory)
+
+  expect_identical(gldp_resource(pkg_back, "notes")$path, "notes.txt")
+  expect_null(gldp_resource(pkg_back, "notes")$data)
+  expect_identical(tags(pkg_back)$tag_id, "A")
+})
+
 test_that("read_gldp handles invalid input", {
   # Test with non-existent file
   expect_error(read_gldp("nonexistent.json"))
