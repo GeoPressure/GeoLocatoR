@@ -13,8 +13,9 @@
 #' - dates and times as ISO 8601 text, in UTC and to the second;
 #' - version numbers (e.g. `GeoPressureR_version`) as text;
 #' - functions and unevaluated calls as their R source text;
-#' - a scalar `NA`, `Inf` or `NaN`, and `NA` in text, as the text `"NA"`,
-#'   `"Inf"` or `"NaN"` (numeric vectors of length > 1 keep them);
+#' - a scalar `NA`, and `NA` in text, as the text `"NA"` (numeric vectors of
+#'   length > 1 keep it), and a text `"Inf"`, `"-Inf"` or `"NaN"` of length 1
+#'   as a number;
 #' - a vector or column of missing values only as logical;
 #' - empty vectors as empty lists, and atomic vectors without their names;
 #' - objects without their R class (such as `param`, `twl_calib` or glue

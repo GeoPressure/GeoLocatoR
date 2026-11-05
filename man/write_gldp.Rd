@@ -30,8 +30,9 @@ R. JSON has no R types, so reading it back with \code{\link[=read_gldp]{read_gld
 \item dates and times as ISO 8601 text, in UTC and to the second;
 \item version numbers (e.g. \code{GeoPressureR_version}) as text;
 \item functions and unevaluated calls as their R source text;
-\item a scalar \code{NA}, \code{Inf} or \code{NaN}, and \code{NA} in text, as the text \code{"NA"},
-\code{"Inf"} or \code{"NaN"} (numeric vectors of length > 1 keep them);
+\item a scalar \code{NA}, and \code{NA} in text, as the text \code{"NA"} (numeric vectors of
+length > 1 keep it), and a text \code{"Inf"}, \code{"-Inf"} or \code{"NaN"} of length 1
+as a number;
 \item a vector or column of missing values only as logical;
 \item empty vectors as empty lists, and atomic vectors without their names;
 \item objects without their R class (such as \code{param}, \code{twl_calib} or glue

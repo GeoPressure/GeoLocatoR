@@ -68,10 +68,10 @@ test_that("params of a GeoPressureR interim file survive a write/read round trip
   expect_equal(back$geolight_map$twl_calib$y, param$geolight_map$twl_calib$y, tolerance = 1e-14)
   expect_equal(back$twilight_create, param$twilight_create, tolerance = 1e-14)
 
-  # Lossy by design: JSON has no version, function, time or non-finite scalar.
+  # Lossy by design: JSON has no version, function or time; Inf is restored.
   expect_identical(back$GeoPressureR_version, as.character(param$GeoPressureR_version))
   expect_type(back$geolight_map$twl_llp, "character")
-  expect_identical(back$geolight_map$fitted_location_duration, "Inf")
+  expect_identical(back$geolight_map$fitted_location_duration, Inf)
   expect_type(back$geolight_map$twl_calib$calib_stap$start, "character")
 
   # The tag GeoPressureR gets back holds the same parameters.

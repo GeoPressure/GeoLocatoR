@@ -245,7 +245,7 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
           # Plain JSON, as written by write_gldp(). Each param is parsed on its own
           # so that its arrays of records become data frames, but not the list of params.
           purrr::map(json, \(p) {
-            jsonlite::fromJSON(
+            p <- jsonlite::fromJSON(
               jsonlite::toJSON(
                 p,
                 auto_unbox = TRUE,
@@ -255,6 +255,15 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
               ),
               simplifyDataFrame = TRUE,
               simplifyMatrix = FALSE
+            )
+            # write_gldp() writes Inf as "Inf", which jsonlite only reads back as a
+            # number within a numeric array. GeoPressureR defaults such as
+            # `fitted_location_duration` are Inf.
+            rapply(
+              p,
+              \(x) if (length(x) == 1 && x %in% c("Inf", "-Inf", "NaN")) as.numeric(x) else x,
+              classes = "character",
+              how = "replace"
             )
           })
         }
