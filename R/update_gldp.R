@@ -195,18 +195,14 @@ update_gldp_number_tags <- function(pkg) {
 update_gldp_bibliographic_citation <- function(pkg, ...) {
   check_gldp(pkg)
 
-  doi_raw <- first_non_empty_string(pkg$conceptid, pkg$id)
-  doi <- if (!is.null(doi_raw)) {
-    doi_candidate <- sub(
-      "^https?://(dx\\.)?doi\\.org/",
-      "",
-      as.character(doi_raw)[1],
-      ignore.case = TRUE
-    )
-    if (grepl("^10\\.", doi_candidate)) doi_candidate else NULL
-  } else {
-    NULL
-  }
+  # First DOI among the concept id (citing all versions) and the version id.
+  doi_candidates <- sub(
+    "^https?://(dx\\.)?doi\\.org/",
+    "",
+    as.character(c(pkg$conceptid, pkg$id)),
+    ignore.case = TRUE
+  )
+  doi <- purrr::detect(doi_candidates, \(x) grepl("^10\\.", x))
 
   has_doi <- !is.null(doi) && nzchar(doi)
 
