@@ -4,7 +4,8 @@
 #' Convert a list of GeoPressureR `tag` objects into the long-format
 #' `measurements` table used by GeoLocator Data Packages.
 #'
-#' @param tags A list of GeoPressureR `tag` objects.
+#' @param tag_list A list of GeoPressureR `tag` objects.
+#' @param tags `r lifecycle::badge("deprecated")` Use `tag_list` instead.
 #'
 #' @return A [tibble::tibble()] data frame with columns:
 #' \describe{
@@ -33,7 +34,16 @@
 #'   objects.
 #'
 #' @export
-tags_to_measurements <- function(tags) {
+tags_to_measurements <- function(tag_list, tags = lifecycle::deprecated()) {
+  # `tags` clashed with the tags resource and the tags() accessor
+  if (lifecycle::is_present(tags)) {
+    lifecycle::deprecate_warn(
+      when = "1.4.0",
+      what = "tags_to_measurements(tags)",
+      with = "tags_to_measurements(tag_list)"
+    )
+    tag_list <- tags
+  }
   sensor_types <- c(
     "pressure",
     "acceleration",
@@ -60,8 +70,8 @@ tags_to_measurements <- function(tags) {
   )
   all_measurements <- list()
 
-  for (i in seq_along(tags)) {
-    tag <- tags[[i]]
+  for (i in seq_along(tag_list)) {
+    tag <- tag_list[[i]]
     tag_id <- tryCatch(
       {
         tag$param$id

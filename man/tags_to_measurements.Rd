@@ -4,10 +4,12 @@
 \alias{tags_to_measurements}
 \title{Transform Tags to a Tidy Data Frame}
 \usage{
-tags_to_measurements(tags)
+tags_to_measurements(tag_list, tags = lifecycle::deprecated())
 }
 \arguments{
-\item{tags}{A list of GeoPressureR \code{tag} objects.}
+\item{tag_list}{A list of GeoPressureR \code{tag} objects.}
+
+\item{tags}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} Use \code{tag_list} instead.}
 }
 \value{
 A \code{\link[tibble:tibble]{tibble::tibble()}} data frame with columns:
