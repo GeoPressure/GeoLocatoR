@@ -180,12 +180,52 @@ test_that("validate_gldp_resources accepts v1 and v2 tabular resources", {
   ))
 })
 
-test_that("validate_gldp_meta checks missing title", {
-  local_mocked_bindings(
-    resources = function(x) character(0),
-    .package = "frictionless"
+test_that("validate_gldp_resources reports custom and params resources without failing", {
+  # The profile allows `params` and custom resources to be any file. Only the
+  # tables GeoLocator-DP defines must be tabular.
+  pkg <- create_gldp()
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = "AA",
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "test",
+      model = "test"
+    )
   )
+  pkg[["resources"]] <- c(
+    pkg$resources,
+    list(
+      list(name = "params", path = "params.json"),
+      list(name = "readme", path = "readme.pdf")
+    )
+  )
+  expect_message(expect_true(validate_gldp_resources(pkg)), "is not checked")
 
+  pkg[["resources"]][[1]]$schema <- NULL
+  expect_message(expect_false(validate_gldp_resources(pkg)), "not a tabular resource")
+})
+
+test_that("validate_gldp_table reads Table Schema fields, not JSON-Schema properties", {
+  # A Table Schema `format` says how a column is parsed, and a field without
+  # `type` is `any`: neither should fail a valid table.
+  schema <- list(
+    name = "custom",
+    fieldsMatch = "equal",
+    fields = list(
+      list(name = "date", type = "date", format = "default"),
+      list(name = "note", constraints = list(required = FALSE))
+    )
+  )
+  expect_true(suppressMessages(validate_gldp_table(
+    data.frame(date = as.Date("2020-01-01"), note = "a"),
+    schema
+  )))
+})
+
+test_that("validate_gldp_meta checks missing title", {
   pkg <- pkg_shared
   pkg[["title"]] <- ""
   pkg[["contributors"]] <- list(list(roles = "author"))
@@ -198,11 +238,6 @@ test_that("validate_gldp_meta checks missing title", {
 })
 
 test_that("validate_gldp_meta checks title prefix", {
-  local_mocked_bindings(
-    resources = function(x) character(0),
-    .package = "frictionless"
-  )
-
   pkg <- pkg_shared
   pkg[["title"]] <- "Wrong title"
   pkg[["contributors"]] <- list(list(roles = "author"))
@@ -215,11 +250,6 @@ test_that("validate_gldp_meta checks title prefix", {
 })
 
 test_that("validate_gldp_meta checks contributor role completeness", {
-  local_mocked_bindings(
-    resources = function(x) character(0),
-    .package = "frictionless"
-  )
-
   pkg <- pkg_shared
   pkg[["title"]] <- "GeoLocator Data Package: Example"
   pkg[["contributors"]] <- list(list(roles = character(0)))
@@ -232,11 +262,6 @@ test_that("validate_gldp_meta checks contributor role completeness", {
 })
 
 test_that("validate_gldp_meta checks record_type is dataset", {
-  local_mocked_bindings(
-    resources = function(x) character(0),
-    .package = "frictionless"
-  )
-
   pkg <- pkg_shared
   pkg[["title"]] <- "GeoLocator Data Package: Example"
   pkg[["contributors"]] <- list(list(roles = "author"))
@@ -249,10 +274,6 @@ test_that("validate_gldp_meta checks record_type is dataset", {
 })
 
 test_that("validate_gldp_meta checks allowed manufacturers", {
-  local_mocked_bindings(
-    resources = function(x) "tags",
-    .package = "frictionless"
-  )
   local_mocked_bindings(
     tags = function(x) {
       data.frame(manufacturer = "Unknown Manufacturer", stringsAsFactors = FALSE)
@@ -272,11 +293,6 @@ test_that("validate_gldp_meta checks allowed manufacturers", {
 })
 
 test_that("validate_gldp_meta checks relatedIdentifiers presence", {
-  local_mocked_bindings(
-    resources = function(x) character(0),
-    .package = "frictionless"
-  )
-
   pkg <- pkg_shared
   pkg[["title"]] <- "GeoLocator Data Package: Example"
   pkg[["contributors"]] <- list(list(roles = "author"))
@@ -289,11 +305,6 @@ test_that("validate_gldp_meta checks relatedIdentifiers presence", {
 })
 
 test_that("validate_gldp_meta checks selected community", {
-  local_mocked_bindings(
-    resources = function(x) character(0),
-    .package = "frictionless"
-  )
-
   pkg <- pkg_shared
   pkg[["title"]] <- "GeoLocator Data Package: Example"
   pkg[["contributors"]] <- list(list(roles = "author"))
@@ -306,11 +317,6 @@ test_that("validate_gldp_meta checks selected community", {
 })
 
 test_that("validate_gldp_meta checks codeRepository URL", {
-  local_mocked_bindings(
-    resources = function(x) character(0),
-    .package = "frictionless"
-  )
-
   pkg <- pkg_shared
   pkg[["title"]] <- "GeoLocator Data Package: Example"
   pkg[["contributors"]] <- list(list(roles = "author"))
@@ -323,10 +329,6 @@ test_that("validate_gldp_meta checks codeRepository URL", {
 })
 
 test_that("validate_gldp_meta checks taxonomic names against eBird taxonomy", {
-  local_mocked_bindings(
-    resources = function(x) character(0),
-    .package = "frictionless"
-  )
   local_mocked_bindings(
     request = function(url) list(url = url),
     req_headers = function(req, ...) req,
@@ -582,4 +584,51 @@ test_that("foreign-key validation reports missing child and parent columns", {
   resource$data$stap_id <- NULL
   gldp_resource(pkg, "staps") <- resource
   expect_message(expect_false(validate_gldp_geopressure_coherence(pkg)), "missing parent fields")
+})
+
+test_that("coherence checks accept observations without optional columns", {
+  pkg <- create_gldp()
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = "AA",
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "test",
+      model = "test"
+    )
+  )
+  pkg <- add_gldp_resource(
+    pkg,
+    "observations",
+    data.frame(
+      ring_number = "R1",
+      observation_type = "capture",
+      datetime = as.POSIXct("2020-01-01", tz = "UTC"),
+      latitude = 47,
+      longitude = 8,
+      age_class = "0",
+      sex = "U"
+    )
+  )
+  expect_no_error(suppressMessages(validate_gldp_coherence(pkg)))
+  expect_true(suppressMessages(validate_gldp_observations(observations(pkg))))
+  expect_true(suppressMessages(validate_gldp_geopressure_coherence(pkg)))
+})
+
+test_that("coherence checks report a missing observations resource without erroring", {
+  pkg <- create_gldp()
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = "AA",
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "test",
+      model = "test"
+    )
+  )
+  expect_false(suppressMessages(validate_gldp_coherence(pkg)))
 })

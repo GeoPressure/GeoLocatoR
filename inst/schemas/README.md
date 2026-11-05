@@ -11,14 +11,15 @@ Supported versions are defined once in:
 
 ## Refresh workflow
 
-When GeoLocator-DP schemas change, refresh local files from repository root:
+After a GeoLocator-DP release, refresh local files from the repository root:
 
 ```r
 source("data-raw/sync_schemas.R")
 sync_gldp_schemas()
 ```
 
-This script syncs every version listed in `.gldp_supported_versions` into:
+This script syncs the released tag of every version listed in
+`.gldp_supported_versions`, except `main`, into:
 
 - `inst/schemas/<version>/geolocator-dp-profile.json`
 - `inst/schemas/<version>/<resource>-table-schema.json`

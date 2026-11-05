@@ -7,7 +7,7 @@
 
 [![Lifecycle:
 stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
-[![R-CMD-check](https://github.com/GeoPressure/GeoLocatoR/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/GeoPressure/GeoLocatoR/actions/workflows/R-CMD-check.yaml)
+[![R-CMD-check](https://github.com/GeoPressure/GeoLocatoR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/GeoPressure/GeoLocatoR/actions/workflows/R-CMD-check.yaml)
 [![pkgdown.yaml](https://github.com/GeoPressure/GeoLocatoR/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/GeoPressure/GeoLocatoR/actions/workflows/pkgdown.yaml)
 [![jarl](https://github.com/GeoPressure/GeoLocatoR/actions/workflows/jarl-check.yml/badge.svg)](https://github.com/GeoPressure/GeoLocatoR/actions/workflows/jarl-check.yml)
 [![format](https://github.com/GeoPressure/GeoLocatoR/actions/workflows/format-check.yml/badge.svg)](https://github.com/GeoPressure/GeoLocatoR/actions/workflows/format-check.yml)
@@ -35,7 +35,7 @@ data is organized, accessible, and ready to share.
 - **Integration with GeoPressureTemplate**: GeoLocatoR is compatible
   with
   [GeoPressureTemplate](https://github.com/GeoPressure/GeoPressureTemplate)
-  — a template repository for analyzing geolocator data using
+  — a template repository for analysing geolocator data using
   GeoPressureR. Use both together to streamline your analysis and
   maintain a standardized project structure.
 - **Built on frictionless**: This package is built using the

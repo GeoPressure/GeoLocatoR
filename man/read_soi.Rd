@@ -8,14 +8,23 @@ read_soi(gdl, directory_data, generate_observations = TRUE)
 }
 \arguments{
 \item{gdl}{A data frame of SOI export metadata, typically returned by
-\code{\link[=read_soi_gld]{read_soi_gld()}}. It must contain at least \code{GDL_ID} and the fields needed
-to derive package metadata.}
+\code{\link[=read_soi_gld]{read_soi_gld()}}. It must contain at least \code{GDL_ID}, \code{OrderName} unless it
+has a \code{directory} column, and the fields needed to derive package
+metadata. \code{tags$attachment_type} is built from the
+harness columns (\code{Harness_data}, \code{HarnessMaterial_data},
+\code{HarnessAttachement_data}, \code{HarnessThickness}, \code{LegHarnessDiameter},
+\code{BreastHarnessDiameterHead} and \code{BreastHarnessDiameterTail}), which
+\code{read_soi_gld(filter_col = TRUE)} does not keep: use \code{filter_col = FALSE}
+to include them.}
 
 \item{directory_data}{Path to the directory containing SOI raw tag files or
-folders.}
+folders, in one sub-folder per \code{OrderName}. Not used when \code{gdl} already has
+a \code{directory} column.}
 
-\item{generate_observations}{A logical value indicating whether to create pre-filled
-\code{observations} rows for equipment and retrieval events.}
+\item{generate_observations}{A logical value. Equipment and retrieval
+\code{observations} are always created from the dates in \code{gdl}. If \code{TRUE}, rows
+are also created without a datetime, as placeholders to fill in; if \code{FALSE},
+only rows with a known datetime are kept.}
 }
 \value{
 A \code{geolocatordp} object.

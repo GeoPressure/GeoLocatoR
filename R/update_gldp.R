@@ -3,9 +3,10 @@
 #' @description
 #' Updates and stores the following derived package properties:
 #'
-#' - `update_gldp_temporal()`: date range from `measurements$datetime`.
-#' - `update_gldp_taxonomic()`: species vector from `tags`, optionally filtered
-#'   to tags present in `measurements`.
+#' - `update_gldp_temporal()`: date range from `measurements$datetime`, left
+#'   unchanged when the package has no `measurements`.
+#' - `update_gldp_taxonomic()`: species vector from `tags`, restricted to tags
+#'   present in `measurements` when the package has measurements.
 #' - `update_gldp_number_tags()`: counts by resource and sensor.
 #' - `update_gldp_bibliographic_citation()`: formatted citation from package
 #'   metadata.
@@ -23,6 +24,7 @@
 #' @seealso [read_gldp()] and [read_zenodo()] call this function after reading,
 #'   and the resource setters such as [tags()] and [measurements()] update
 #'   selected derived properties automatically.
+#' @order 1
 #' @export
 update_gldp <- function(pkg, ...) {
   pkg <- pkg |>
@@ -38,6 +40,7 @@ update_gldp <- function(pkg, ...) {
 #' Reorder resources to schema order
 #'
 #' @rdname update_gldp
+#' @order 2
 #' @export
 update_gldp_order_resources <- function(pkg) {
   check_gldp(pkg)
@@ -70,13 +73,14 @@ update_gldp_order_resources <- function(pkg) {
 #' Recompute package temporal coverage
 #'
 #' @rdname update_gldp
+#' @order 3
 #' @export
 update_gldp_temporal <- function(pkg) {
   check_gldp(pkg)
   resources <- frictionless::resource_names(pkg)
 
+  # Without measurements (e.g. `read_gldp(drop_measurements = TRUE)`), keep the recorded coverage.
   if (!"measurements" %in% resources) {
-    pkg$temporal <- NULL
     return(pkg)
   }
 
@@ -103,6 +107,7 @@ update_gldp_temporal <- function(pkg) {
 #' Recompute package taxonomic coverage
 #'
 #' @rdname update_gldp
+#' @order 4
 #' @export
 update_gldp_taxonomic <- function(pkg) {
   check_gldp(pkg)
@@ -144,6 +149,7 @@ update_gldp_taxonomic <- function(pkg) {
 #' Recompute tag counts by resource and sensor
 #'
 #' @rdname update_gldp
+#' @order 5
 #' @export
 update_gldp_number_tags <- function(pkg) {
   check_gldp(pkg)
@@ -191,34 +197,26 @@ update_gldp_number_tags <- function(pkg) {
 #' Recompute bibliographic citation text
 #'
 #' @rdname update_gldp
+#' @order 6
 #' @export
 update_gldp_bibliographic_citation <- function(pkg, ...) {
   check_gldp(pkg)
 
-  doi_raw <- first_non_empty_string(pkg$conceptid, pkg$id)
-  doi <- if (!is.null(doi_raw)) {
-    doi_candidate <- sub(
-      "^https?://(dx\\.)?doi\\.org/",
-      "",
-      as.character(doi_raw)[1],
-      ignore.case = TRUE
-    )
-    if (grepl("^10\\.", doi_candidate)) doi_candidate else NULL
-  } else {
-    NULL
-  }
+  # First DOI among the concept id (citing all versions) and the version id.
+  doi_candidates <- sub(
+    "^https?://(dx\\.)?doi\\.org/",
+    "",
+    as.character(c(pkg$conceptid, pkg$id)),
+    ignore.case = TRUE
+  )
+  doi <- purrr::detect(doi_candidates, \(x) grepl("^10\\.", x))
 
   has_doi <- !is.null(doi) && nzchar(doi)
 
+  # Year of the ISO 8601 `created` date, which may also be a bare year or year-month.
   year_source <- first_non_empty_string(pkg$created)
-  year <- NULL
-  if (is_non_empty_string(year_source)) {
-    parsed <- suppressWarnings(as.Date(substr(year_source, 1, 10)))
-    if (!is.na(parsed)) {
-      year <- format(parsed, "%Y")
-    } else if (grepl("^[0-9]{4}", year_source)) {
-      year <- substr(year_source, 1, 4)
-    }
+  year <- if (!is.null(year_source) && grepl("^[0-9]{4}", year_source)) {
+    substr(year_source, 1, 4)
   }
 
   author <- if (!is.null(pkg$contributors)) contributors_to_persons(pkg$contributors) else NULL

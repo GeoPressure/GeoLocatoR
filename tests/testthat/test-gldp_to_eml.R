@@ -42,3 +42,103 @@ test_that("gldp_to_eml handles lowercase roles and title-only contributors", {
   expect_true(length(eml$dataset$contact) >= 1)
   expect_true(length(eml$dataset$creator) >= 1)
 })
+
+test_that("gldp_to_eml writes valid EML without a creator or contact role", {
+  skip_if_not_installed("EML")
+
+  tmp <- tempfile("gldp-to-eml-")
+  on.exit(unlink(tmp, recursive = TRUE))
+  pkg <- create_gldp(title = "Example package")
+  pkg$contributors <- list(
+    list(title = "Doe, Jane", givenName = "Jane", familyName = "Doe", roles = "datacollector"),
+    list(title = "Roe, Rick", givenName = "Rick", familyName = "Roe", roles = "supervisor")
+  )
+
+  eml <- suppressMessages(gldp_to_eml(pkg, tmp))
+  expect_length(eml$dataset$creator, 2)
+  expect_equal(eml$dataset$contact[[1]]$individualName$surName, "Doe")
+})
+
+test_that("gldp_to_eml adds a rights holder once", {
+  skip_if_not_installed("EML")
+
+  tmp <- tempfile("gldp-to-eml-")
+  on.exit(unlink(tmp, recursive = TRUE))
+  pkg <- create_gldp(title = "Example package")
+  pkg$contributors <- list(
+    list(title = "Doe, Jane", roles = "researcher"),
+    list(title = "Bird Institute", roles = "rightsholder"),
+    list(title = "Roe, Rick", roles = c("rightsholder", "datacollector"))
+  )
+
+  parties <- suppressMessages(gldp_to_eml(pkg, tmp))$dataset$associatedParty
+  roles <- vapply(parties, \(party) party$role, character(1))
+  names <- vapply(parties, \(party) party$organizationName, character(1))
+  expect_equal(roles, c("rightsHolder", "datacollector", "rightsHolder"))
+  expect_equal(names, c("Bird Institute", "Roe, Rick", "Roe, Rick"))
+})
+
+test_that("gldp_to_eml does not use a person's name as organization", {
+  skip_if_not_installed("EML")
+
+  tmp <- tempfile("gldp-to-eml-")
+  on.exit(unlink(tmp, recursive = TRUE))
+  pkg <- create_gldp(title = "Example package")
+  pkg$contributors <- list(
+    list(title = "Doe, Jane", givenName = "Jane", familyName = "Doe", roles = "researcher"),
+    list(title = "Bird Institute", roles = "researcher")
+  )
+
+  creators <- suppressMessages(gldp_to_eml(pkg, tmp))$dataset$creator
+  expect_null(creators[[1]]$organizationName)
+  expect_equal(creators[[1]]$individualName$surName, "Doe")
+  expect_equal(creators[[2]]$organizationName, "Bird Institute")
+})
+
+test_that("gldp_to_eml reads the publication year of a partial date", {
+  skip_if_not_installed("EML")
+
+  tmp <- tempfile("gldp-to-eml-")
+  on.exit(unlink(tmp, recursive = TRUE))
+  pkg <- create_gldp(title = "Example package", created = "2024-06")
+  pkg$contributors <- list(list(title = "Doe, Jane", roles = "researcher"))
+
+  expect_equal(suppressMessages(gldp_to_eml(pkg, tmp))$dataset$pubDate, "2024")
+})
+
+test_that("gldp_to_eml writes the bounding box of a Point and a Polygon", {
+  skip_if_not_installed("EML")
+
+  tmp <- tempfile("gldp-to-eml-")
+  on.exit(unlink(tmp, recursive = TRUE))
+  pkg <- create_gldp(title = "Example package")
+  pkg$contributors <- list(list(title = "Doe, Jane", roles = "researcher"))
+
+  # upgrade_gldp() builds a Point from the former referenceLocation.
+  pkg$spatial <- list(type = "Point", coordinates = c(8, 46))
+  box <- suppressMessages(gldp_to_eml(pkg, tmp))$dataset$coverage$geographicCoverage
+  expect_equal(
+    unlist(box$boundingCoordinates),
+    c(
+      westBoundingCoordinate = 8,
+      eastBoundingCoordinate = 8,
+      northBoundingCoordinate = 46,
+      southBoundingCoordinate = 46
+    )
+  )
+
+  pkg$spatial <- list(
+    type = "Polygon",
+    coordinates = list(list(list(7, 45), list(9, 45), list(9, 47), list(7, 47), list(7, 45)))
+  )
+  box <- suppressMessages(gldp_to_eml(pkg, tmp))$dataset$coverage$geographicCoverage
+  expect_equal(
+    unlist(box$boundingCoordinates),
+    c(
+      westBoundingCoordinate = 7,
+      eastBoundingCoordinate = 9,
+      northBoundingCoordinate = 47,
+      southBoundingCoordinate = 45
+    )
+  )
+})

@@ -9,12 +9,21 @@
 #' See an example of use [with this tutorial](https://rpubs.com/GeoPressure/Geolocator_create_from_soi).
 #'
 #' @param gdl A data frame of SOI export metadata, typically returned by
-#'   [read_soi_gld()]. It must contain at least `GDL_ID` and the fields needed
-#'   to derive package metadata.
+#'   [read_soi_gld()]. It must contain at least `GDL_ID`, `OrderName` unless it
+#'   has a `directory` column, and the fields needed to derive package
+#'   metadata. `tags$attachment_type` is built from the
+#'   harness columns (`Harness_data`, `HarnessMaterial_data`,
+#'   `HarnessAttachement_data`, `HarnessThickness`, `LegHarnessDiameter`,
+#'   `BreastHarnessDiameterHead` and `BreastHarnessDiameterTail`), which
+#'   `read_soi_gld(filter_col = TRUE)` does not keep: use `filter_col = FALSE`
+#'   to include them.
 #' @param directory_data Path to the directory containing SOI raw tag files or
-#'   folders.
-#' @param generate_observations A logical value indicating whether to create pre-filled
-#'   `observations` rows for equipment and retrieval events.
+#'   folders, in one sub-folder per `OrderName`. Not used when `gdl` already has
+#'   a `directory` column.
+#' @param generate_observations A logical value. Equipment and retrieval
+#'   `observations` are always created from the dates in `gdl`. If `TRUE`, rows
+#'   are also created without a datetime, as placeholders to fill in; if `FALSE`,
+#'   only rows with a known datetime are kept.
 #'
 #' @details
 #' The function performs the following steps:
@@ -60,14 +69,6 @@ read_soi <- function(
     gdl <- read_soi_directory(gdl, directory_data)
   }
 
-  # Do not add any data if same id already presents in measurements
-  if ("measurements" %in% frictionless::resource_names(pkg)) {
-    m <- measurements(pkg)
-    gdl <- gdl |> filter(!(.data$GDL_ID %in% unique(m$tag_id)))
-  } else {
-    m <- NULL
-  }
-
   # Read tag data
   n_tags_with_data <- sum(!is.na(gdl$directory))
   cli_progress_step(
@@ -83,10 +84,23 @@ read_soi <- function(
         tryCatch(
           {
             if (grepl("\\.glf$", directory)) {
+              # The folder can hold other tags' files, which GeoPressureR would pick by
+              # extension, so pass the full path of each sensor file of this tag: every
+              # GeoPressureR version uses an existing path as is and skips a sensor given NA
+              tag_files <- list.files(dirname(directory), full.names = TRUE)
+              tag_files <- tag_files[startsWith(basename(tag_files), GDL_ID)]
+              sensor_file <- \(ext) {
+                tag_files[grepl(glue::glue("\\.{ext}$"), tag_files, ignore.case = TRUE)][1]
+              }
               GeoPressureR::tag_create(
                 id = GDL_ID,
                 directory = dirname(directory),
-                light_file = basename(directory),
+                light_file = directory,
+                pressure_file = sensor_file("pressure"),
+                acceleration_file = sensor_file("acceleration"),
+                temperature_external_file = sensor_file("(air)?temperature"),
+                temperature_internal_file = sensor_file("bodytemperature"),
+                magnetic_file = sensor_file("magnetic"),
                 assert_pressure = FALSE, # Allow tag to not have pressure data
                 quiet = TRUE
               )
@@ -114,8 +128,8 @@ read_soi <- function(
       )
     )
 
-  # Adding measurement resource
-  m <- bind_rows(m, tags_to_measurements(dtags))
+  # Adding measurement resource, without the tags that could not be read
+  m <- tags_to_measurements(purrr::compact(dtags))
 
   if (nrow(m) > 0) {
     cli_progress_step("Add {.field measurements} to {.pkg pkg}")
@@ -127,17 +141,8 @@ read_soi <- function(
     )
   }
 
-  # Only add tags and observations data to the tag_id not yet present in tag
-  if ("tags" %in% frictionless::resource_names(pkg)) {
-    t <- tags(pkg)
-    gdl_to <- gdl |> filter(!(.data$GDL_ID %in% t$tag_id))
-  } else {
-    t <- NULL
-    gdl_to <- gdl
-  }
-
   # Compute tags.csv from gdl table
-  if (nrow(gdl_to) == 0) {
+  if (nrow(gdl) == 0) {
     t_gdl <- tibble(
       tag_id = character(),
       manufacturer = character(),
@@ -150,7 +155,7 @@ read_soi <- function(
       tag_comments = character()
     )
   } else {
-    t_gdl <- gdl_to |>
+    t_gdl <- gdl |>
       rowwise() |>
       mutate(
         attachment_type = {
@@ -172,7 +177,7 @@ read_soi <- function(
                   names(vars) &&
                   !is.na(.data$HarnessAttachement_data)
               ) {
-                glue::glue("attachement:{HarnessAttachement_data}")
+                glue::glue("attachment:{HarnessAttachement_data}")
               },
               if (
                 "HarnessThickness" %in%
@@ -207,14 +212,20 @@ read_soi <- function(
           )
         }
       ) |>
-      ungroup()
+      ungroup() |>
+      # NA rather than an empty string when no harness detail is known
+      mutate(attachment_type = na_if(as.character(.data$attachment_type), ""))
 
     t_gdl <- t_gdl |>
       transmute(
         tag_id = .data$GDL_ID,
         manufacturer = "Swiss Ornithological Institute",
         model = if (all(c("GDL_Type", "HardwareVersion") %in% names(t_gdl))) {
-          glue::glue("{GDL_Type}-{HardwareVersion}")
+          # Without a hardware version, the type alone names the model
+          coalesce(
+            as.character(glue::glue("{GDL_Type}-{HardwareVersion}", .na = NULL)),
+            .data$GDL_Type
+          )
         } else {
           NA_character_
         },
@@ -251,54 +262,42 @@ read_soi <- function(
       )
   }
 
-  t <- bind_rows(t, t_gdl)
-
-  if (nrow(t) > 0) {
+  if (nrow(t_gdl) > 0) {
     cli_progress_step("Add {.field tags} to {.pkg pkg}")
     pkg <- add_gldp_resource(
       pkg,
       "tags",
-      t,
+      t_gdl,
       replace = TRUE
     )
   }
 
-  if ("observations" %in% frictionless::resource_names(pkg)) {
-    o <- observations(pkg)
-  } else {
-    o <- NULL
-  }
-
-  # Adding sensor resource
+  # Equipment and retrieval observations from the attachment and removal records
   o_gdl <- bind_rows(
-    gdl_to |>
+    gdl |>
       transmute(
-        ring_number = if ("RingNumber" %in% names(gdl_to)) {
+        ring_number = if ("RingNumber" %in% names(gdl)) {
           .data$RingNumber
         } else {
           NA_character_
         },
-        tag_id = if ("GDL_ID" %in% names(gdl_to)) {
-          .data$GDL_ID
-        } else {
-          NA_character_
-        },
-        datetime = if ("UTC_Attached" %in% names(gdl_to)) {
+        tag_id = .data$GDL_ID,
+        datetime = if ("UTC_Attached" %in% names(gdl)) {
           .data$UTC_Attached
         } else {
           as.POSIXct(NA)
         },
-        location_name = if ("SiteAttached" %in% names(gdl_to)) {
+        location_name = if ("SiteAttached" %in% names(gdl)) {
           .data$SiteAttached
         } else {
           NA_character_
         },
-        longitude = if ("LongitudeAttached" %in% names(gdl_to)) {
+        longitude = if ("LongitudeAttached" %in% names(gdl)) {
           .data$LongitudeAttached
         } else {
           NA_real_
         },
-        latitude = if ("LatitudeAttached" %in% names(gdl_to)) {
+        latitude = if ("LatitudeAttached" %in% names(gdl)) {
           .data$LatitudeAttached
         } else {
           NA_real_
@@ -307,29 +306,25 @@ read_soi <- function(
         age_class = "0",
         sex = "U"
       ),
-    gdl_to |>
+    gdl |>
       transmute(
-        ring_number = if ("RingNumber" %in% names(gdl_to)) {
+        ring_number = if ("RingNumber" %in% names(gdl)) {
           .data$RingNumber
         } else {
           NA_character_
         },
-        tag_id = if ("GDL_ID" %in% names(gdl_to)) {
-          .data$GDL_ID
-        } else {
-          NA_character_
-        },
-        datetime = if ("UTC_Removed" %in% names(gdl_to)) {
+        tag_id = .data$GDL_ID,
+        datetime = if ("UTC_Removed" %in% names(gdl)) {
           .data$UTC_Removed
         } else {
           as.POSIXct(NA)
         },
-        longitude = if ("LongitudeRemoved" %in% names(gdl_to)) {
+        longitude = if ("LongitudeRemoved" %in% names(gdl)) {
           .data$LongitudeRemoved
         } else {
           NA_real_
         },
-        latitude = if ("LatitudeRemoved" %in% names(gdl_to)) {
+        latitude = if ("LatitudeRemoved" %in% names(gdl)) {
           .data$LatitudeRemoved
         } else {
           NA_real_
@@ -344,14 +339,12 @@ read_soi <- function(
     o_gdl <- o_gdl |> filter(!is.na(.data$datetime))
   }
 
-  o <- bind_rows(o, o_gdl)
-
-  if (nrow(o) > 0) {
+  if (nrow(o_gdl) > 0) {
     cli_progress_step("Add {.field observations} to {.pkg pkg}")
     pkg <- add_gldp_resource(
       pkg,
       "observations",
-      o,
+      o_gdl,
       replace = TRUE
     )
   }
@@ -374,7 +367,8 @@ read_soi <- function(
 #' to a GDL (Geolocator Data List) object.
 #'
 #' @param gdl A GDL data frame object
-#' @param directory_data A data frame containing directory information
+#' @param directory_data Path to the directory containing one folder per
+#'   `OrderName`
 #' @return Updated GDL object with directory information
 #' @noRd
 read_soi_directory <- function(gdl, directory_data) {
@@ -453,29 +447,21 @@ read_soi_directory <- function(gdl, directory_data) {
       files <- list.files(order_dir, recursive = FALSE, full.names = TRUE)
     }
 
-    matching_files <- files[startsWith(basename(files), as.character(gdl_id))]
-    # Check if there are matching files and prioritize .glf files
-    if (length(matching_files) > 0) {
-      # Look for a .glf file first
-      glf_files <- matching_files[grepl("\\.glf$", matching_files)]
-
-      # If there are .glf files, return the first one, otherwise return the first matching file
-      if (length(glf_files) > 0) {
-        return(list(
-          directory = glf_files[1],
-          reason = NA_character_
-        ))
-      } else {
-        return(list(
-          directory = matching_files[1],
-          reason = NA_character_
-        ))
-      }
+    # Outside a tag folder only a .glf file can be read: read_soi() passes any other
+    # file as a directory, which GeoPressureR rejects
+    glf_files <- files[
+      startsWith(basename(files), as.character(gdl_id)) & grepl("\\.glf$", files)
+    ]
+    if (length(glf_files) > 0) {
+      return(list(
+        directory = glf_files[1],
+        reason = NA_character_
+      ))
     }
     list(
       directory = NA_character_,
       reason = glue::glue(
-        "No folder or file starting with GDL_ID {gdl_id} was found in {order_name}."
+        "No folder or .glf file starting with GDL_ID {gdl_id} was found in {order_name}."
       )
     )
   }

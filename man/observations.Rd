@@ -21,7 +21,6 @@ specification.}
 \description{
 \code{observations()} gets the observations from a GeoLocator Data Package object.
 
-\verb{observations<-()} is the assignment equivalent.
-It should only be used within other functions, where the expected data
-structure can be guaranteed.
+\verb{observations<-()} is the assignment equivalent. It replaces the resource
+and casts \code{value} to the types of its schema.
 }

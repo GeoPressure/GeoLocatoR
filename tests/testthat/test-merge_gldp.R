@@ -167,6 +167,41 @@ test_that("merge_gldp errors on packages with duplicate datapackage_id", {
   expect_error(merge_gldp(pkg, pkg2), "duplicate .*datapackage_id")
 })
 
+# Offline package with one tag; `...` sets top-level fields such as `id`.
+local_merge_pkg <- function(tag_id, ...) {
+  pkg <- create_gldp(title = tag_id, ...)
+  add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = tag_id,
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "soi",
+      model = "GDL3"
+    )
+  )
+}
+
+test_that("merge_gldp requires an id for tags without datapackage_id", {
+  expect_error(
+    merge_gldp(
+      local_merge_pkg("AA"),
+      local_merge_pkg("BB", id = "https://doi.org/10.5281/zenodo.2")
+    ),
+    "without id"
+  )
+
+  merged <- merge_gldp(
+    local_merge_pkg("AA", id = "https://doi.org/10.5281/zenodo.1"),
+    local_merge_pkg("BB", id = "https://doi.org/10.5281/zenodo.2")
+  )
+  expect_equal(
+    tags(merged)$datapackage_id,
+    c("https://doi.org/10.5281/zenodo.1", "https://doi.org/10.5281/zenodo.2")
+  )
+})
+
 test_that("merge_gldp supports sequential merges", {
   pkg1 <- pkg_shared
   suppressMessages({
@@ -348,4 +383,40 @@ test_that("merge_gldp_contributors keeps equal names with different ORCIDs apart
   )
   # The ORCID-less entry is ambiguous, so it stays on its own.
   expect_length(merge_gldp_contributors(ctr), 3)
+})
+
+test_that("merge_gldp_contributors keeps unrelated names apart", {
+  ctr <- list(
+    list(title = "王伟", roles = list("researcher")),
+    list(title = "李娜", roles = list("datacollector")),
+    list(organization = "Institute A"),
+    list(organization = "Institute B")
+  )
+  out <- merge_gldp_contributors(ctr)
+  expect_length(out, 4)
+  expect_identical(out[[3]]$organization, "Institute A")
+})
+
+test_that("merge_gldp_contributors ignores accents in names", {
+  # Transliteration depends on the iconv build and the locale.
+  skip_if_not(
+    identical(gsub("[\"'`^~?]", "", iconv("ü", "UTF-8", "ASCII//TRANSLIT")), "u"),
+    "iconv cannot transliterate in this locale"
+  )
+  ctr <- list(
+    list(title = "Müller, Jürgen"),
+    list(title = "Jurgen Muller", organization = "Lab")
+  )
+  out <- merge_gldp_contributors(ctr)
+  expect_length(out, 1)
+  expect_identical(out[[1]]$organization, "Lab")
+})
+
+test_that("merge_gldp_contributors keeps a role that is part of another role", {
+  ctr <- list(
+    list(title = "Doe, Jane", roles = list("researcher")),
+    list(title = "Doe, Jane", roles = list("researchergroup"))
+  )
+  out <- merge_gldp_contributors(ctr)
+  expect_identical(unlist(out[[1]]$roles), c("researcher", "researchergroup"))
 })

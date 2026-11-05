@@ -10,8 +10,10 @@
 #' @return Invisibly returns `x`.
 #'
 #' @examples
+#' \dontrun{
 #' pkg <- read_zenodo("17367319", quiet = TRUE)
 #' print(pkg)
+#' }
 #'
 #' @family print functions
 #' @export
@@ -24,7 +26,7 @@ print.geolocatordp <- function(x, ...) {
   cli::cli_h3("Metadata")
   cat_line(
     format_inline(
-      "{.strong Note}: All {.field green} texts are fields of `pkg` which can be accessed with `pkg${.field field}`)."
+      "{.strong Note}: All {.field green} texts are fields of `pkg` which can be accessed with `pkg${.field field}`."
     ),
     col = "silver"
   )
@@ -33,8 +35,13 @@ print.geolocatordp <- function(x, ...) {
   }
 
   bullets(x, "title")
+  # Labelled by its field name: `id` is a DOI for a Zenodo package, but can be any identifier
   if (has_value(x$id)) {
-    cli_bullets(c("*" = "{.field doi}: {.url {x$id}}"))
+    if (grepl("^https?://", x$id)) {
+      cli_bullets(c("*" = "{.field id}: {.url {x$id}}"))
+    } else {
+      cli_bullets(c("*" = "{.field id}: {.val {x$id}}"))
+    }
   }
 
   if (has_value(x$contributors)) {
@@ -80,11 +87,15 @@ print.geolocatordp <- function(x, ...) {
   access_status <- tolower(as.character(x$access_status %||% "")[1])
   embargo <- as.character(x$embargo %||% "")[1]
   has_embargo <- nzchar(embargo) && !identical(embargo, "1970-01-01")
+  # Access and communities are only known for a package read from Zenodo
+  from_zenodo <- nzchar(access_status)
   if (identical(access_status, "restricted")) {
     cli::cli_bullets(c("x" = "{.field access}: restricted"))
   } else if (has_embargo) {
     cli::cli_bullets(c("!" = "{.field access}: with embargo until {embargo}"))
-  } else {
+  } else if (identical(access_status, "metadata-only")) {
+    cli::cli_bullets(c("!" = "{.field access}: metadata only, without files"))
+  } else if (from_zenodo) {
     cli::cli_bullets(c("v" = "{.field access}: Open access"))
   }
 
@@ -141,7 +152,7 @@ print.geolocatordp <- function(x, ...) {
   )
   if (any(communities %in% allowed_communities)) {
     cli::cli_bullets(c("v" = "{.field community}: Geolocator DP community"))
-  } else {
+  } else if (from_zenodo) {
     cli::cli_bullets(c("!" = "{.field community}: no Geolocator DP community"))
   }
 

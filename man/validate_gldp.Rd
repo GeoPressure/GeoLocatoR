@@ -23,17 +23,23 @@ then reports additional metadata recommendations.
 Validation runs in four steps:
 \enumerate{
 \item \strong{Package profile validation}
-The package metadata is checked against the GeoLocator-DP profile schema. This includes
-required package-level fields and schema-defined constraints such as type, format,
-uniqueness, enumerated values, regular-expression patterns, and minimum or maximum
-lengths, item counts, and numeric values.
+The package-level properties the GeoLocator-DP profile declares are checked against
+it. From GeoLocator-DP v1.0 the profile declares only \verb{$schema}, so this checks that
+\verb{$schema} is a GeoLocator-DP profile URL. Earlier profiles also declare package
+metadata, checked for presence, type, format, enumerated values, regular-expression
+patterns, item counts, and numeric bounds. Neither the Data Package profile that
+GeoLocator-DP extends nor the profile's rules on resource descriptors (\code{type}, \code{path},
+\verb{$schema}, \code{schema}, at least three resources) are checked.
 \item \strong{Resource validation}
 File-backed tables are loaded for field and foreign-key checks; source files
 are not modified.
 Resources are checked against their schema: columns must match the
 \code{fieldsMatch} rule, and each column must satisfy its declared constraints
-such as type, format, requiredness, uniqueness, allowed values, patterns,
+such as type, requiredness, uniqueness, allowed values, patterns,
 and numeric or length limits. Rows must be unique on the schema \code{primaryKey}.
+The tables GeoLocator-DP defines (\code{tags}, \code{observations}, ...) must be tabular
+resources with a table schema. The \code{params} resource and custom resources are
+checked when they carry a table schema, and are otherwise reported as not checked.
 \item \strong{Coherence validation}
 Cross-resource consistency checks are then applied.
 
@@ -60,7 +66,8 @@ Observation-sequence checks verify that:
 \item retrieval does not precede equipment for the same \code{tag_id};
 \item duplicated observations are not present for the same \code{ring_number}, \code{datetime},
 and \code{observation_type};
-\item \code{device_status} transitions are plausible across the observation history.
+\item \code{device_status} transitions are plausible across the observation history;
+\item \code{mass} above 10,000 g is reported as a warning only, a guideline rather than a limit.
 }
 
 GeoPressure-specific coherence checks are applied when the corresponding resources are
@@ -70,10 +77,10 @@ present. These include:
 \item realistic year windows for datetime fields in \code{staps}, \code{twilights},
 \code{pressurepaths}, and \code{edges};
 \item duration checks for \code{staps} and \code{edges};
-\item schema-declared foreign key consistency across resources;
+\item schema-declared foreign key consistency across all resources, core ones included;
 \item warnings for unusual \code{edges} distances, durations, or wind/ground-speed magnitudes,
-for \code{pressurepaths$altitude} outside -200 to 10,000 m, and for
-\code{observations$mass} above 10,000 g. These are guidelines, not limits.
+and for \code{pressurepaths$altitude} outside -200 to 10,000 m. These are guidelines,
+not limits.
 }
 \item \strong{Metadata recommendations}
 Additional metadata quality checks are reported without affecting the final validity.
@@ -94,7 +101,9 @@ See the \href{https://geopressure.org/GeoLocator-DP/curation/}{GeoLocator-DP cur
 more information.
 }
 \examples{
+\dontrun{
 pkg <- read_zenodo("17367319", quiet = TRUE)
 validate_gldp(pkg)
+}
 
 }

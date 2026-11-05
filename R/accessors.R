@@ -35,9 +35,8 @@
 #' @description
 #' `tags()` gets the tags from a GeoLocator Data Package object.
 #'
-#' `tags<-()` is the assignment equivalent.
-#'   It should only be used within other functions, where the expected data
-#'   structure can be guaranteed.
+#' `tags<-()` is the assignment equivalent. It replaces the resource
+#' and casts `value` to the types of its schema.
 #'
 #' @inheritParams print.geolocatordp
 #' @return [tibble::tibble()] data frame with tags
@@ -67,9 +66,8 @@ tags <- function(x) {
 #' @description
 #' `observations()` gets the observations from a GeoLocator Data Package object.
 #'
-#' `observations<-()` is the assignment equivalent.
-#'   It should only be used within other functions, where the expected data
-#'   structure can be guaranteed.
+#' `observations<-()` is the assignment equivalent. It replaces the resource
+#' and casts `value` to the types of its schema.
 #'
 #' @inheritParams print.geolocatordp
 #' @return [tibble::tibble()] data frame with observations
@@ -95,9 +93,8 @@ observations <- function(x) {
 #' @description
 #' `measurements()` gets the measurements from a GeoLocator Data Package object.
 #'
-#' `measurements<-()` is the assignment equivalent.
-#'   It should only be used within other functions, where the expected data
-#'   structure can be guaranteed.
+#' `measurements<-()` is the assignment equivalent. It replaces the resource
+#' and casts `value` to the types of its schema.
 #'
 #' @inheritParams print.geolocatordp
 #' @return [tibble::tibble()] data frame with measurements
@@ -115,9 +112,11 @@ measurements <- function(x) {
     x = x,
     value = value,
     resource_name = "measurements",
+    # `taxonomic` only lists the species of tags with measurements.
     post = \(pkg) {
       pkg |>
         update_gldp_temporal() |>
+        update_gldp_taxonomic() |>
         update_gldp_number_tags()
     }
   )
@@ -128,9 +127,8 @@ measurements <- function(x) {
 #' @description
 #' `staps()` gets the staps from a GeoLocator Data Package object.
 #'
-#' `staps<-()` is the assignment equivalent.
-#'   It should only be used within other functions, where the expected data
-#'   structure can be guaranteed.
+#' `staps<-()` is the assignment equivalent. It replaces the resource
+#' and casts `value` to the types of its schema.
 #'
 #' @inheritParams print.geolocatordp
 #' @return [tibble::tibble()] data frame with staps
@@ -155,9 +153,8 @@ staps <- function(x) {
 #' @description
 #' `twilights()` gets the twilights from a GeoLocator Data Package object.
 #'
-#' `twilights<-()` is the assignment equivalent.
-#'   It should only be used within other functions, where the expected data
-#'   structure can be guaranteed.
+#' `twilights<-()` is the assignment equivalent. It replaces the resource
+#' and casts `value` to the types of its schema.
 #'
 #' @inheritParams print.geolocatordp
 #' @return [tibble::tibble()] data frame with twilights
@@ -183,9 +180,8 @@ twilights <- function(x) {
 #' @description
 #' `paths()` gets the paths from a GeoLocator Data Package object.
 #'
-#' `paths<-()` is the assignment equivalent.
-#'   It should only be used within other functions, where the expected data
-#'   structure can be guaranteed.
+#' `paths<-()` is the assignment equivalent. It replaces the resource
+#' and casts `value` to the types of its schema.
 #'
 #' @inheritParams print.geolocatordp
 #' @return [tibble::tibble()] data frame with paths
@@ -211,9 +207,8 @@ paths <- function(x) {
 #' @description
 #' `edges()` gets the edges from a GeoLocator Data Package object.
 #'
-#' `edges<-()` is the assignment equivalent.
-#'   It should only be used within other functions, where the expected data
-#'   structure can be guaranteed.
+#' `edges<-()` is the assignment equivalent. It replaces the resource
+#' and casts `value` to the types of its schema.
 #'
 #' @inheritParams print.geolocatordp
 #' @return [tibble::tibble()] data frame with edges
@@ -238,9 +233,8 @@ edges <- function(x) {
 #' @description
 #' `pressurepaths()` gets the pressurepaths from a GeoLocator Data Package object.
 #'
-#' `pressurepaths<-()` is the assignment equivalent.
-#'   It should only be used within other functions, where the expected data
-#'   structure can be guaranteed.
+#' `pressurepaths<-()` is the assignment equivalent. It replaces the resource
+#' and casts `value` to the types of its schema.
 #'
 #' @inheritParams print.geolocatordp
 #' @return [tibble::tibble()] data frame with pressurepaths

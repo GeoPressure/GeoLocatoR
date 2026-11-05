@@ -39,8 +39,9 @@
 #' @param id Zenodo identifier. Can be a record id, DOI, DOI URL, or Zenodo
 #'   record URL. Supported examples include `"18467383"`,
 #'   `"10.5281/zenodo.18467383"`, `"https://doi.org/10.5281/zenodo.18467383"`,
-#'   and `"https://zenodo.org/records/18467383"`. For Zenodo Sandbox records,
-#'   set `sandbox = TRUE`.
+#'   and `"https://zenodo.org/records/18467383"`. A Zenodo Sandbox record URL
+#'   or DOI (prefix `10.5072`) is read from Zenodo Sandbox; for a bare Sandbox
+#'   record id, set `sandbox = TRUE`.
 #' @param token Optional Zenodo access token for authenticated requests. Supply
 #'   it explicitly, or leave `NULL` to resolve it from environment variables or
 #'   the system keyring. Draft access usually requires a token.
@@ -89,6 +90,8 @@ read_zenodo <- function(
   quiet = FALSE,
   timeout = 600
 ) {
+  # A Sandbox record URL or DOI names a Sandbox record whatever `sandbox` says
+  sandbox <- sandbox || grepl("sandbox\\.zenodo\\.org|10\\.5072/", id)
   token <- resolve_zenodo_token(token = token, sandbox = sandbox)
 
   # 1) Fetch Zenodo record

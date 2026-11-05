@@ -10,10 +10,15 @@
 #' 2. `"raw-tag"`: create tag objects from `data/raw-tag/` and `config.yml`,
 #'    then derive `measurements`, `tags`, `observations`, and `params`.
 #'
+#' The `ring_number`, `tag_comments` and `bird_create$scientific_name` entries
+#' of each tag in `config.yml` fill the generated `tags`.
+#'
 #' Manual data files take precedence over generated metadata:
-#' - `data/tags.csv` or `data/tags.xlsx` replaces generated `tags`;
+#' - `data/tags.csv` or `data/tags.xlsx` replaces generated `tags`. Tags missing
+#'   from the file are kept from the generated table, with a warning;
 #' - `data/observations.csv` or `data/observations.xlsx` replaces generated
-#'   `observations`.
+#'   `observations`. Generated observations take their `ring_number` from
+#'   `tags`.
 #'
 #' During automatic discovery, GeoLocatoR skips private GeoPressureTemplate
 #' entries whose names start with `"_"`: config keys, interim files, raw-tag
@@ -85,8 +90,7 @@ read_geopressuretemplate <- function(
   m <- NULL
   params <- list()
 
-  # Change working directory to the specified directory so that GeoPressureR can work with default
-  # value: setwd(directory)
+  # Work inside the project so that GeoPressureR default paths resolve
   pkg <- withr::with_dir(directory, {
     project_files <- geopressuretemplate_project_files()
 
@@ -110,6 +114,7 @@ read_geopressuretemplate <- function(
       )
       var_names_pressurepath <- c(
         "pressurepath_most_likely",
+        "pressurepath_simulation",
         "pressurepath_geopressureviz",
         "pressurepath_tag"
       )
@@ -154,7 +159,7 @@ read_geopressuretemplate <- function(
         }
       }
 
-      # Crete tag resource
+      # Create tag resource
       t <- params_to_tags(interim$param)
 
       # Create observations resource
@@ -171,6 +176,7 @@ read_geopressuretemplate <- function(
         purrr::map(function(tag) {
           if ("twilight" %in% names(tag)) {
             tag$twilight |>
+              select(-any_of("stap_id")) |>
               mutate(tag_id = tag$param$id)
           } else {
             NULL
@@ -195,7 +201,7 @@ read_geopressuretemplate <- function(
         }) |>
         purrr::compact() |> # Remove NULLs
         purrr::list_rbind() |>
-        select(-any_of(c("duration", "nb_sample")))
+        select(-any_of(c("duration", "nb_sample", "include")))
 
       if (nrow(staps) > 0) {
         pkg <- add_gldp_resource(pkg, "staps", staps)
@@ -208,7 +214,7 @@ read_geopressuretemplate <- function(
             purrr::imap(function(p, i) {
               if (!is.null(p)) {
                 p |>
-                  select(-any_of(c("start", "end", "include"))) |>
+                  select(-any_of(c("start", "end", "include", "ind", "known", "nb_sample"))) |>
                   mutate(
                     type = sub("path_", "", x, fixed = TRUE),
                     tag_id = interim$tag[[i]]$param$id
@@ -231,6 +237,7 @@ read_geopressuretemplate <- function(
             purrr::imap(function(e, i) {
               if (!is.null(e)) {
                 e |>
+                  select(-any_of(c("s", "t", "duration"))) |>
                   mutate(
                     type = sub("edge_", "", x, fixed = TRUE),
                     tag_id = interim$tag[[i]]$param$id
@@ -303,7 +310,7 @@ read_geopressuretemplate <- function(
         # Read raw tag data with raw_tag_id_to_tag function
         dtags <- list_id |>
           purrr::map(
-            purrr::possibly(raw_tag_id_to_tag, NULL),
+            purrr::safely(raw_tag_id_to_tag),
             .progress = list(
               type = "custom",
               format = "{cli::pb_spin} Reading {cli::pb_current}/{cli::pb_total} raw tag{?s}.",
@@ -313,18 +320,22 @@ read_geopressuretemplate <- function(
             )
           )
 
-        # Check for failed tag reads and warn
-        failed_tags <- list_id[sapply(dtags, is.null)]
-        if (length(failed_tags) > 0) {
+        # Warn about failed tag reads with their error message. The bullets refer to the
+        # values by index so that braces in messages are not interpolated by cli.
+        failed <- purrr::map_lgl(dtags, \(x) !is.null(x$error))
+        if (any(failed)) {
+          failed_ids <- list_id[failed]
+          failed_msg <- purrr::map_chr(dtags[failed], \(x) conditionMessage(x$error))
+          i <- seq_along(failed_ids)
           cli_warn(c(
-            "!" = "Failed to read {.val {length(failed_tags)}} {?tag/tags}:",
-            "i" = "{.field {failed_tags}}",
-            ">" = "These tags will be skipped."
+            "!" = "Failed to read {.val {length(failed_ids)}} tag{?s}, which will be skipped:",
+            stats::setNames(
+              glue::glue("{{.field {{failed_ids[{i}]}}}}: {{failed_msg[{i}]}}"),
+              rep("x", length(i))
+            )
           ))
         }
-
-        # Remove NULL entries
-        dtags <- purrr::compact(dtags)
+        dtags <- purrr::map(dtags[!failed], "result")
 
         # Collect GeoPressureR param objects
         params <- c(params, purrr::map(dtags, ~ .x$param))
@@ -352,12 +363,19 @@ read_geopressuretemplate <- function(
 
     if (!is.null(t) && file.exists("config.yml")) {
       raw_config <- yaml::yaml.load_file("config.yml", eval.expr = FALSE)
-      # Top-level tag fields are not preserved by GeoPressureR config parsing.
-      for (field in c("ring_number", "tag_comments")) {
+      # Interim tag params do not carry these config fields, so read them from
+      # config.yml, keyed by their path in each tag entry.
+      config_fields <- list(
+        ring_number = "ring_number",
+        tag_comments = "tag_comments",
+        scientific_name = c("bird_create", "scientific_name")
+      )
+      for (field in names(config_fields)) {
         values <- tibble::tibble(
           tag_id = project_files$config_ids,
-          value = purrr::map_chr(raw_config[project_files$config_ids], \(x) {
-            x[[field]] %||% NA_character_
+          # Unquoted ring numbers are read from YAML as numbers.
+          value = purrr::map_chr(unname(raw_config[project_files$config_ids]), \(x) {
+            as.character(purrr::pluck(x, !!!config_fields[[field]], .default = NA))
           })
         ) |>
           filter(!is.na(.data$value))
@@ -379,41 +397,44 @@ read_geopressuretemplate <- function(
         cli_abort("The {.pkg readxl} package is required to read {.file data/tags.xlsx}.")
       }
       file <- "data/tags.xlsx"
-      tf <- readxl::read_excel(
-        file,
-        col_types = c(
-          tag_id = "text",
-          ring_number = "text",
-          scientific_name = "text",
-          manufacturer = "text",
-          model = "text",
-          firmware = "text",
-          weight = "numeric",
-          attachment_type = "text",
-          readout_method = "text",
-          tag_comments = "text"
-        )
+      col_types <- c(
+        tag_id = "text",
+        datapackage_id = "text",
+        ring_number = "text",
+        scientific_name = "text",
+        manufacturer = "text",
+        model = "text",
+        firmware = "text",
+        weight = "numeric",
+        attachment_type = "text",
+        readout_method = "text",
+        tag_comments = "text"
       )
+      # readxl matches col_types by position, so order them by the sheet header.
+      header <- names(readxl::read_excel(file, n_max = 0))
+      tf <- readxl::read_excel(file, col_types = unname(coalesce(col_types[header], "guess")))
       cli_alert_success(
         "Reading tags from {.file {file.path(directory, file)}}."
       )
     } else if (file.exists("data/tags.csv")) {
       file <- "data/tags.csv"
-      tf <- readr::read_delim(
-        file,
-        col_types = readr::cols(
-          tag_id = "c",
-          ring_number = "c",
-          scientific_name = "c",
-          manufacturer = "c",
-          model = "c",
-          firmware = "c",
-          weight = "d",
-          attachment_type = "c",
-          readout_method = "c",
-          tag_comments = "c"
-        )
+      col_types <- readr::cols(
+        tag_id = "c",
+        datapackage_id = "c",
+        ring_number = "c",
+        scientific_name = "c",
+        manufacturer = "c",
+        model = "c",
+        firmware = "c",
+        weight = "d",
+        attachment_type = "c",
+        readout_method = "c",
+        tag_comments = "c"
       )
+      # Optional metadata columns need parsers only when present in the file.
+      header <- names(readr::read_delim(file, n_max = 0, show_col_types = FALSE))
+      col_types$cols <- col_types$cols[intersect(names(col_types$cols), header)]
+      tf <- readr::read_delim(file, col_types = col_types)
       cli_alert_success(
         "Reading tags from {.file {file.path(directory, file)}}."
       )
@@ -440,60 +461,76 @@ read_geopressuretemplate <- function(
       t <- tf
     }
 
+    # Generated observations have no ring_number; take it from the final tags table.
+    if (is.data.frame(o) && nrow(o) > 0 && "ring_number" %in% names(t)) {
+      o <- o |>
+        left_join(select(t, "tag_id", tag_ring_number = "ring_number"), by = "tag_id") |>
+        mutate(ring_number = coalesce(.data$ring_number, .data$tag_ring_number)) |>
+        select(-"tag_ring_number")
+    }
+
     if (file.exists("./data/observations.xlsx")) {
       if (!requireNamespace("readxl", quietly = TRUE)) {
         cli_abort(
           "The {.pkg readxl} package is required to read {.file data/observations.xlsx}."
         )
       }
+      col_types <- c(
+        ring_number = "text",
+        tag_id = "text",
+        observation_type = "text",
+        datetime = "date",
+        latitude = "numeric",
+        longitude = "numeric",
+        location_name = "text",
+        device_status = "text",
+        observer = "text",
+        catching_method = "text",
+        age_class = "text",
+        sex = "text",
+        condition = "text",
+        mass = "numeric",
+        wing_length = "numeric",
+        additional_metric = "text",
+        observation_comments = "text"
+      )
+      # readxl matches col_types by position, so order them by the sheet header.
+      header <- names(readxl::read_excel("./data/observations.xlsx", n_max = 0))
       o <- readxl::read_excel(
         "./data/observations.xlsx",
-        col_types = c(
-          ring_number = "text", # ring_number: character
-          tag_id = "text", # tag_id: character
-          observation_type = "text", # observation_type: character
-          datetime = "date", # datetime: date-time (ISO 8601 format)
-          latitude = "numeric", # latitude: numeric
-          longitude = "numeric", # longitude: numeric
-          location_name = "text", # location_name: character
-          device_status = "text", # device_status: character
-          observer = "text", # observer: character
-          catching_method = "text", # catching_method: character
-          age_class = "text", # age_class: character
-          sex = "text", # sex: character
-          condition = "text", # condition: character
-          mass = "numeric", # mass: numeric
-          wing_length = "numeric", # wing_length: numeric
-          additional_metric = "text", # additional_metric: character
-          observation_comments = "text" # observation_comments: character
-        )
+        col_types = unname(coalesce(col_types[header], "guess"))
       )
       cli_alert_success(
         "Reading observations from {.file {file.path(directory, 'data/observations.xlsx')}}."
       )
     } else if (file.exists("./data/observations.csv")) {
-      o <- readr::read_delim(
-        "./data/observations.csv",
-        col_types = readr::cols(
-          ring_number = "c",
-          tag_id = "c",
-          observation_type = "c",
-          datetime = "T", # ISO 8601 format
-          latitude = "d",
-          longitude = "d",
-          location_name = "c",
-          device_status = "c",
-          observer = "c",
-          catching_method = "c",
-          age_class = "c",
-          sex = "c",
-          condition = "c",
-          mass = "d",
-          wing_length = "d",
-          additional_metric = "c",
-          observation_comments = "c"
-        )
+      col_types <- readr::cols(
+        ring_number = "c",
+        tag_id = "c",
+        observation_type = "c",
+        datetime = "T", # ISO 8601 format
+        latitude = "d",
+        longitude = "d",
+        location_name = "c",
+        device_status = "c",
+        observer = "c",
+        catching_method = "c",
+        age_class = "c",
+        sex = "c",
+        condition = "c",
+        mass = "d",
+        wing_length = "d",
+        additional_metric = "c",
+        observation_comments = "c"
       )
+      # Optional metadata columns need parsers only when present in the file.
+      header <- names(readr::read_delim(
+        "./data/observations.csv",
+        n_max = 0,
+        show_col_types = FALSE
+      ))
+      col_types$cols <- col_types$cols[intersect(names(col_types$cols), header)]
+      o <- readr::read_delim("./data/observations.csv", col_types = col_types)
       cli_alert_success(
         "Reading observations from {.file {file.path(directory, 'data/observations.csv')}}."
       )
@@ -538,10 +575,9 @@ read_geopressuretemplate <- function(
 #' by reading the configuration and data files.
 #'
 #' @param id Character string of the tag identifier
-#' @param display_config_error Logical indicating whether to display configuration errors
 #' @return A tag object with parameter and data information
 #' @noRd
-raw_tag_id_to_tag <- function(id, display_config_error = TRUE) {
+raw_tag_id_to_tag <- function(id) {
   config <- tryCatch(
     {
       GeoPressureR::geopressuretemplate_config(
@@ -550,15 +586,12 @@ raw_tag_id_to_tag <- function(id, display_config_error = TRUE) {
       )
     },
     error = function(e) {
-      if (display_config_error) {
-        # Warn that the configuration file could not be read and display the error
-        cli_warn(c(
-          "i" = "Configuration file {.file config.yml} could not be read for {.field {id}}.",
-          ">" = "Create the tag with default values using {.fun GeoPressureR::param_create}.",
-          "!" = "Error: {e$message}"
-        ))
-        display_config_error <- FALSE
-      }
+      # Warn that the configuration file could not be read and display the error
+      cli_warn(c(
+        "i" = "Configuration file {.file config.yml} could not be read for {.field {id}}.",
+        ">" = "Create the tag with default values using {.fun GeoPressureR::param_create}.",
+        "!" = "Error: {e$message}"
+      ))
       GeoPressureR::param_create(
         id,
         default = TRUE,
@@ -577,16 +610,14 @@ raw_tag_id_to_tag <- function(id, display_config_error = TRUE) {
 
   tag <- tryCatch(
     {
-      GeoPressureR::tag_label_read(
-        tag = tag,
-        file = config$tag_label$file
+      # do.call() evaluates the default label path, which GeoPressureR stores as an
+      # unevaluated glue call referring to `tag`.
+      tag <- do.call(
+        GeoPressureR::tag_label_read,
+        list(tag = tag, file = config$tag_label$file)
       )
 
-      GeoPressureR::tag_label_stap(
-        tag = tag,
-        quiet = TRUE,
-        file = config$tag_label$file
-      )
+      tag <- GeoPressureR::tag_label_stap(tag, quiet = TRUE)
 
       tag <- do.call(
         GeoPressureR::tag_set_map,

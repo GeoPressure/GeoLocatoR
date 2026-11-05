@@ -1,8 +1,8 @@
 #' Convert GeoPressureTemplate config.yml to tibble
 #'
+#' @description
 #' `r lifecycle::badge("experimental")`
 #'
-#' @description
 #' Reads a GeoPressureTemplate `config.yml` file and converts it into a tibble format with
 #' one row per tag and columns for each configuration parameter. This is useful for comparing
 #' configurations across multiple tags or for programmatic analysis of tag settings.
@@ -10,8 +10,8 @@
 #' @param file Character string specifying the path to the `config.yml` file.
 #'   Defaults to `"config.yml"` in the current directory, or the value of the
 #'   `R_CONFIG_FILE` environment variable if set.
-#' @param filter_return Logical. If `TRUE` (default), only columns that vary across tags
-#'   are returned. If `FALSE`, all configuration columns are included even if they have
+#' @param filter_return Logical. If `TRUE` (default), only `id` and the columns that vary
+#'   across tags are returned. If `FALSE`, all configuration columns are included even if they have
 #'   the same value for all tags.
 #'
 #' @return A [tibble::tibble()] with one row per tag ID and columns for each configuration
@@ -26,7 +26,7 @@
 #'
 #' The function handles various GeoPressureR configuration parameters including:
 #' - Tag creation settings (manufacturer, file paths, crop dates)
-#' - Labeling parameters (flight/stap duration warnings)
+#' - Labelling file
 #' - Map settings (extent, known locations, pressure/light thresholds)
 #' - Graph creation and movement model parameters
 #' - Bird characteristics (mass, wing measurements)
@@ -58,16 +58,13 @@ config_to_tibble <- function(
   filter_return = TRUE
 ) {
   config_ids <- geopressuretemplate_config_ids(file)
-  raw_config <- yaml::yaml.load_file(file, eval.expr = FALSE)
-  # Top-level tag fields are not preserved by GeoPressureR config parsing.
-  config_tag_fields <- c("ring_number", "tag_comments")
 
   parse_fun <- \(x) {
-    if (is.null(x) || (length(x) == 1 && is.na(x))) {
-      return(NA_character_)
-    }
     if (is.function(x) || is.call(x)) {
       x <- deparse(x)
+    }
+    if (is.null(x) || (length(x) == 1 && is.na(x))) {
+      return(NA_character_)
     }
     paste(x, collapse = ", ")
   }
@@ -87,10 +84,8 @@ config_to_tibble <- function(
     "tag_create.crop_start" = as.character, # date stored as string
     "tag_create.crop_end" = as.character, # datetime stored as string
     "tag_label.file" = parse_fun,
-    "tag_label.warning_flight_duration" = as.numeric,
-    "tag_label.warning_stap_duration" = as.numeric,
     "tag_set_map.scale" = as.numeric,
-    "tag_set_map.include_stap_id" = as.character, # flexible
+    "tag_set_map.include_stap_id" = parse_fun,
     "tag_set_map.include_min_duration" = as.numeric,
     "tag_set_map.extent" = \(x) list(x),
     "tag_set_map.known" = \(x) {
@@ -109,7 +104,8 @@ config_to_tibble <- function(
     "geolight_map.compute_known" = as.logical,
     "geolight_map.twl_calib_adjust" = as.numeric,
     "geolight_map.twl_llp" = parse_fun,
-    "graph_create.likelihood" = as.character,
+    "geolight_map.fitted_location_duration" = as.numeric,
+    "graph_create.likelihood" = parse_fun,
     "graph_create.thr_likelihood" = as.numeric,
     "graph_create.thr_gs" = as.numeric,
     "graph_set_movement.method" = parse_fun,
@@ -127,7 +123,6 @@ config_to_tibble <- function(
     "bird_create.body_frontal_area" = as.numeric,
     "bird_create.scientific_name" = as.character,
     "graph_add_wind.file" = parse_fun,
-    "graph_add_wind.variable" = parse_fun,
     "graph_add_wind.rounding_interval" = as.numeric,
     "graph_add_wind.interp_spatial_linear" = as.logical,
     "graph_add_wind.thr_as" = as.numeric,
@@ -143,17 +138,15 @@ config_to_tibble <- function(
   )
 
   cfg <- purrr::map_df(config_ids, \(id) {
-    # Parse GeoPressureR fields, then restore top-level tag fields from raw YAML.
+    # GeoPressureR keeps top-level tag fields such as ring_number in the parsed config.
     config <- GeoPressureR::geopressuretemplate_config(
       id,
-      config = file,
+      config = config::get(config = id, file = file),
       assert_tag = FALSE,
       assert_graph = FALSE
     )
 
     class(config) <- NULL
-    config_fields <- intersect(names(raw_config[[id]]), config_tag_fields)
-    config[config_fields] <- raw_config[[id]][config_fields]
 
     # Flatten nested config sections and apply column-specific type conversions.
     config <- purrr::list_flatten(
@@ -197,9 +190,9 @@ config_to_tibble <- function(
   })
 
   if (filter_return) {
-    # Keep only columns that do not contain the same value in every row.
+    # Keep `id` and the columns that do not contain the same value in every row.
     cfg <- cfg |>
-      select(where(~ n_distinct(.) > 1))
+      select("id", where(~ n_distinct(.) > 1))
   }
   cfg
 }

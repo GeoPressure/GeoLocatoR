@@ -23,6 +23,10 @@ read_zenodo_fetch_record <- function(
   req |>
     httr2::req_error(
       body = \(resp) {
+        # Zenodo explains errors in JSON, but a gateway error page is HTML
+        if (!grepl("json", httr2::resp_content_type(resp))) {
+          return(NULL)
+        }
         body <- httr2::resp_body_json(resp, simplifyVector = FALSE)
         body$message %||% httr2::resp_status_desc(resp)
       }
@@ -70,11 +74,13 @@ resolve_zenodo_token <- function(token = NULL, sandbox = FALSE) {
 
 #' @noRd
 parse_zenodo_id <- function(id) {
-  id <- trimws(as.character(id)[1])
+  # DOIs and host names are case-insensitive; DataCite writes DOIs in upper case
+  id <- tolower(trimws(as.character(id)[1]))
   doi <- "^10\\.(?:5281|5072)/zenodo\\.(\\d+)$"
-  doi_url <- "^https?://doi\\.org/10\\.(?:5281|5072)/zenodo\\.(\\d+)$"
-  record_url <- "^https?://zenodo\\.org/records/(\\d+)/?(?:\\?.*)?(?:#.*)?$"
-  sandbox_record_url <- "^https?://sandbox\\.zenodo\\.org/records/(\\d+)/?(?:\\?.*)?(?:#.*)?$"
+  doi_url <- "^https?://(?:dx\\.)?doi\\.org/10\\.(?:5281|5072)/zenodo\\.(\\d+)/?$"
+  # Legacy record URLs use /record/ rather than /records/
+  record_url <- "^https?://(?:www\\.)?zenodo\\.org/records?/(\\d+)/?(?:\\?.*)?(?:#.*)?$"
+  sandbox_record_url <- "^https?://sandbox\\.zenodo\\.org/records?/(\\d+)/?(?:\\?.*)?(?:#.*)?$"
   record_id <- "^(\\d+)$"
 
   if (grepl(doi, id)) {

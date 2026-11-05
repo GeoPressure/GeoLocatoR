@@ -35,6 +35,8 @@ test_that("read_soi_gld() keeps retrieval coordinates and handles column selecti
   expect_true(all(c("LongitudeRemoved", "LatitudeRemoved") %in% names(gdl)))
   expect_equal(gdl$LatitudeRemoved, c(47.47, NA))
   expect_equal(gdl$LongitudeRemoved, c(8.31, NA))
+  # Missing order remarks stay missing rather than becoming the text "NA"
+  expect_identical(gdl$RemarksOrder, c(NA_character_, NA_character_))
 
   # A character vector selects these columns
   gdl <- read_soi_gld(data_file = d, order_file = o, filter_col = c("GDL_ID", "Client"))
@@ -63,4 +65,13 @@ test_that("read_soi_gld() keeps retrieval coordinates and handles column selecti
   expect_identical(gdl$PrioritySensor, c("LIGHT", "LIGHT"))
   expect_identical(gdl$PriorityMemory, c(20, 20))
   expect_identical(suppressWarnings(read_soi_gld_orders(order_file))$AccSamplingRate, 25)
+})
+
+test_that("read_soi_gld() reports a failed Access export", {
+  skip_on_os("windows")
+  # An empty file is not an Access database, and CI has no mdb-export: both make the export fail
+  access_file <- withr::local_tempfile(fileext = ".accdb")
+  file.create(access_file)
+
+  expect_error(suppressWarnings(read_soi_gld(access_file = access_file)), "could not export")
 })

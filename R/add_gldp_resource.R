@@ -2,13 +2,13 @@
 #'
 #' @description
 #' Add a standard GeoLocator-DP resource to a package. This essentially wraps
-#' [frictionless::add_resource()] but with prepartions steps of the data:
+#' [frictionless::add_resource()], preparing the data first:
 #' - extending the schema with extra columns present in `data` when allowed by
 #'   `fieldsMatch`;
 #' - adding missing schema columns to `data` with typed `NA` values when
 #'   needed;
 #' - reordering `data` columns to match the schema, because
-#'   [frictionless::add_resource()] expects fields in schema order.
+#'   [frictionless::add_resource()] expects fields in schema order;
 #' - casting columns to schema types when `cast_type = TRUE`, for example
 #'   converting strings to dates, numbers, or integers when required by the
 #'   schema, so the stored resource is consistent with the declared schema.
@@ -23,6 +23,8 @@
 #' adjusted according to the schema.
 #' @param cast_type A logical value indicating whether the data frame should be cast to the types
 #' specified in the schema. Defaults to `FALSE`.
+#' @param delim Not used: [frictionless::add_resource()] only uses it when
+#'   `data` is a path to a file, and `data` is always a data frame here.
 #' @inheritParams frictionless::add_resource
 #'
 #' @return The updated GeoLocator Data Package object with the new resource added.
@@ -42,7 +44,7 @@ add_gldp_resource <- function(
   check_gldp(pkg)
   version <- gldp_version(pkg)
 
-  # Retrieve full schema (pkg$resources) does not have schema at first
+  # The profile lists the tables, whose schemas are not in `pkg` until added.
   pkg_schema <- gldp_profile_schema(version)
   # The first branch is the one for the fixed tables.
   possible_gldp_resources <-
@@ -50,8 +52,8 @@ add_gldp_resource <- function(
 
   if (!resource_name %in% possible_gldp_resources) {
     cli_abort(c(
-      "x" = "{.val {resource_name}} is not a supported GeoLocatoR resource for {.fn add_gldp_resource}.",
-      "i" = "Supported GeoLocatoR resources are: {.val {possible_gldp_resources}}.",
+      "x" = "{.val {resource_name}} is not a GeoLocator-DP table supported by {.fn add_gldp_resource}.",
+      "i" = "Supported GeoLocator-DP tables are: {.val {possible_gldp_resources}}.",
       "i" = "To add custom resources, use {.fn frictionless::add_resource} directly."
     ))
   }
@@ -108,14 +110,18 @@ add_gldp_resource <- function(
     if (!field$name %in% names(data)) {
       # Types not listed fall back to a logical NA, which writes as an empty
       # CSV column and is typed by `frictionless::read_resource()` on the way in.
-      data[[field$name]] <- switch(
-        as.character(field$type)[1],
-        string = NA_character_,
-        number = NA_real_,
-        integer = NA_integer_,
-        date = as.Date(NA),
-        duration = NA_character_,
-        NA
+      # Repeated to the row count: a base data.frame does not recycle to 0 rows.
+      data[[field$name]] <- rep(
+        switch(
+          as.character(field$type)[1],
+          string = NA_character_,
+          number = NA_real_,
+          integer = NA_integer_,
+          date = as.Date(NA),
+          duration = NA_character_,
+          NA
+        ),
+        nrow(data)
       )
     }
   }
@@ -138,37 +144,32 @@ add_gldp_resource <- function(
     delim = delim
   )
 
-  # GeoLocator-DP requires `$schema` and `type: "table"` on its tabular resources
-  # from v1.1. frictionless only sets them from version 2.0, so set them here to
-  # stay correct on both. Every profile version declares both properties, so this
-  # is safe for older packages too.
-  #
-  # `profile: "tabular-data-resource"` is deliberately left in place: it is the
-  # Data Package v1 spelling that `$schema` and `type` replace, but frictionless
-  # 1.3.0 refuses to read a resource without it.
-  resource <- gldp_resource(pkg, resource_name)
-  changed <- FALSE
-
-  if (!identical(resource[["$schema"]], .gldp_data_resource_profile)) {
-    resource <- append(
-      list(`$schema` = .gldp_data_resource_profile),
-      resource
-    )
-    changed <- TRUE
-  }
-
-  if (!identical(resource$type, "table")) {
-    resource <- append(
-      resource,
-      list(type = "table"),
-      after = which(names(resource) == "name")
-    )
-    changed <- TRUE
-  }
-
-  if (changed) {
-    gldp_resource(pkg, resource_name) <- resource
-  }
+  gldp_resource(pkg, resource_name) <- gldp_mark_table_resource(gldp_resource(pkg, resource_name))
 
   return(pkg)
+}
+
+#' Mark a resource descriptor as a GeoLocator-DP table
+#'
+#' @description
+#' GeoLocator-DP requires `$schema` and `type: "table"` on its tabular resources
+#' from v1.1. frictionless only sets them from version 2.0, so they are set here
+#' to stay correct on both. Up to v1.0, the profile used the resource `$schema`
+#' for the table schema URL instead, so a resource of a package created for
+#' those versions does not match that version's profile; [read_gldp()] upgrades
+#' such packages.
+#'
+#' `profile: "tabular-data-resource"` is deliberately left in place: it is the
+#' Data Package v1 spelling that `$schema` and `type` replace, but frictionless
+#' 1.3.0 refuses to read a resource without it.
+#'
+#' @param resource A resource descriptor.
+#' @return `resource`, with `$schema` first and `type` after `name`.
+#' @noRd
+gldp_mark_table_resource <- function(resource) {
+  # Remove any earlier value, such as a v1.0 table schema URL in `$schema`.
+  resource[["$schema"]] <- NULL
+  resource[["type"]] <- NULL
+  resource <- append(list(`$schema` = .gldp_data_resource_profile), resource)
+  append(resource, list(type = "table"), after = which(names(resource) == "name"))
 }

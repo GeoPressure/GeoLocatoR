@@ -71,9 +71,79 @@ test_that("read_gldp identifies an unreadable resource", {
     auto_unbox = TRUE
   )
 
-  expect_error(
+  err <- expect_error(
     read_gldp(path),
     "Could not read resource tags"
+  )
+  # The parent error says what went wrong; the schema is not blamed for it.
+  expect_no_match(conditionMessage(err), "does not match the declared schema")
+})
+
+test_that("read_gldp leaves resources that are not tables on their path", {
+  # The profile allows custom resources and a `params` resource. They have no
+  # table schema, so they cannot be read as tables.
+  source_dir <- tempfile("read-custom-source-")
+  directory <- tempfile("read-custom-")
+  on.exit(unlink(c(source_dir, directory), recursive = TRUE), add = TRUE)
+  dir.create(source_dir)
+  writeLines("A note", file.path(source_dir, "notes.txt"))
+
+  pkg <- add_gldp_resource(
+    create_gldp(),
+    "tags",
+    data.frame(
+      tag_id = "A",
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "test",
+      model = "test"
+    )
+  )
+  pkg[["resources"]] <- c(pkg[["resources"]], list(list(name = "notes", path = "notes.txt")))
+  attr(pkg, "directory") <- source_dir
+  write_gldp(pkg, directory)
+
+  pkg_back <- read_gldp(directory)
+
+  expect_identical(gldp_resource(pkg_back, "notes")$path, "notes.txt")
+  expect_null(gldp_resource(pkg_back, "notes")$data)
+  expect_identical(tags(pkg_back)$tag_id, "A")
+})
+
+test_that("read_gldp reads the GeoLocator-DP example package offline", {
+  # The example gives each table schema as a URL, and declares `type: "table"`
+  # without the Data Package v1 `profile` that frictionless 1.3.0 requires.
+  directory <- tempfile("read-example-")
+  copy <- tempfile("read-example-copy-")
+  on.exit(unlink(c(directory, copy), recursive = TRUE), add = TRUE)
+  dir.create(directory)
+  file.copy(
+    list.files(test_path("fixtures", "geolocator-dp-example"), full.names = TRUE),
+    directory
+  )
+
+  # Its measurements use `acceleration`, which is not a v1.2 sensor.
+  expect_warning(pkg <- read_gldp(directory), "measurements")
+
+  expect_identical(gldp_resource(pkg, "tags")$schema, gldp_resource_schema("v1.2", "tags"))
+  expect_identical(nrow(tags(pkg)), 8L)
+  expect_identical(nrow(observations(pkg)), 18L)
+
+  write_gldp(pkg, copy)
+  pkg_back <- read_gldp(copy)
+  expect_equal(tags(pkg_back), tags(pkg))
+  expect_equal(observations(pkg_back), observations(pkg))
+})
+
+test_that("read_gldp reports a Data Package without $schema", {
+  directory <- tempfile("read-no-schema-")
+  on.exit(unlink(directory, recursive = TRUE), add = TRUE)
+  dir.create(directory)
+  writeLines('{"name": "plain", "resources": []}', file.path(directory, "datapackage.json"))
+
+  expect_error(
+    suppressWarnings(read_gldp(directory)),
+    "does not seem to be a GeoLocator Data Package"
   )
 })
 
@@ -161,6 +231,17 @@ test_that("write_gldp/read_gldp roundtrip keeps pkg$params via params.json", {
   pkg_back <- suppressWarnings(read_gldp(file.path(out_dir, "datapackage.json"), force_read = TRUE))
   expect_true(is.list(pkg_back$params))
   expect_equal(pkg_back$params[[1]]$id, "TEST-PARAM")
+})
+
+test_that("write_gldp does not write an empty params.json", {
+  directory <- tempfile("write-no-params-")
+  on.exit(unlink(directory, recursive = TRUE), add = TRUE)
+  pkg <- add_gldp_resource(create_gldp(), "tags", data.frame(tag_id = "A", ring_number = "R1"))
+  pkg[["params"]] <- list()
+
+  write_gldp(pkg, directory)
+
+  expect_false(file.exists(file.path(directory, "params.json")))
 })
 
 test_that("read_gldp restores the provenance table after a JSON round trip", {

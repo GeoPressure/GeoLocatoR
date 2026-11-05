@@ -19,11 +19,14 @@
 #'
 #' **datapackage_id in tags:**
 #' - For the `tags` resource, each row must have a `datapackage_id`.
-#' - Missing `datapackage_id` values are filled with the package `id`.
+#' - Missing `datapackage_id` values are filled with the package `id`, so the
+#'   merge aborts when such a package has no `id`.
 #' - The merge aborts if `tags$datapackage_id` overlaps between the two inputs.
 #'
 #' **Metadata merging rules:**
-#' - **version**: Uses the package default version from `create_gldp()`.
+#' - **`$schema`**: The latest GeoLocator-DP version, as set by `create_gldp()`. The
+#'   source packages' `version` is not kept on the merged package; it is listed in
+#'   `datapackages$version`.
 #' - **title**: Combined from both packages, separated by a "/".
 #' - **contributors**: Combined from both packages. Entries for the same person
 #'   (same ORCID in `path`, or the same name when no ORCID is given) are merged
@@ -35,11 +38,12 @@
 #' - **codeRepository**: Combined from both packages, with duplicates removed.
 #' - **datapackages**: Carries the merged provenance table described above.
 #' - **relatedIdentifiers**: Combined, with duplicates removed, and each unique
-#'   source `datapackage_id` (or package `id`) is added as `IsCompiledBy`.
+#'   source `datapackage_id` (or package `id`) is added as `IsCompiledBy`, a DOI
+#'   without its `https://doi.org/` prefix.
 #' - **params**: Concatenated from all inputs; every entry must contain a
 #'   non-empty `param$id`.
 #' - **created**: Set to the current timestamp at the time of merging.
-#' - All others are dropped
+#' - All others are dropped.
 #'
 #' **datapackages provenance table:**
 #' - `pkg$datapackages` is a one-row-per-source tibble keyed by
@@ -54,6 +58,7 @@
 #' @return A GeoLocator Data Package object containing the merged data from all inputs.
 #'
 #' @examples
+#' \dontrun{
 #' pkg1 <- read_zenodo("17367319", quiet = TRUE)
 #' pkg2 <- read_zenodo("17257520", quiet = TRUE)
 #'
@@ -62,6 +67,7 @@
 #'
 #' # List-style input is also supported
 #' merged <- merge_gldp(list(pkg1, pkg2))
+#' }
 #'
 #' @seealso [create_gldp()] to create package shells and [update_gldp()] for the
 #'   derived properties recomputed on the merged package.
@@ -232,9 +238,17 @@ merge_gldp_prepare_tags <- function(pkg, resources) {
 
   tags <- gldp_read_resource(pkg, resource_name = "tags")
   if (!"datapackage_id" %in% names(tags)) {
-    tags$datapackage_id <- pkg$id
+    tags$datapackage_id <- NA_character_
   }
-  tags$datapackage_id[is.na(tags$datapackage_id) | tags$datapackage_id == ""] <- pkg$id
+  # Tags without a datapackage_id take the package id, which identifies their source.
+  missing <- is.na(tags$datapackage_id) | tags$datapackage_id == ""
+  if (any(missing) && !is_non_empty_string(pkg$id)) {
+    cli_abort(c(
+      "x" = "Cannot merge a package without {.field id} whose tags have no {.field datapackage_id}.",
+      "i" = "Set {.code pkg[[\"id\"]]} (for example its DOI) on every input package before merging."
+    ))
+  }
+  tags$datapackage_id[missing] <- pkg$id
   tags
 }
 
@@ -454,7 +468,7 @@ merge_gldp_datapackages <- function(pkgs) {
 #' name identifies a single person; entries with different ORCIDs stay separate.
 #' The first entry is kept, completed with fields it lacks (such as the ORCID
 #' `path`) from the other entries, with the union of `roles` and of `organization`
-#' (values split on `;`, joined with `; `; a value contained in a longer one,
+#' (values split on `;`, joined with `; `; an organization contained in a longer one,
 #' such as `"Institute"` in `"Institute, University"`, is dropped).
 #' @noRd
 merge_gldp_contributors <- function(contributors) {
@@ -467,9 +481,13 @@ merge_gldp_contributors <- function(contributors) {
     if (is.na(title) || !nzchar(trimws(title))) {
       title <- paste(ctr$givenName %||% "", ctr$familyName %||% "")
     }
-    title <- iconv(tolower(title), to = "ASCII//TRANSLIT")
-    words <- strsplit(gsub("[^a-z ]", " ", title %||% ""), " +")[[1]]
-    paste(sort(words[nzchar(words)]), collapse = " ")
+    # Drop accents. Some iconv builds leave marks ("u, 'i) or substitute "?": remove them
+    # rather than split the word. `from` is needed for non-ASCII names in a C locale.
+    ascii <- gsub("[\"'`^~?]", "", iconv(tolower(title), from = "UTF-8", to = "ASCII//TRANSLIT"))
+    words <- strsplit(gsub("[^a-z ]", " ", ascii), " +")[[1]]
+    key <- paste(sort(words[nzchar(words)]), collapse = " ")
+    # A name with no ASCII form (e.g. in another script) is compared as written.
+    if (nzchar(key)) key else trimws(tolower(title))
   }
   orcid <- purrr::map_chr(contributors, \(ctr) {
     path <- as.character(ctr$path %||% "")[1]
@@ -478,8 +496,11 @@ merge_gldp_contributors <- function(contributors) {
   })
   name <- purrr::map_chr(contributors, name_key)
   key <- ifelse(is.na(orcid), paste0("name:", name), paste0("orcid:", orcid))
+  # An entry with neither ORCID nor name is never merged.
+  unnamed <- which(is.na(orcid) & !nzchar(name))
+  key[unnamed] <- glue::glue("entry:{unnamed}")
   # A name shared by exactly one ORCID identifies that person.
-  for (k in which(is.na(orcid))) {
+  for (k in setdiff(which(is.na(orcid)), unnamed)) {
     match <- unique(orcid[!is.na(orcid) & name == name[k]])
     if (length(match) == 1) key[k] <- paste0("orcid:", match)
   }
@@ -488,15 +509,7 @@ merge_gldp_contributors <- function(contributors) {
     values <- unlist(purrr::map(entries, \(ctr) ctr[[field]]), use.names = FALSE)
     values <- trimws(unlist(strsplit(as.character(values), ";", fixed = TRUE)))
     values <- values[!is.na(values) & nzchar(values)]
-    values <- values[!duplicated(tolower(values))]
-    # Drop a value contained in a longer one ("Institute" in "Institute, University").
-    contained <- purrr::map_lgl(seq_along(values), \(i) {
-      any(
-        nchar(values[-i]) > nchar(values[i]) &
-          grepl(tolower(values[i]), tolower(values[-i]), fixed = TRUE)
-      )
-    })
-    values[!contained]
+    values[!duplicated(tolower(values))]
   }
   purrr::map(unique(key), \(k) {
     entries <- contributors[key == k]
@@ -513,6 +526,15 @@ merge_gldp_contributors <- function(contributors) {
       merged$roles <- as.list(roles)
     }
     organization <- split_values(entries, "organization")
+    # Drop an affiliation contained in a longer one ("Institute" in "Institute, University").
+    # Roles are a vocabulary, where "researcher" is not part of "researchergroup".
+    contained <- purrr::map_lgl(seq_along(organization), \(i) {
+      any(
+        nchar(organization[-i]) > nchar(organization[i]) &
+          grepl(tolower(organization[i]), tolower(organization[-i]), fixed = TRUE)
+      )
+    })
+    organization <- organization[!contained]
     if (length(organization) > 0) {
       merged$organization <- paste(organization, collapse = "; ")
     }

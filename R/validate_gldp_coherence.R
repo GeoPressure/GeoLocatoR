@@ -12,7 +12,9 @@ validate_gldp_coherence <- function(pkg) {
   cli_h3("Check Coherence")
 
   valid_pkg <- validate_gldp_core_coherence(pkg)
-  valid_obs <- validate_gldp_observations(observations(pkg))
+  # A missing observations resource is already reported by the core checks.
+  valid_obs <- !"observations" %in% frictionless::resource_names(pkg) ||
+    validate_gldp_observations(observations(pkg))
   valid_gp <- validate_gldp_geopressure_coherence(pkg)
   valid <- valid_pkg & valid_obs & valid_gp
 
@@ -29,8 +31,8 @@ validate_gldp_coherence <- function(pkg) {
 #'
 #' Internal helper that applies additional checks for optional GeoPressure
 #' resources when they are present. These checks cover selected numeric ranges,
-#' datetime windows, duration windows, schema-declared foreign keys, and
-#' unusual-but-non-failing movement metrics in `edges`.
+#' datetime windows, duration windows, schema-declared foreign keys of every
+#' resource, and unusual-but-non-failing values in `edges` and `pressurepaths`.
 #'
 #' @param pkg A GeoLocator Data Package object.
 #'
@@ -130,7 +132,7 @@ validate_gldp_geopressure_coherence <- function(pkg) {
         )
       } else {
         cli_alert_danger(
-          "{sum(invalid)} duration{?s} in {.field {resource_name}} {?is/are} outside the expected range ({expected_range_label[1]} < duration < {expected_range_label[2]}). {extreme_kind} invalid duration: {extreme_label}."
+          "{sum(invalid)} duration{?s} in {.field {resource_name}} {cli::qty(sum(invalid))}{?is/are} outside the expected range ({expected_range_label[1]} < duration < {expected_range_label[2]}). {extreme_kind} invalid duration: {extreme_label}."
         )
         valid <<- FALSE
       }
@@ -150,7 +152,12 @@ validate_gldp_geopressure_coherence <- function(pkg) {
 
       for (fk in foreign_keys) {
         child_fields <- as.character(unlist(fk$fields %||% character(0), use.names = FALSE))
-        parent_name <- as.character(fk$reference$resource %||% NA_character_)[1]
+        # A reference without `resource` (v2) or with `resource: ""` (v1) points
+        # at the resource itself.
+        parent_name <- as.character(fk$reference$resource %||% "")[1]
+        if (!nzchar(parent_name)) {
+          parent_name <- child_name
+        }
         parent_fields <- as.character(unlist(
           fk$reference$fields %||% character(0),
           use.names = FALSE
@@ -158,7 +165,6 @@ validate_gldp_geopressure_coherence <- function(pkg) {
 
         if (
           length(child_fields) == 0 ||
-            !nzchar(parent_name) ||
             length(child_fields) != length(parent_fields)
         ) {
           next
@@ -174,11 +180,20 @@ validate_gldp_geopressure_coherence <- function(pkg) {
           next
         }
 
-        if (!all(child_fields %in% names(child_data))) {
-          cli_alert_danger(
-            "Foreign key check for {.field {child_name}} failed: missing child fields: {.field {child_fields}}."
+        absent_child_fields <- setdiff(child_fields, names(child_data))
+        if (length(absent_child_fields) > 0) {
+          # A column the schema declares optional (e.g. `observations$tag_id`)
+          # may be left out of the file and then holds no key to check.
+          optional_fields <- purrr::map_chr(
+            purrr::discard(resource$schema$fields, \(f) isTRUE(f$constraints$required)),
+            "name"
           )
-          valid <<- FALSE
+          if (!all(absent_child_fields %in% optional_fields)) {
+            cli_alert_danger(
+              "Foreign key check for {.field {child_name}} failed: missing child fields: {.field {child_fields}}."
+            )
+            valid <<- FALSE
+          }
           next
         }
         if (!all(parent_fields %in% names(parent_data))) {
@@ -206,7 +221,7 @@ validate_gldp_geopressure_coherence <- function(pkg) {
         missing_keys <- anti_join(child_keys, parent_keys, by = child_fields)
         if (nrow(missing_keys) > 0) {
           cli_alert_danger(
-            "{nrow(missing_keys)} foreign key row{?s} in {.field {child_name}} {?is/are} missing in parent {.field {parent_name}}."
+            "{nrow(missing_keys)} foreign key row{?s} in {.field {child_name}} {cli::qty(nrow(missing_keys))}{?is/are} missing in parent {.field {parent_name}}."
           )
           valid <<- FALSE
         }
@@ -241,11 +256,11 @@ validate_gldp_geopressure_coherence <- function(pkg) {
     check_datetime_window(pressurepaths_data, "pressurepaths", "datetime")
     if ("altitude" %in% names(pressurepaths_data)) {
       altitude <- suppressWarnings(as.numeric(pressurepaths_data$altitude))
+      # `label` is an optional column; without it no row is discarded.
+      label <- pressurepaths_data[["label"]] %||% NA_character_
       invalid_altitude <- !is.na(altitude) &
         (altitude < -200 | altitude > 10000) &
-        (!"label" %in% names(pressurepaths_data) |
-          is.na(pressurepaths_data$label) |
-          pressurepaths_data$label != "discard")
+        (is.na(label) | label != "discard")
       if (any(invalid_altitude)) {
         cli_alert_warning(
           "{sum(invalid_altitude)} value{?s} in {.field pressurepaths$altitude} {?is/are} outside the usual \\
@@ -263,7 +278,7 @@ validate_gldp_geopressure_coherence <- function(pkg) {
       n_missing <- sum(is.na(data$j))
       if (n_missing > 0) {
         cli_alert_warning(
-          "{format(n_missing, big.mark = ',')} {cli::qty(n_missing)}row{?s} of {.field {resource_name}} {?has/have} no {.field j}. \\
+          "{format(n_missing, big.mark = ',')} {cli::qty(n_missing)}row{?s} of {.field {resource_name}} {cli::qty(n_missing)}{?has/have} no {.field j}. \\
           Each row should identify its trajectory (1 for {.val most_likely})."
         )
       }
@@ -362,8 +377,8 @@ validate_gldp_core_coherence <- function(pkg) {
     !(min_res_required %in% sapply(pkg$resources, \(x) x$name))
   ]
   if (length(res_missing) > 0) {
-    cli::cli_alert_warning(
-      "{.pkg pkg} is missing {.val {res_missing}}. We could not check package coherence."
+    cli_alert_danger(
+      "{.arg pkg} is missing {.val {res_missing}}. We could not check package coherence."
     )
     valid <- FALSE
     return(valid)
@@ -372,6 +387,9 @@ validate_gldp_core_coherence <- function(pkg) {
   t <- tags(pkg)
   o <- observations(pkg)
   m <- measurements(pkg)
+
+  # `tag_id` and `device_status` are optional columns: an absent one is empty.
+  o[setdiff(c("tag_id", "device_status"), names(o))] <- NA_character_
 
   # Check for conflicting species assignments:
   # A single ring_number should be linked to only one scientific_name.
@@ -383,13 +401,9 @@ validate_gldp_core_coherence <- function(pkg) {
     pull(.data$ring_number)
   if (length(conflicting_ring_numbers) > 0) {
     valid <- FALSE
-    conflicting_ring_numbers |>
-      purrr::walk(
-        ~ cli_alert_danger(
-          "Multiple scientific names used for ring_number {.strong {}}",
-          .
-        )
-      )
+    cli_alert_danger(
+      "Multiple scientific names used for {.field ring_number} {.val {conflicting_ring_numbers}}."
+    )
   }
 
   # Check for measurements with tag_id not present in the tags table.
@@ -421,10 +435,12 @@ validate_gldp_core_coherence <- function(pkg) {
     filter(!is.na(.data$tag_id)) |>
     anti_join(t, by = c("tag_id", "ring_number"))
   if (nrow(invalid_combinations) > 0) {
+    combinations <- unique(glue::glue(
+      "{invalid_combinations$tag_id}/{invalid_combinations$ring_number}"
+    ))
     cli_alert_danger(
-      "The following {.field tag_id} and {.field ring_number} combinations in {.field observations} are not present in {.field tags}:"
+      "{length(combinations)} {.field tag_id}/{.field ring_number} combination{?s} in {.field observations} {?is/are} not present in {.field tags}: {.val {combinations}}."
     )
-    print(invalid_combinations)
     valid <- FALSE
   }
 
@@ -435,12 +451,11 @@ validate_gldp_core_coherence <- function(pkg) {
     cli::cli_alert_warning(
       "No observations found for {.val {tidmissing}} declared in {.field tags}."
     )
-    # Still valid
-    # valid <- FALSE
+    # A warning only: the package stays valid.
   }
 
-  # Check for missing equipment or retrieval while measurement are present
-  # If measurements are present, there should be at least one equipment or retrieval observation.
+  # Check for missing equipment or retrieval while measurements are present.
+  # A tag with measurements needs both an equipment and a retrieval observation.
   tidmissingequip <- setdiff(
     unique(m$tag_id),
     unique(o$tag_id[o$observation_type == "equipment"])
@@ -481,6 +496,9 @@ validate_gldp_core_coherence <- function(pkg) {
 validate_gldp_observations <- function(o) {
   valid <- TRUE
 
+  # `tag_id` and `device_status` are optional columns: an absent one is empty.
+  o[setdiff(c("tag_id", "device_status"), names(o))] <- NA_character_
+
   o <- o |>
     arrange(
       .data$ring_number,
@@ -514,9 +532,9 @@ validate_gldp_observations <- function(o) {
     )
 
   if (nrow(missing_tag_id) > 0) {
-    error_tag <- unique(missing_tag_id$tag_id)
+    error_ring_number <- unique(missing_tag_id$ring_number)
     cli_alert_danger(
-      "{length(error_tag)} equipment or retrieval observation{?s} {?is/are} missing a tag_id. Check: {.field {error_tag}}"
+      "{nrow(missing_tag_id)} equipment or retrieval observation{?s} {?is/are} missing a tag_id. Check ring_number: {.field {error_ring_number}}"
     )
     valid <- FALSE
   }
@@ -574,7 +592,7 @@ validate_gldp_observations <- function(o) {
     valid <- FALSE
   }
 
-  # Check 6: A tag_id must follow an equipment event
+  # Check 6: Each tag_id must have an equipment event (its order is check 7).
   tag_without_equipment <- o |>
     group_by(.data$ring_number, .data$tag_id) |>
     filter(!is.na(.data$tag_id)) |>
@@ -583,12 +601,13 @@ validate_gldp_observations <- function(o) {
   if (nrow(tag_without_equipment) > 0) {
     error_tag <- unique(tag_without_equipment$tag_id)
     cli_alert_danger(
-      "{length(error_tag)} tag{?s} {?was/were} recorded without a preceding equipment event. Check: {.field {error_tag}}"
+      "{length(error_tag)} tag{?s} {?was/were} recorded without an equipment event. Check: {.field {error_tag}}"
     )
     valid <- FALSE
   }
 
   # Check 7: Retrieval datetime must be equal to or after equipment datetime per tag_id.
+  # The earliest event of each kind is kept without summarising, which warns on an empty table.
   equipment_dates <- o |>
     filter(
       !is.na(.data$tag_id),
@@ -596,8 +615,9 @@ validate_gldp_observations <- function(o) {
     ) |>
     mutate(datetime = suppressWarnings(as.POSIXct(.data$datetime, tz = "UTC"))) |>
     filter(!is.na(.data$datetime)) |>
-    group_by(.data$tag_id) |>
-    summarize(equipment_datetime = min(.data$datetime), .groups = "drop")
+    arrange(.data$datetime) |>
+    distinct(.data$tag_id, .keep_all = TRUE) |>
+    select("tag_id", equipment_datetime = "datetime")
 
   retrieval_dates <- o |>
     filter(
@@ -606,8 +626,9 @@ validate_gldp_observations <- function(o) {
     ) |>
     mutate(datetime = suppressWarnings(as.POSIXct(.data$datetime, tz = "UTC"))) |>
     filter(!is.na(.data$datetime)) |>
-    group_by(.data$tag_id) |>
-    summarize(retrieval_datetime = min(.data$datetime), .groups = "drop")
+    arrange(.data$datetime) |>
+    distinct(.data$tag_id, .keep_all = TRUE) |>
+    select("tag_id", retrieval_datetime = "datetime")
 
   invalid_equipment_retrieval_order <- inner_join(
     equipment_dates,
@@ -630,9 +651,9 @@ validate_gldp_observations <- function(o) {
     filter(n() > 1)
 
   if (nrow(duplicate_observations) > 0) {
-    error_tag <- unique(duplicate_observations$tag_id)
+    error_ring_number <- unique(duplicate_observations$ring_number)
     cli_alert_danger(
-      "{length(error_tag)} duplicate observation{?s} found. Check: {.field {error_tag}}"
+      "{nrow(duplicate_observations)} duplicate observation{?s} found. Check ring_number: {.field {error_ring_number}}"
     )
     valid <- FALSE
   }

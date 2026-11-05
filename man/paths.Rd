@@ -20,7 +20,6 @@ paths(x) <- value
 \description{
 \code{paths()} gets the paths from a GeoLocator Data Package object.
 
-\verb{paths<-()} is the assignment equivalent.
-It should only be used within other functions, where the expected data
-structure can be guaranteed.
+\verb{paths<-()} is the assignment equivalent. It replaces the resource
+and casts \code{value} to the types of its schema.
 }

@@ -20,7 +20,6 @@ edges(x) <- value
 \description{
 \code{edges()} gets the edges from a GeoLocator Data Package object.
 
-\verb{edges<-()} is the assignment equivalent.
-It should only be used within other functions, where the expected data
-structure can be guaranteed.
+\verb{edges<-()} is the assignment equivalent. It replaces the resource
+and casts \code{value} to the types of its schema.
 }

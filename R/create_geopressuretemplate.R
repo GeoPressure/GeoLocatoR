@@ -9,7 +9,7 @@
 #'   component is used as the project name.
 #' @param pkg Optional `geolocatordp` object used to fill project metadata,
 #'   config, and data files.
-#' @param open If `TRUE`, the package is opened in a new RStudio session.
+#' @param open If `TRUE`, the project is opened in a new RStudio session.
 #'
 #' @return The path to the created project directory.
 #'
@@ -77,7 +77,7 @@ create_geopressuretemplate <- function(path, pkg = NULL, open = interactive()) {
   }
   unlink(clone_stderr)
   cli_alert_success(
-    "Cloning repo from {.url https://github.com/GeoPressure/GeoPressureTemplate/} into {.path {path}}."
+    "Cloned repo from {.url https://github.com/GeoPressure/GeoPressureTemplate/} into {.path {path}}."
   )
   project_name <- basename(path)
 
@@ -86,9 +86,7 @@ create_geopressuretemplate <- function(path, pkg = NULL, open = interactive()) {
     to = file.path(path, glue::glue("{project_name}.Rproj"))
   )
 
-  # setwd(path)
   withr::with_dir(path, {
-    # setwd(path)
     d <- desc::desc()
     d$set("Package", gsub("[^a-zA-Z0-9\\.]", "", project_name))
     d$write()
@@ -197,7 +195,8 @@ create_geopressuretemplate_desc <- function(pkg) {
 
   # Optional fields
   if (!is.null(pkg$description)) {
-    description_text <- as.character(pkg$description)[1] |>
+    # Wrap in a tag so that plain text is not read as a file path.
+    description_text <- glue::glue("<div>{as.character(pkg$description)[1]}</div>") |>
       rvest::read_html() |>
       rvest::html_text2()
     if (nzchar(description_text)) {
@@ -222,15 +221,16 @@ create_geopressuretemplate_desc <- function(pkg) {
 #' @return Nothing (side effect: writes README.md file)
 #' @noRd
 create_geopressuretemplate_readme <- function(pkg) {
-  badge_part <- if (!is.null(pkg$name) && nzchar(pkg$name)) {
-    glue::glue(
-      "[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.{pkg$name}.svg)](https://doi.org/10.5281/zenodo.{pkg$name})"
-    )
+  # pkg$id holds the DOI URL of packages published on Zenodo; pkg$name is not a DOI.
+  doi <- sub("^https?://doi\\.org/", "", pkg$id %||% "")
+  badge_part <- if (startsWith(doi, "10.")) {
+    glue::glue("[![DOI](https://zenodo.org/badge/DOI/{doi}.svg)](https://doi.org/{doi})")
   } else {
     ""
   }
   description_text <- if (!is.null(pkg$description)) {
-    as.character(pkg$description)[1] |>
+    # Wrap in a tag so that plain text is not read as a file path.
+    glue::glue("<div>{as.character(pkg$description)[1]}</div>") |>
       rvest::read_html() |>
       rvest::html_text2()
   } else {
@@ -292,7 +292,7 @@ create_geopressuretemplate_licenses <- function(pkg) {
   } else {
     as.character(lic)[1]
   }
-  # 5. Abort if no usable license identifier is available
+  # 5. Stop with a warning if no usable license identifier is available
   if (is.null(license_name) || is.na(license_name) || !nzchar(license_name)) {
     cli_warn(c(
       "!" = "No license name or path provided.",
@@ -309,7 +309,8 @@ create_geopressuretemplate_licenses <- function(pkg) {
     mit = list("\\bmit\\b", usethis::use_mit_license),
     apache = list("apache", usethis::use_apache_license),
     cc0 = list("cc[- ]?0", usethis::use_cc0_license),
-    ccby = list("cc[- ]?by", usethis::use_ccby_license),
+    # Only plain CC-BY: SA, NC and ND variants have no usethis template.
+    ccby = list("cc[- ]?by([- ]?[0-9.]+)?$", usethis::use_ccby_license),
     proprietary = list("proprietary", usethis::use_proprietary_license)
   )
 
@@ -336,7 +337,7 @@ create_geopressuretemplate_licenses <- function(pkg) {
 create_geopressuretemplate_data <- function(pkg) {
   check_gldp(pkg)
 
-  # Observations
+  # Tags and observations
   readr::write_csv(tags(pkg), "./data/tags.csv")
   readr::write_csv(observations(pkg), "./data/observations.csv")
 
@@ -441,6 +442,11 @@ create_geopressuretemplate_config <- function(pkg) {
           }
         })
         param_config$tag_create$directory <- NULL
+        # Exported measurements are already drift-corrected, so do not apply it again.
+        param_config$tag_create[c("time_drift", "time_reference")] <- NULL
+        # `known` is rebuilt from observations below; modifyList() cannot merge two
+        # data.frames with different numbers of rows.
+        param_config$tag_set_map$known <- NULL
         if ("geopressuretemplate" %in% names(param)) {
           param_config$geopressuretemplate <- param$geopressuretemplate
         }
@@ -469,12 +475,7 @@ create_geopressuretemplate_config <- function(pkg) {
           datetime = as.POSIXct(.data$datetime, tz = "UTC"),
           known_lon = .data$longitude,
           known_lat = .data$latitude,
-          location_name = .data$location_name,
-          device_status = .data$device_status,
-          condition = .data$condition,
-          age_class = .data$age_class,
-          sex = .data$sex,
-          observation_comments = .data$observation_comments
+          sex = .data$sex
         )
 
       # Add sex if unique and defined (i.e., not U)
@@ -484,39 +485,7 @@ create_geopressuretemplate_config <- function(pkg) {
         co$sex <- usex
       }
 
-      # Conditionally remove the column
-      rm_col <- c("sex")
-      if (all(is.na(k$location_name) | k$location_name == "")) {
-        rm_col <- c(rm_col, "location_name")
-      }
-      if (
-        all(
-          is.na(k$device_status) |
-            k$device_status == "" |
-            k$device_status == "unknown"
-        )
-      ) {
-        rm_col <- c(rm_col, "device_status")
-      }
-      if (all(is.na(k$condition) | k$condition == "" | k$condition == "unknown")) {
-        rm_col <- c(rm_col, "condition")
-      }
-      if (
-        all(
-          is.na(k$age_class) |
-            k$age_class == "" |
-            k$age_class == 0 |
-            k$age_class == "0"
-        )
-      ) {
-        rm_col <- c(rm_col, "age_class")
-      }
-      if (all(is.na(k$observation_comments) | k$observation_comments == "")) {
-        rm_col <- c(rm_col, "observation_comments")
-      }
-      k <- k |> select(any_of(names(k)[!names(k) %in% rm_col]))
-
-      # Add crop date from equipement and retrieval
+      # Add crop date from equipment and retrieval
       co$tag_create <- list(
         crop_start = k |>
           filter(.data$stap_id == 1) |>
@@ -534,8 +503,9 @@ create_geopressuretemplate_config <- function(pkg) {
           pull(.data$dt)
       )
 
+      # `!!` is required: a bare `tag_id` would refer to the column itself.
       sensor <- m |>
-        filter(.data$tag_id == tag_id) |>
+        filter(.data$tag_id == !!tag_id) |>
         pull(.data$sensor)
       co$tag_create <- utils::modifyList(
         list(
@@ -547,12 +517,12 @@ create_geopressuretemplate_config <- function(pkg) {
           } else {
             NULL
           },
-          temperature_external_file = if ("temperature-external" %in% sensor) {
+          temperature_external_file = if ("temperature_external" %in% sensor) {
             "temperature_external.csv"
           } else {
             NULL
           },
-          temperature_internal_file = if ("temperature-internal" %in% sensor) {
+          temperature_internal_file = if ("temperature_internal" %in% sensor) {
             "temperature_internal.csv"
           } else {
             NULL
@@ -580,12 +550,12 @@ create_geopressuretemplate_config <- function(pkg) {
         co$tag_create
       )
 
-      # Add known
+      # Add known, keeping only observations with a location. tag_set_map() warns on
+      # any other column.
       co$tag_set_map <- list(
         known = k |>
-          mutate(
-            datetime = format(.data$datetime, "%Y-%m-%d")
-          )
+          filter(!is.na(.data$known_lat), !is.na(.data$known_lon)) |>
+          select("stap_id", "known_lat", "known_lon")
       )
 
       co <- utils::modifyList(param_config, co)
@@ -650,7 +620,7 @@ create_geopressuretemplate_config <- function(pkg) {
         tmp <- lapply(names(k), function(name) {
           x <- k[[name]]
           if (name == "stap_id" && any(x == 0)) {
-            add_text <- " # Modify the `stap_id` of `0` to the correct stap_id"
+            add_text <- " # Replace each `0` with the stap_id of that observation (sorted by datetime)"
           } else {
             add_text <- ""
           }
@@ -658,8 +628,6 @@ create_geopressuretemplate_config <- function(pkg) {
             x <- glue::glue('"{x}"')
           }
           tmp <- glue::glue("[{glue::glue_collapse(x, sep = ', ')}]")
-
-          # class(tmp) <- "verbatim" # does not work
           glue::glue("{tmp}{add_text}")
         })
         names(tmp) <- names(k)

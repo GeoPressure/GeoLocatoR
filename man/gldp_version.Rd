@@ -11,11 +11,11 @@ gldp_version(x)
 }
 \value{
 Character string version (e.g. \code{"v1.0"}).
+}
+\description{
+Extract the GeoLocator-DP version from \code{x$`$schema`}.
 
 The function aborts if \verb{$schema} is missing, cannot be parsed, or refers to
 an unsupported version.
-}
-\description{
-Extract the GeoLocator-DP version from \code{x$schema}.
 }
 \concept{misc functions}

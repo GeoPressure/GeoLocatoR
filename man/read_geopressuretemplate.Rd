@@ -34,11 +34,16 @@ package resources, and store raw parameter objects in \code{pkg$params}.
 then derive \code{measurements}, \code{tags}, \code{observations}, and \code{params}.
 }
 
+The \code{ring_number}, \code{tag_comments} and \code{bird_create$scientific_name} entries
+of each tag in \code{config.yml} fill the generated \code{tags}.
+
 Manual data files take precedence over generated metadata:
 \itemize{
-\item \code{data/tags.csv} or \code{data/tags.xlsx} replaces generated \code{tags};
+\item \code{data/tags.csv} or \code{data/tags.xlsx} replaces generated \code{tags}. Tags missing
+from the file are kept from the generated table, with a warning;
 \item \code{data/observations.csv} or \code{data/observations.xlsx} replaces generated
-\code{observations}.
+\code{observations}. Generated observations take their \code{ring_number} from
+\code{tags}.
 }
 
 During automatic discovery, GeoLocatoR skips private GeoPressureTemplate

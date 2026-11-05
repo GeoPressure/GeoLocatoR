@@ -21,9 +21,10 @@
 #' - `abstract`: Package description.
 #' - `pubDate`: Publication year extracted from publication/creation date.
 #' - `creator`: Contributors with roles `"ProjectLeader"`, `"Researcher"`, or
-#'   `"DataCurator"` when available.
-#' - `contact`: Contributors with role `"ContactPerson"` as provided in
-#'   contributors.
+#'   `"DataCurator"`, or without any role. When no contributor qualifies, all
+#'   contributors are creators.
+#' - `contact`: Contributors with role `"ContactPerson"`, or else the first
+#'   creator.
 #' - `associatedParty`: Other contributors,
 #'   including those with role `"RightsHolder"`.
 #' - `intellectualRights`: License information.
@@ -35,8 +36,8 @@
 #' Coverage information:
 #' - `temporalCoverage`: Date range from package temporal coverage (if available),
 #'   derived from measurement timestamps.
-#' - `geographicCoverage`: Bounding box from package spatial coverage (if available),
-#'   calculated from all locations in observations, paths, and pressurepaths.
+#' - `geographicCoverage`: Bounding box of the package `spatial` coverage, when the
+#'   package already carries one. It is not computed from the package data.
 #' - `taxonomicCoverage`: Species list from package taxonomic coverage (if available),
 #'   derived from unique scientific names in tags.
 #'
@@ -93,6 +94,7 @@ gldp_to_eml <- function(pkg, directory) {
   creators <- list()
   contacts <- list()
   associated_parties <- list()
+  parties <- list()
 
   for (contributor in (pkg$contributors %||% list())) {
     # Normalise possibly missing fields
@@ -100,7 +102,8 @@ gldp_to_eml <- function(pkg, directory) {
     family_name <- contributor$familyName
     organization_name <- contributor$organization
     contributor_title <- contributor$title %||% contributor$name %||% NULL
-    if (is.null(organization_name)) {
+    # A title stands for the organization only when the contributor has no personal name.
+    if (is.null(organization_name) && is.null(given_name) && is.null(family_name)) {
       organization_name <- contributor_title
     }
     email <- contributor$email
@@ -122,6 +125,7 @@ gldp_to_eml <- function(pkg, directory) {
         NULL
       }
     )
+    parties <- c(parties, list(party))
 
     roles <- contributor$roles
     if (is.null(roles)) {
@@ -139,9 +143,10 @@ gldp_to_eml <- function(pkg, directory) {
         any(c("projectleader", "researcher", "datacurator") %in% roles_lower)
     ) {
       creators <- c(creators, list(party))
-    } else if (!("contactperson" %in% roles_lower) && length(roles) > 0) {
-      # If not a creator or contact, add as associated party with first role (when available)
-      party$role <- roles[1]
+    } else if (!("contactperson" %in% roles_lower) && any(roles_lower != "rightsholder")) {
+      # If not a creator or contact, add as associated party with its first role; a rights
+      # holder is added below with its own role.
+      party$role <- roles[roles_lower != "rightsholder"][1]
       associated_parties <- c(associated_parties, list(party))
     }
 
@@ -151,13 +156,14 @@ gldp_to_eml <- function(pkg, directory) {
     }
   }
 
-  # EML requires a contact. If none is explicitly provided, fallback to first creator.
+  # EML requires a creator and a contact: without a creator role, every contributor is a
+  # creator, and without a contact role, the first creator is the contact.
+  if (length(creators) == 0) {
+    creators <- parties
+  }
   if (length(contacts) == 0 && length(creators) > 0) {
     contacts <- creators[1]
   }
-
-  # Deduplicate creators if needed (simple check)
-  # EML::set_responsibleParty returns a list, so we have a list of lists.
 
   # Abstract
   abstract_text <- to_plain_text(pkg$description)
@@ -213,8 +219,8 @@ gldp_to_eml <- function(pkg, directory) {
 
   # Spatial
   if (!is.null(spatial)) {
-    # Extract bounding box from the polygon's outer ring.
-    coords <- matrix(unlist(spatial$coordinates[[1]]), ncol = 2, byrow = TRUE)
+    # Bounding box of all positions, so a Point and a Polygon both work.
+    coords <- matrix(unlist(spatial$coordinates), ncol = 2, byrow = TRUE)
     lons <- coords[, 1]
     lats <- coords[, 2]
 
@@ -242,13 +248,9 @@ gldp_to_eml <- function(pkg, directory) {
   }
 
   # Dataset
-  pub_year <- NA_character_
-  if (is_non_empty_string(as.character(pkg$created %||% NA_character_)[1])) {
-    pub_year <- format(as.Date(substr(as.character(pkg$created[1]), 1, 10)), "%Y")
-  }
-  if (is.na(pub_year)) {
-    pub_year <- NULL
-  }
+  # Year of the ISO 8601 `created` date, which may also be a bare year or year-month.
+  created <- first_non_empty_string(pkg$created)
+  pub_year <- if (!is.null(created) && grepl("^[0-9]{4}", created)) substr(created, 1, 4)
 
   dataset <- list(
     title = title,

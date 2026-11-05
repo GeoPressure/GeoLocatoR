@@ -89,3 +89,43 @@ test_that("update_gldp_number_tags counts mean_acceleration_z as activity", {
   out <- update_gldp_number_tags(pkg)
   expect_equal(out$numberTags$activity, expected_activity)
 })
+
+test_that("update_gldp_bibliographic_citation reads the year of a partial date", {
+  for (created in c("2024", "2024-06", "2024-06-01T10:00:00Z")) {
+    pkg <- create_gldp(title = "Example", created = created)
+    expect_match(
+      update_gldp_bibliographic_citation(pkg)$bibliographicCitation,
+      "(2024)",
+      fixed = TRUE
+    )
+  }
+  pkg <- create_gldp(title = "Example", created = "June 2024")
+  expect_match(update_gldp_bibliographic_citation(pkg)$bibliographicCitation, "Example")
+})
+
+test_that("update_gldp_bibliographic_citation uses the id DOI when conceptid is not a DOI", {
+  pkg <- create_gldp(
+    title = "Example",
+    conceptid = "15259675",
+    id = "https://doi.org/10.5281/zenodo.15259676"
+  )
+  pkg <- update_gldp_bibliographic_citation(pkg)
+  expect_match(pkg$bibliographicCitation, "doi:10.5281/zenodo.15259676", fixed = TRUE)
+})
+
+test_that("update_gldp_temporal keeps the coverage of a package without measurements", {
+  pkg <- create_gldp(temporal = list(start = "2020-01-01", end = "2020-12-31"))
+  expect_equal(update_gldp_temporal(pkg)$temporal, list(start = "2020-01-01", end = "2020-12-31"))
+
+  pkg <- add_gldp_resource(
+    pkg,
+    "measurements",
+    data.frame(
+      tag_id = "AA",
+      sensor = "pressure",
+      datetime = as.POSIXct(c("2021-03-01", "2021-04-01"), tz = "UTC"),
+      value = 1000
+    )
+  )
+  expect_equal(update_gldp_temporal(pkg)$temporal, list(start = "2021-03-01", end = "2021-04-01"))
+})

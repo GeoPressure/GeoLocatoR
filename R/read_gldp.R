@@ -17,17 +17,22 @@
 #'   file, or a URL to `datapackage.json`.
 #' @param force_read If `TRUE` (default), loads resource data into memory so
 #'   the returned object is self-contained in memory. This means that each
-#' resource is read immediately with [frictionless::read_resource()], cast to
-#' the schema types, stored in `resource$data`, and its `path` field is removed.
-#'   The `measurements` resource is read last.
-#'   Packages older than GeoLocator-DP v1.0 are loaded even when `FALSE`, because
-#'   their upgrades transform table values and cannot operate on file paths alone.
+#'   table is read immediately with [frictionless::read_resource()], cast to
+#'   the schema types, stored in `resource$data`, and its `path` field is
+#'   removed. The `measurements` resource is read last, and resources without
+#'   a table schema keep their `path`.
+#'   Some tables are loaded even when `FALSE`, because their upgrade changes
+#'   values and cannot operate on file paths alone: every table of a package
+#'   older than GeoLocator-DP v1.0, and `pressurepaths` and `observations` of
+#'   a v1.0 or v1.1 package.
 #' @param drop_measurements `r lifecycle::badge("experimental")` If `TRUE`,
 #'   drops the `measurements` resource after reading `datapackage.json` and
 #'   before the optional `force_read` step loads resource data into memory. Use
 #'   this to save memory and avoid slowdowns when working mainly with derived
 #'   GeoPressure resources such as `staps`, `paths`, `edges`, or
-#'   `pressurepaths`.
+#'   `pressurepaths`. The derived `temporal` coverage and the measurement
+#'   counts in `numberTags` are then left out, and `taxonomic` lists the
+#'   species of every tag.
 #'
 #' @return A `geolocatordp` object.
 #'
@@ -71,7 +76,8 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
   )
   base_dir <- dirname(x)
 
-  if (!grepl("geolocator-dp-profile\\.json$", pkg$`$schema`)) {
+  # A Data Package without `$schema` is not a GeoLocator Data Package either.
+  if (!grepl("geolocator-dp-profile\\.json$", pkg[["$schema"]] %||% "")) {
     cli_abort(
       "The datapackage provided does not seem to be a GeoLocator Data Package."
     )
@@ -85,6 +91,26 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
     # `"$schema": ""` back out, which no Data Package version allows.
     if (!is.null(r[["$schema"]])) {
       r[["$schema"]] <- gsub("Rafnuss", "GeoPressure", r[["$schema"]], fixed = TRUE)
+    }
+    # A GeoLocator-DP table schema given by URL is taken from the bundled
+    # schemas, so that it is read offline and can be cast and matched by name.
+    if (is.character(r$schema)) {
+      m <- regmatches(
+        r$schema,
+        regexec(
+          "GeoLocator-DP/(?:refs/tags/)?(v[0-9]+\\.[0-9]+)/([a-z]+)-table-schema\\.json$",
+          r$schema,
+          perl = TRUE
+        )
+      )[[1]]
+      if (length(m) == 3) {
+        r[["schema"]] <- gldp_resource_schema(m[2], m[3])
+      }
+    }
+    # frictionless 1.3.0 only reads a table with the Data Package v1 `profile`,
+    # which `type: "table"` replaces from GeoLocator-DP v1.1.
+    if (identical(r$type, "table") && is.null(r$profile)) {
+      r[["profile"]] <- "tabular-data-resource"
     }
     r
   })
@@ -117,6 +143,10 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
       logical(1)
     ))
     pkg[["resources"]][read_order] <- purrr::map(pkg[["resources"]][read_order], \(r) {
+      # Only tables are loaded: custom and `params` resources have no table schema.
+      if (is.null(r$schema)) {
+        return(r)
+      }
       resource_name <- as.character(r$name %||% NA_character_)[1]
       resource_path <- as.character(r$path %||% NA_character_)[1]
       resource_location <- if (!is.na(resource_path) && nzchar(resource_path)) {
@@ -129,11 +159,9 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
         base_dir
       }
 
-      # When modification of the csv were made without adapting the datapackage.json,
-      # this create issue in the reading of the resources. For now, only if
-      # a change of variable type is observed, we get a read_csv warning.
-      # But this warning is impossible to know where it occurs which resources
-      # and which column. So we add this bad catching of error
+      # A CSV edited without updating datapackage.json can hold values that do
+      # not parse as their declared type. readr only warns, without naming the
+      # resource or the column, so the warning is caught and reported with them.
       has_parsing_warning <- FALSE
       df <- tryCatch(
         withCallingHandlers(
@@ -150,10 +178,9 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
           cli_abort(
             c(
               "x" = "Could not read resource {.field {resource_name}}.",
-              "i" = "Location: {.file {resource_location}}",
-              "i" = "The resource descriptor or CSV does not match the declared schema.",
-              "i" = "Original error: {conditionMessage(e)}"
+              "i" = "Location: {.file {resource_location}}"
             ),
+            # The parent error, printed below, says what went wrong.
             parent = e
           )
         }
@@ -184,7 +211,7 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
         ))
       }
 
-      # Store casted data in the resource and clear path to keep the object in-memory.
+      # Store the cast data in the resource and clear path to keep the object in memory.
       r$data <- cast_table(df, r$schema)
       r$path <- NULL
       r
@@ -193,9 +220,15 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
 
   pkg$params <- list()
   params_path <- file.path(base_dir, "params.json")
-  if (file.exists(params_path)) {
+  # A remote package may have no params.json: one that cannot be opened is absent.
+  params_json <- if (grepl("^https?://", params_path)) {
+    tryCatch(readLines(params_path, warn = FALSE), error = \(e) NULL, warning = \(w) NULL)
+  } else if (file.exists(params_path)) {
+    readLines(params_path, warn = FALSE)
+  }
+  if (!is.null(params_json)) {
     pkg$params <- tryCatch(
-      jsonlite::unserializeJSON(paste(readLines(params_path, warn = FALSE), collapse = "\n")),
+      jsonlite::unserializeJSON(paste(params_json, collapse = "\n")),
       error = function(e) {
         cli_warn("Could not parse {.file params.json}: {e$message}")
         list()

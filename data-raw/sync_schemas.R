@@ -1,6 +1,6 @@
 # Manual maintainer script:
 # - Refresh local GeoLocator-DP schemas bundled in inst/schemas.
-# - Run this when a GeoLocator-DP schema version/branch changes.
+# - Run this after a GeoLocator-DP release: each version is synced from its tag.
 # - Runtime code is offline-only and reads schemas from inst/schemas.
 # - Versions synced are taken from .gldp_supported_versions in R/versioning.R.
 # - `main` is excluded (only released version schemas are stored locally).
@@ -36,15 +36,17 @@ sync_gldp_schemas <- function(
       simplifyVector = TRUE
     )
 
-    resource_names <- unique(gldp_profile_resource_names(profile))
+    # Only the tables have a table schema; the `params` resource has none.
+    resource_names <- gldp_profile_resource_branches(profile)[[1]]$properties$name$enum
 
     for (resource_name in resource_names) {
       schema_url <- glue::glue("{base_url}/{resource_name}-table-schema.json")
       schema_path <- file.path(out_dir, glue::glue("{resource_name}-table-schema.json"))
+      # v0.1 declares `maps` and `configs` tables that never had a schema, so a
+      # failed download is reported rather than stopping the sync.
       tryCatch(
         utils::download.file(schema_url, schema_path, mode = "wb", quiet = TRUE),
-        warning = function(...) NULL,
-        error = function(...) NULL
+        error = \(e) warning(glue::glue("Could not download {schema_url}."), call. = FALSE)
       )
     }
   }

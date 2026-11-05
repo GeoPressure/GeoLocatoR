@@ -9,18 +9,24 @@
 #' Validation runs in four steps:
 #'
 #' 1. **Package profile validation**
-#'    The package metadata is checked against the GeoLocator-DP profile schema. This includes
-#'    required package-level fields and schema-defined constraints such as type, format,
-#'    uniqueness, enumerated values, regular-expression patterns, and minimum or maximum
-#'    lengths, item counts, and numeric values.
+#'    The package-level properties the GeoLocator-DP profile declares are checked against
+#'    it. From GeoLocator-DP v1.0 the profile declares only `$schema`, so this checks that
+#'    `$schema` is a GeoLocator-DP profile URL. Earlier profiles also declare package
+#'    metadata, checked for presence, type, format, enumerated values, regular-expression
+#'    patterns, item counts, and numeric bounds. Neither the Data Package profile that
+#'    GeoLocator-DP extends nor the profile's rules on resource descriptors (`type`, `path`,
+#'    `$schema`, `schema`, at least three resources) are checked.
 #'
 #' 2. **Resource validation**
 #'    File-backed tables are loaded for field and foreign-key checks; source files
 #'    are not modified.
 #'    Resources are checked against their schema: columns must match the
 #'    `fieldsMatch` rule, and each column must satisfy its declared constraints
-#'    such as type, format, requiredness, uniqueness, allowed values, patterns,
+#'    such as type, requiredness, uniqueness, allowed values, patterns,
 #'    and numeric or length limits. Rows must be unique on the schema `primaryKey`.
+#'    The tables GeoLocator-DP defines (`tags`, `observations`, ...) must be tabular
+#'    resources with a table schema. The `params` resource and custom resources are
+#'    checked when they carry a table schema, and are otherwise reported as not checked.
 #'
 #' 3. **Coherence validation**
 #'    Cross-resource consistency checks are then applied.
@@ -45,7 +51,8 @@
 #'    - retrieval does not precede equipment for the same `tag_id`;
 #'    - duplicated observations are not present for the same `ring_number`, `datetime`,
 #'      and `observation_type`;
-#'    - `device_status` transitions are plausible across the observation history.
+#'    - `device_status` transitions are plausible across the observation history;
+#'    - `mass` above 10,000 g is reported as a warning only, a guideline rather than a limit.
 #'
 #'    GeoPressure-specific coherence checks are applied when the corresponding resources are
 #'    present. These include:
@@ -53,10 +60,10 @@
 #'    - realistic year windows for datetime fields in `staps`, `twilights`,
 #'      `pressurepaths`, and `edges`;
 #'    - duration checks for `staps` and `edges`;
-#'    - schema-declared foreign key consistency across resources;
+#'    - schema-declared foreign key consistency across all resources, core ones included;
 #'    - warnings for unusual `edges` distances, durations, or wind/ground-speed magnitudes,
-#'      for `pressurepaths$altitude` outside -200 to 10,000 m, and for
-#'      `observations$mass` above 10,000 g. These are guidelines, not limits.
+#'      and for `pressurepaths$altitude` outside -200 to 10,000 m. These are guidelines,
+#'      not limits.
 #'
 #' 4. **Metadata recommendations**
 #'    Additional metadata quality checks are reported without affecting the final validity.
@@ -80,8 +87,10 @@
 #' return value.
 #'
 #' @examples
+#' \dontrun{
 #' pkg <- read_zenodo("17367319", quiet = TRUE)
 #' validate_gldp(pkg)
+#' }
 #'
 #' @export
 validate_gldp <- function(pkg) {
@@ -110,7 +119,8 @@ validate_gldp <- function(pkg) {
 #' Validate GeoLocator Data Package profile
 #'
 #' Internal helper that validates package-level metadata against the GeoLocator-DP
-#' profile schema. Resource definitions are excluded here and validated separately.
+#' profile schema. Resource descriptors are excluded and not checked; resource data
+#' are validated by `validate_gldp_resources()`.
 #'
 #' @param pkg A GeoLocator Data Package object
 #' @return Invisibly returns `TRUE` when the package-level profile validation passes,
@@ -125,11 +135,12 @@ validate_gldp_profile <- function(pkg) {
   required <- unlist(pkg_schema$allOf[[2]]$required)
   properties <- pkg_schema$allOf[[2]]$properties
 
-  # Skip resource validation at the profile level (handled separately)
+  # The profile's rules on resource descriptors are not checked; resource data are
+  # validated by validate_gldp_resources().
   required <- setdiff(required, "resources")
   properties$resources <- NULL
 
-  # Ignore all additional field not present in the schema
+  # Ignore all additional fields not present in the schema
   ignore_fields <- setdiff(names(pkg), names(properties))
 
   valid <- validate_gldp_object(
@@ -145,13 +156,13 @@ validate_gldp_profile <- function(pkg) {
 
 #' Validate GeoLocator Data Package resources
 #'
-#' Internal helper that validates each package resource against its own resource
-#' schema. Resources must be tabular data resources with a declared schema and
-#' in-memory data.
+#' Internal helper that loads file-backed tables and validates each tabular
+#' resource against its own table schema. The tables GeoLocator-DP defines must
+#' be tabular; other resources without a table schema are reported, not checked.
 #'
 #' @param pkg A GeoLocator Data Package object
-#' @return Invisibly returns `TRUE` when all resources can be validated and pass
-#'   their schema checks, `FALSE` otherwise.
+#' @return Invisibly returns `TRUE` when all GeoLocator-DP tables can be validated
+#'   and all tabular resources pass their schema checks, `FALSE` otherwise.
 #' @noRd
 validate_gldp_resources <- function(pkg) {
   pkg <- gldp_materialize_tables(pkg)
@@ -163,6 +174,10 @@ validate_gldp_resources <- function(pkg) {
     cli_alert_danger("Package must contain at least one resource.")
     valid <- FALSE
   }
+
+  # Only the tables GeoLocator-DP defines must be tabular. `params` and custom
+  # resources may be any file, so they have no table schema to check against.
+  tables <- setdiff(gldp_profile_resource_names(gldp_profile_schema(gldp_version(pkg))), "params")
 
   for (i in seq_along(pkg$resources)) {
     resource <- pkg$resources[[i]]
@@ -177,10 +192,15 @@ validate_gldp_resources <- function(pkg) {
 
     if (is_tabular_resource) {
       valid <- valid & validate_gldp_table(resource$data, resource$schema, resource$name)
+    } else if (resource$name %in% tables) {
+      cli_h3("Check Resources {.field {resource$name}}")
+      cli_alert_danger(
+        "{.field {resource$name}} is not a tabular resource with a table schema, so it could not be checked."
+      )
+      valid <- FALSE
     } else {
       cli_h3("Check Resources {.field {resource$name}}")
-      cli::cli_alert_warning("Could not check {.field {resource$name}}")
-      valid <- FALSE
+      cli_alert_info("{.field {resource$name}} has no table schema and is not checked.")
     }
   }
 
@@ -233,7 +253,7 @@ validate_gldp_table <- function(data, schema, name = schema$name) {
 
   if (length(absent_required) > 0) {
     cli_alert_danger(
-      "{.field {schema$name}} is missing {length(absent_required)} required
+      "{.field {name}} is missing {length(absent_required)} required
        column{?s}: {.field {absent_required}}."
     )
     valid <- FALSE
@@ -248,8 +268,11 @@ validate_gldp_table <- function(data, schema, name = schema$name) {
       prop$constraints <- NULL # Remove the 'constraints' field after merging
     }
 
-    field_name <- glue::glue("{schema$name}${field}")
-    prop <- resolve_prop(data[[field]], prop, defs = NULL, field = field_name)
+    field_name <- glue::glue("{name}${field}")
+    # A Table Schema `format` (`default`, `any`, a strptime pattern) says how the
+    # reader parses a column; it is not one of the JSON-Schema formats checked for
+    # the profile. A field without `type` is `any`, so no type is inferred either.
+    prop$format <- NULL
 
     valid <- valid & validate_gldp_item(data[[field]], prop, field_name)
   }
@@ -269,7 +292,7 @@ validate_gldp_table <- function(data, schema, name = schema$name) {
 
   if (valid) {
     cli_alert_success(
-      "Table {.field {schema$name}} is consistent with the schema."
+      "Table {.field {name}} is consistent with the schema."
     )
   }
 

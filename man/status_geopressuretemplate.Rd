@@ -25,6 +25,8 @@ objects are saved in the interim file, plus \code{tag_status} from
 }
 }
 \description{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+
 Summarize which tags are discoverable in a GeoPressureTemplate project from
 \code{config.yml}, \code{data/interim}, and \code{data/raw-tag}. Use this before importing
 a project to see which tags are available from each source and, optionally,
@@ -35,9 +37,6 @@ project entries and skipped. This applies to config keys, interim files,
 raw-tag folders, and files inside raw-tag folders. Empty raw-tag folders are
 also skipped, so \code{in_raw_tag = TRUE} means the folder contains at least one
 non-ignored file.
-}
-\details{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
 }
 \examples{
 \dontrun{

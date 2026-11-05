@@ -1,18 +1,22 @@
-#' Plot GeoLocator Data Package coverage
+#' Plot a GeoLocator Data Package
 #'
 #' @description
-#' Creates visualizations for a GeoLocator Data Package, including coverage plots
-#' showing data availability across time for different sensors and tags.
+#' Creates visualizations for a GeoLocator Data Package: the data availability
+#' across time for each sensor and tag, the observation history of each ring, or
+#' a map of the most likely paths.
 #'
 #' @param x A GeoLocator Data Package object.
-#' @param type Type of the plot to display: `"coverage"` (requires `measurements`),
-#'   `"ring"` (requires `observations` and `measurements`) or `"map"` (requires
-#'   `paths` and `staps`). When `NULL`, the first type the package supports is used.
-#' @param ... Additional parameters passed to plotting functions.
+#' @param type Type of the plot to display: `"coverage"` (requires `measurements`,
+#'   and draws `observations` when present), `"ring"` (requires `observations`,
+#'   `measurements` and `tags`) or `"map"` (requires `paths` and `staps`). When
+#'   `NULL`, the first type the package supports is used.
+#' @param ... Unused, for compatibility with the [plot()] generic.
 #'
-#' @return a plot, ggplotly or leaflet object.
+#' @return A ggplot2 object for `"coverage"` and `"ring"`, a leaflet map for
+#'   `"map"`.
 #'
 #' @examples
+#' \dontrun{
 #' pkg <- read_zenodo("17367319")
 #'
 #' # Plot data coverage
@@ -21,21 +25,24 @@
 #' # Plot observation history by ring
 #' plot(pkg, type = "ring")
 #'
-#' # Plot map view
+#' # Plot map view (requires leaflet)
 #' plot(pkg, type = "map")
+#' }
 #'
 #' @export
 plot.geolocatordp <- function(x, type = NULL, ...) {
   required <- list(
     coverage = "measurements",
-    ring = c("observations", "measurements"),
+    ring = c("observations", "measurements", "tags"),
     map = c("paths", "staps")
   )
   available <- frictionless::resource_names(x)
   if (is.null(type)) {
     type <- names(required)[vapply(required, \(r) all(r %in% available), logical(1))][1]
     if (is.na(type)) {
-      cli_abort("This package has no {.field measurements} or {.field paths} to plot.")
+      cli_abort(
+        "This package has neither {.field measurements} nor {.field paths} and {.field staps} to plot."
+      )
     }
   }
   if (!type %in% names(required)) {
@@ -68,6 +75,8 @@ plot.geolocatordp <- function(x, type = NULL, ...) {
 plot_pkg_coverage <- function(x) {
   m <- measurements(x) |>
     mutate(
+      # Group the sensors read from one GeoPressureR sensor table: the acceleration and
+      # magnetic axes come from `magnetic`, the mean z acceleration with `activity`
       sensor = case_when(
         sensor %in%
           c(
@@ -76,10 +85,10 @@ plot_pkg_coverage <- function(x) {
             "magnetic_z",
             "acceleration_x",
             "acceleration_y",
-            "acceleration_z",
-            "mean_acceleration_z"
+            "acceleration_z"
           ) ~
           "magnetic",
+        sensor == "mean_acceleration_z" ~ "activity",
         TRUE ~ sensor # Keep other sensor names unchanged
       )
     ) |>
@@ -88,7 +97,13 @@ plot_pkg_coverage <- function(x) {
     summarize(has_data = sum(!is.na(.data$value)) > 0) |> # Check if there is data (non-NA)
     ungroup()
 
-  o <- observations(x) |>
+  # Observations only add equipment and retrieval lines, so the plot works without them
+  o <- if ("observations" %in% frictionless::resource_names(x)) {
+    observations(x)
+  } else {
+    tibble(tag_id = character(), datetime = as.POSIXct(character()), observation_type = character())
+  }
+  o <- o |>
     filter(!is.na(.data$datetime)) |>
     filter(.data$tag_id %in% unique(m$tag_id))
 
@@ -98,7 +113,8 @@ plot_pkg_coverage <- function(x) {
   ) +
     ggplot2::geom_tile() +
     ggplot2::facet_grid(.data$tag_id ~ ., scales = "free_y") +
-    ggplot2::scale_fill_manual(values = c("black", "grey")) +
+    # Named, so that days with data are black whether or not days without data exist
+    ggplot2::scale_fill_manual(values = c("TRUE" = "black", "FALSE" = "grey")) +
     ggplot2::geom_vline(
       data = o |>
         filter(.data$observation_type %in% c("equipment", "retrieval")),
@@ -129,6 +145,8 @@ plot_pkg_coverage <- function(x) {
         "sighting" = "orange",
         "other" = "purple"
       ),
+      # The observed types, so that a package without observations draws without warning
+      limits = force,
       name = "Observation Type"
     ) + # Customize colors and legend
     ggplot2::theme(
@@ -143,12 +161,13 @@ plot_pkg_coverage <- function(x) {
 }
 
 
-#' Plot coverage data for a GeoLocator Data Package
+#' Plot the observation history of each ring
 #'
-#' Internal helper function to create a coverage plot showing observations across time for all tags.
+#' Internal helper function to plot the observations of each ring over the period
+#' covered by its tags' measurements.
 #'
 #' @param x A GeoLocator Data Package object
-#' @return A ggplot2 object showing the coverage plot
+#' @return A ggplot2 object showing the ring plot
 #' @noRd
 plot_pkg_ring <- function(x) {
   o <- observations(x) |>
@@ -167,14 +186,16 @@ plot_pkg_ring <- function(x) {
     ungroup()
 
   ggplot2::ggplot() +
+    # A fixed colour, outside aes(): the colour scale only knows observation types
     ggplot2::geom_segment(
       data = m,
       ggplot2::aes(
         x = .data$start,
         y = .data$ring_number,
         xend = .data$end,
-        color = "black"
-      )
+        yend = .data$ring_number
+      ),
+      color = "black"
     ) +
     ggplot2::geom_point(
       data = o,
@@ -201,12 +222,13 @@ plot_pkg_ring <- function(x) {
     )
 }
 
-#' Plot coverage data for a GeoLocator Data Package
+#' Map the most likely paths of a GeoLocator Data Package
 #'
-#' Internal helper function to create a coverage plot showing observations across time for all tags.
+#' Internal helper function to map the most likely path of each tag, with markers
+#' sized by the duration of its stationary periods.
 #'
 #' @param x A GeoLocator Data Package object
-#' @return A ggplot2 object showing the coverage plot
+#' @return A leaflet map
 #' @noRd
 plot_pkg_map <- function(x) {
   if (!requireNamespace("leaflet", quietly = TRUE)) {

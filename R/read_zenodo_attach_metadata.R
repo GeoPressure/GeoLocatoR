@@ -26,13 +26,15 @@ read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
   pkg$version <- m$version
   pkg$created <- z$created
   pkg$homepage <- z$links$self_html %||% NULL
-  pkg$licenses <- purrr::map(m$rights %||% list(), \(x) {
-    list(
+  # Absent values are dropped rather than written as JSON null or empty arrays
+  licenses <- purrr::map(m$rights %||% list(), \(x) {
+    purrr::compact(list(
       name = x$id,
       title = x$title$en %||% NULL,
       path = x$props$url %||% NULL
-    )
+    ))
   })
+  pkg[["licenses"]] <- if (length(licenses) > 0) licenses
   pkg$contributors <- purrr::map(m$creators %||% list(), \(creator) {
     orcid <- creator$person_or_org$identifiers |>
       purrr::keep(~ .x$scheme == "orcid") |>
@@ -44,7 +46,8 @@ read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
       familyName = creator$person_or_org$family_name,
       path = if (is.null(orcid)) NULL else glue::glue("https://orcid.org/{orcid}"),
       # email = NULL,
-      roles = creator$role$id %||% NULL,
+      # A list, so that a single role is written as a JSON array
+      roles = as.list(creator$role$id),
       organization = as.character(glue::glue_collapse(
         purrr::map_chr(creator$affiliations, "name"),
         sep = ", "
@@ -68,8 +71,8 @@ read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
   } else {
     NULL
   }
-  pkg$grants <- purrr::map_chr(m$funding %||% list(), \(x) x$funder$name %||% "")
-  pkg$keywords <- purrr::map_chr(m$subjects %||% list(), \(x) x$subject %||% "")
+  pkg[["grants"]] <- unlist(purrr::map(m$funding %||% list(), \(x) x$funder$name))
+  pkg[["keywords"]] <- unlist(purrr::map(m$subjects %||% list(), \(x) x$subject))
   pkg$codeRepository <- z$custom_fields$`code:codeRepository` %||% NULL
   pkg$status <- z$status
   pkg$record_type <- m$resource_type$id %||% NULL

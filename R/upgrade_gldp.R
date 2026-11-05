@@ -17,12 +17,6 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
   if (identical(from_version, to_version)) {
     return(x)
   }
-  if (is.na(from_rank) || is.na(to_rank)) {
-    cli_abort(c(
-      "x" = "Unsupported version comparison ({.val {from_version}} -> {.val {to_version}})."
-    ))
-  }
-
   if (from_rank > to_rank) {
     cli_abort(c(
       "x" = "Downgrade is not supported ({.val {from_version}} -> {.val {to_version}})."
@@ -70,7 +64,8 @@ normalize_upgraded_resources <- function(x) {
   # We only touch resources already present in the package and keep custom resources unchanged.
   target_version <- gldp_version(x)
   profile <- gldp_profile_schema(target_version)
-  supported_resources <- gldp_profile_resource_names(profile)
+  # Only the tables have a table schema; the `params` resource has none.
+  supported_resources <- gldp_profile_resource_branches(profile)[[1]]$properties$name$enum
 
   resources <- x$resources %||% list()
   for (resource in resources) {
@@ -92,11 +87,11 @@ normalize_upgraded_resources <- function(x) {
         replace = TRUE
       )
     } else {
-      # Keep schema in sync when data are not loaded in memory.
+      # Keep schema and descriptor in sync when data are not loaded in memory.
       lazy_resource <- gldp_resource(x, resource_name)
       if (!is.null(lazy_resource)) {
         lazy_resource$schema <- target_schema
-        gldp_resource(x, resource_name) <- lazy_resource
+        gldp_resource(x, resource_name) <- gldp_mark_table_resource(lazy_resource)
       }
     }
 
@@ -277,7 +272,6 @@ upgrade_gldp_v0_4_to_v0_5 <- function(x) {
 
     missing <- is.na(d$type) | trimws(as.character(d$type)) == ""
     # v0.5 requires `type`; unresolved rows keep the historical default.
-    d$type[is.na(d$type)] <- "most_likely"
     d$type[missing] <- "most_likely"
     d$type <- as.character(d$type)
     d
@@ -380,7 +374,7 @@ upgrade_gldp_v0_6_to_v1_0 <- function(x) {
 #' @noRd
 upgrade_gldp_v1_0_to_v1_1 <- function(x) {
   # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v1.1
-  # The table schema moved from `resource$$schema` to `resource$schema`, and
+  # The table schema moved from the resource `$schema` to its `schema`, and
   # `type` became required. Resources are rebuilt against the v1.1 schemas by
   # `normalize_upgraded_resources()`, so only the profile URL changes here.
   x[["$schema"]] <- gldp_schema_url("v1.1")

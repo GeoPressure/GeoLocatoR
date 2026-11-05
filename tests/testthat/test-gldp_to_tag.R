@@ -4,6 +4,88 @@ library(GeoPressureR)
 
 # pkg_shared is loaded from setup.R
 
+# Offline package with one tag "AA" and the given measurements.
+local_tag_pkg <- function(measurements) {
+  pkg <- create_gldp()
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = "AA",
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "soi",
+      model = "GDL3"
+    )
+  )
+  add_gldp_resource(pkg, "measurements", measurements)
+}
+
+test_that("gldp_to_tag converts temperature sensors", {
+  pkg <- local_tag_pkg(data.frame(
+    tag_id = "AA",
+    sensor = rep(c("temperature_external", "temperature_internal"), each = 2),
+    datetime = as.POSIXct("2020-01-01", tz = "UTC") + 3600 * 0:1,
+    value = c(10, 11, 40, 41)
+  ))
+  tag <- gldp_to_tag(pkg, "AA")
+  expect_equal(tag$temperature_external$value, c(10, 11))
+  expect_equal(tag$temperature_internal$value, c(40, 41))
+})
+
+test_that("gldp_to_tag accepts measurements without a label column", {
+  directory <- tempfile("gldp-to-tag-")
+  on.exit(unlink(directory, recursive = TRUE))
+  pkg <- local_tag_pkg(data.frame(
+    tag_id = "AA",
+    sensor = rep(c("pressure", "activity"), each = 2),
+    datetime = as.POSIXct("2020-01-01", tz = "UTC") + 3600 * 0:1,
+    value = c(1000, 1001, 3, 4)
+  ))
+  write_gldp(pkg, directory)
+  file <- file.path(directory, "measurements.csv")
+  data <- read.csv(file)
+  write.csv(data[names(data) != "label"], file, row.names = FALSE)
+
+  tag <- gldp_to_tag(read_gldp(directory, force_read = FALSE), "AA")
+  expect_equal(tag$pressure$value, c(1000, 1001))
+  expect_equal(tag$acceleration$value, c(3, 4))
+  expect_false("label" %in% names(tag$pressure))
+})
+
+test_that("gldp_to_tag keeps pressure labels when only acceleration is labelled", {
+  datetime <- as.POSIXct("2020-01-01", tz = "UTC") + 3600 * 0:5
+  pkg <- local_tag_pkg(rbind(
+    data.frame(tag_id = "AA", sensor = "pressure", datetime = datetime, value = 1000, label = NA),
+    # Acceleration starts after pressure, as in tags switched on at different times.
+    data.frame(
+      tag_id = "AA",
+      sensor = "activity",
+      datetime = datetime[2:5],
+      value = 1,
+      label = c("", "flight", "flight", "")
+    )
+  ))
+
+  tag <- gldp_to_tag(pkg, "AA")
+  expect_equal(tag$pressure$label, rep("", 6))
+  expect_equal(tag$stap$stap_id, c(1, 2))
+  expect_true(tag_assert(tag, "label", "logical"))
+})
+
+test_that("gldp_to_tag turns missing twilight labels into empty strings", {
+  datetime <- as.POSIXct("2020-01-01", tz = "UTC") + 3600 * 0:1
+  pkg <- local_tag_pkg(data.frame(tag_id = "AA", sensor = "light", datetime = datetime, value = 1))
+  pkg <- add_gldp_resource(
+    pkg,
+    "twilights",
+    data.frame(tag_id = "AA", twilight = datetime, rise = c(TRUE, FALSE), label = c(NA, "discard"))
+  )
+
+  tag <- gldp_to_tag(pkg, "AA")
+  expect_equal(tag$twilight$label, c("", "discard"))
+})
+
 test_that("gldp_to_tag converts single tag correctly", {
   pkg <- pkg_shared
   # Get the first tag_id
@@ -11,7 +93,7 @@ test_that("gldp_to_tag converts single tag correctly", {
   first_tag_id <- tag_ids[1]
 
   # Convert single tag
-  tag <- gldp_to_tag(pkg, tag_id = first_tag_id)
+  expect_no_warning(tag <- gldp_to_tag(pkg, tag_id = first_tag_id))
 
   # Check that result is a tag object
   expect_s3_class(tag, "tag")
@@ -351,7 +433,7 @@ test_that("gldp_to_tag omits empty label columns", {
   tag_id <- unique(tags(pkg)$tag_id)[1]
   tag <- gldp_to_tag(pkg, tag_id)
 
-  m <- measurements(pkg) |> dplyr::filter(.data$tag_id == tag_id)
+  m <- measurements(pkg) |> dplyr::filter(.data$tag_id == .env$tag_id)
   if (any(m$sensor == "pressure") && all(is.na(m$label[m$sensor == "pressure"]))) {
     expect_false("label" %in% names(tag$pressure))
   }

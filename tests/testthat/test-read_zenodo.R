@@ -31,6 +31,16 @@ test_that("parse_zenodo_id supports Zenodo Sandbox record URLs", {
     parse_zenodo_id("https://sandbox.zenodo.org/records/470406?x=1"),
     "470406"
   )
+
+  # Upper-case DOIs, dx.doi.org, a trailing slash, www. and legacy /record/ URLs
+  ids <- c(
+    "10.5281/ZENODO.470406",
+    "https://dx.doi.org/10.5281/zenodo.470406",
+    "https://doi.org/10.5281/zenodo.470406/",
+    "https://www.zenodo.org/records/470406",
+    "https://zenodo.org/record/470406"
+  )
+  expect_identical(purrr::map_chr(ids, parse_zenodo_id), rep("470406", length(ids)))
 })
 
 test_that("read_zenodo_fetch_record does not require token for request construction", {
@@ -63,6 +73,14 @@ test_that("read_zenodo_fetch_record does not require token for request construct
     expected
   )
   expect_false(auth_called)
+})
+
+test_that("read_zenodo_fetch_record reports an HTTP error without a JSON body", {
+  httr2::local_mocked_responses(\(req) {
+    httr2::response(502, headers = "Content-Type: text/html", body = charToRaw("<html></html>"))
+  })
+
+  expect_error(read_zenodo_fetch_record("1", token = "dummy"), "HTTP 502 Bad Gateway")
 })
 
 test_that("resolve_zenodo_token prefers sandbox env token when sandbox = TRUE", {
@@ -125,6 +143,26 @@ test_that("read_zenodo reuses sandbox-resolved token for fetch and download", {
   expect_equal(download_timeout, 1200)
 })
 
+test_that("read_zenodo reads a Sandbox URL or DOI from Zenodo Sandbox", {
+  fetch_sandbox <- logical()
+  local_mocked_bindings(
+    resolve_zenodo_token = function(token = NULL, sandbox = FALSE) NULL,
+    read_zenodo_fetch_record = function(id, token, draft, sandbox) {
+      fetch_sandbox <<- c(fetch_sandbox, sandbox)
+      list()
+    },
+    read_zenodo_download_files = function(zenodo_record, token, sandbox, timeout) NULL,
+    read_zenodo_attach_metadata = function(pkg, zenodo_record) pkg,
+    update_gldp = function(pkg) pkg,
+    .package = "GeoLocatoR"
+  )
+
+  read_zenodo("https://sandbox.zenodo.org/records/5", quiet = TRUE)
+  read_zenodo("10.5072/zenodo.5", quiet = TRUE)
+  read_zenodo("https://zenodo.org/records/5", quiet = TRUE)
+  expect_identical(fetch_sandbox, c(TRUE, TRUE, FALSE))
+})
+
 test_that("read_zenodo_download_files aborts when parallel downloads fail", {
   local_mocked_bindings(
     req_perform_parallel = function(...) {
@@ -155,6 +193,46 @@ test_that("read_zenodo_download_files aborts when parallel downloads fail", {
   )
 })
 
+test_that("read_zenodo_download_files counts every failed download", {
+  httr2::local_mocked_responses(\(req) httr2::response(404))
+  file_entry <- \(key) {
+    list(key = key, links = list(content = glue::glue("https://example.org/{key}")))
+  }
+  zenodo_record <- list(
+    links = list(self_html = "https://zenodo.org/records/1"),
+    files = list(
+      entries = list(
+        file_entry("datapackage.json"),
+        file_entry("tags.csv"),
+        file_entry("observations.csv")
+      )
+    )
+  )
+
+  expect_error(
+    read_zenodo_download_files(zenodo_record, token = "dummy"),
+    "Failed to download 3 files"
+  )
+})
+
+test_that("read_zenodo_download_files downloads each call to its own folder", {
+  local_mocked_bindings(
+    req_perform_parallel = function(reqs, ...) as.list(seq_along(reqs)),
+    .package = "httr2"
+  )
+  zenodo_record <- list(
+    links = list(self_html = "https://zenodo.org/records/1"),
+    files = list(
+      entries = list(
+        list(key = "datapackage.json", links = list(content = "https://example.org/dp.json"))
+      )
+    )
+  )
+
+  dirs <- replicate(2, read_zenodo_download_files(zenodo_record, token = "dummy"))
+  expect_false(dirs[1] == dirs[2])
+})
+
 test_that("read_zenodo can read from Zenodo Sandbox", {
   skip_on_cran()
   skip_if_offline()
@@ -164,7 +242,7 @@ test_that("read_zenodo can read from Zenodo Sandbox", {
     skip("Set RUN_ZENODO_SANDBOX_TESTS=true to run Zenodo Sandbox integration tests.")
   }
 
-  token <- Sys.getenv("ZENODO_SANDBOX_TOKEN", unset = "")
+  token <- Sys.getenv("ZENODO_TOKEN_SANDBOX", unset = "")
   if (!nzchar(token)) {
     token <- NULL
   }
@@ -220,6 +298,42 @@ test_that("read_zenodo_attach_metadata uses version DOI as pkg$id", {
   out <- read_zenodo_attach_metadata(pkg, record)
   expect_identical(out$id, "https://doi.org/10.5281/zenodo.1234567")
   expect_identical(out$conceptid, "https://doi.org/10.5281/zenodo.1234566")
+})
+
+test_that("read_zenodo_attach_metadata keeps contributor roles as a list", {
+  pkg <- structure(list(), class = c("geolocatordp", "datapackage", "list"))
+  creator <- \(role) {
+    list(person_or_org = list(name = "Doe, Jane"), role = role, affiliations = list())
+  }
+  record <- list(
+    id = "1",
+    metadata = list(creators = list(creator(list(id = "datacollector")), creator(NULL))),
+    links = list()
+  )
+
+  out <- read_zenodo_attach_metadata(pkg, record)
+  expect_identical(out$contributors[[1]]$roles, list("datacollector"))
+  expect_null(out$contributors[[2]]$roles)
+})
+
+test_that("read_zenodo_attach_metadata drops absent licence, keyword and grant values", {
+  pkg <- structure(list(), class = c("geolocatordp", "datapackage", "list"))
+  record <- list(
+    id = "1",
+    metadata = list(
+      rights = list(list(title = list(en = "Custom licence"))),
+      funding = list(list(funder = list(id = "00k4n6c32")), list(funder = list(name = "SNSF")))
+    ),
+    links = list()
+  )
+
+  out <- read_zenodo_attach_metadata(pkg, record)
+  expect_identical(out$licenses, list(list(title = "Custom licence")))
+  expect_identical(out$grants, "SNSF")
+  expect_false("keywords" %in% names(out))
+
+  out <- read_zenodo_attach_metadata(pkg, list(id = "1", metadata = list(), links = list()))
+  expect_false(any(c("licenses", "grants") %in% names(out)))
 })
 
 test_that("read_zenodo_attach_metadata computes access status and embargo", {

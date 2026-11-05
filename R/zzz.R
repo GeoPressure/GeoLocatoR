@@ -98,7 +98,7 @@ gldp_resource <- function(pkg, resource_name) {
 #' because `upgrade_gldp()` walks packages written against any earlier version.
 #'
 #' @param profile A GeoLocator-DP profile, as returned by
-#'   [gldp_profile_schema()].
+#'   `gldp_profile_schema()`.
 #' @return List of branch schemas, tables first.
 #' @noRd
 gldp_profile_resource_branches <- function(profile) {
@@ -176,11 +176,8 @@ contributors_to_persons <- function(contributors) {
     purrr::map(
       ~ {
         utils::person(
-          given = ifelse(
-            is.null(.x$givenName) & !is.null(.x$title),
-            .x$title,
-            .x$givenName
-          ),
+          # An organisation has a title instead of a given name; either can be absent.
+          given = .x$givenName %||% .x$title,
           family = .x$familyName,
           email = .x$email,
           role = purrr::map_vec(
@@ -208,13 +205,18 @@ contributors_to_persons <- function(contributors) {
 #' @noRd
 cast_table <- function(data, schema) {
   schema_fields <- schema_field_names(schema)
-  schema_types <- sapply(schema$fields, \(x) x$type)
+  # A field without `type` is `any`, the Table Schema default.
+  schema_types <- vapply(schema$fields, \(x) x$type %||% "any", character(1))
 
   for (i in seq_along(schema_fields)) {
     field <- schema_fields[i]
     type <- schema_types[i]
 
     if (field %in% names(data)) {
+      # Cast factors from their labels: as.numeric() would return level codes.
+      if (is.factor(data[[field]])) {
+        data[[field]] <- as.character(data[[field]])
+      }
       if (type == "string") {
         data[[field]] <- as.character(data[[field]])
       } else if (type == "number") {
@@ -227,7 +229,13 @@ cast_table <- function(data, schema) {
       } else if (type == "date") {
         data[[field]] <- as.Date(data[[field]])
       } else if (type == "datetime") {
-        data[[field]] <- as.POSIXct(data[[field]], tz = "UTC")
+        # The default formats read ISO 8601 "2020-01-01T12:30:00Z" as a date only,
+        # so its "T" separator is replaced by the space they expect.
+        value <- data[[field]]
+        if (is.character(value)) {
+          value <- sub("T", " ", value, fixed = TRUE)
+        }
+        data[[field]] <- as.POSIXct(value, tz = "UTC")
       } else if (type == "time") {
         # For time fields, convert to character if not already
         if (!is.character(data[[field]])) {
@@ -251,7 +259,8 @@ cast_table <- function(data, schema) {
       } else if (type == "list") {
         # Data Package v2 `list` fields are read as character by frictionless
         data[[field]] <- as.character(data[[field]])
-      } else {
+      } else if (type != "any") {
+        # `any` columns are left as they are.
         cli_warn(c(
           "!" = "No casting for {.field {field}} of type {.val {type}}."
         ))

@@ -8,11 +8,12 @@
 #' generated during the GeoPressure workflow. See [`GeoPressureR::param_create()`
 #' ](https://geopressure.org/GeoPressureR/reference/param_create.html) for more information.
 #'
-#' @return A [tibble::tibble()] data frame with columns `tag_id`, `manufacturer`, `scientific_name`,
-#' `ring_number`, and, when available, `model` and `firmware`.
+#' @return A [tibble::tibble()] data frame with columns `tag_id` and `ring_number` (always
+#' missing), plus `manufacturer`, `scientific_name`, `model` and `firmware` when available.
 #'
-#' Manufacturer names are normalized for common GeoPressure sources, and SOI or
-#' Migrate-specific model metadata are propagated when present in the parameter
+#' @details
+#' Manufacturer names are normalised for common GeoPressure sources, and SOI or
+#' Migrate Technology model metadata are propagated when present in the parameter
 #' objects.
 #'
 #' @seealso [params_to_observations()] and [tags_to_measurements()] for related
@@ -64,6 +65,7 @@ params_to_tags <- function(params) {
           .data$manufacturer == "soi" ~ "Swiss Ornithological Institute",
           .data$manufacturer == "migratetech" ~ "Migrate Technology Limited",
           .data$manufacturer == "lund" ~ "Lund University",
+          .data$manufacturer == "bas" ~ "British Antarctic Survey",
           .default = .data$manufacturer
         )
       )
@@ -74,7 +76,12 @@ params_to_tags <- function(params) {
       s <- param$soi_settings
       t <- tryCatch(
         {
-          dplyr::mutate(t, model = s$`HW Version`, firmware = s$`FW Version`)
+          # Older SOI settings files name these HWVersion and SWVersion.
+          dplyr::mutate(
+            t,
+            model = s[["HW Version"]] %||% s$HWVersion,
+            firmware = s[["FW Version"]] %||% s$SWVersion
+          )
         },
         error = function(e) {
           cli_abort(
