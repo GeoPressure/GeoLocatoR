@@ -78,3 +78,10 @@ test_that("print.geolocatordp labels the package identifier by its field name", 
   out <- cli::cli_fmt(print(pkg))
   expect_true(any(grepl("id: <https://doi.org/10.5281/zenodo.1>", out, fixed = TRUE)))
 })
+
+test_that("print.geolocatordp lists keywords stored as a list", {
+  pkg <- create_gldp()
+  pkg[["keywords"]] <- list("hoopoe", "migration")
+  out <- cli::cli_fmt(print(pkg))
+  expect_true(any(grepl("keywords:.*hoopoe.*migration", out)))
+})
