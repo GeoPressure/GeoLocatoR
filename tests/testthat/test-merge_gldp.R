@@ -411,3 +411,12 @@ test_that("merge_gldp_contributors ignores accents in names", {
   expect_length(out, 1)
   expect_identical(out[[1]]$organization, "Lab")
 })
+
+test_that("merge_gldp_contributors keeps a role that is part of another role", {
+  ctr <- list(
+    list(title = "Doe, Jane", roles = list("researcher")),
+    list(title = "Doe, Jane", roles = list("researchergroup"))
+  )
+  out <- merge_gldp_contributors(ctr)
+  expect_identical(unlist(out[[1]]$roles), c("researcher", "researchergroup"))
+})
