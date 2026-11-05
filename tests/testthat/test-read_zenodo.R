@@ -155,6 +155,28 @@ test_that("read_zenodo_download_files aborts when parallel downloads fail", {
   )
 })
 
+test_that("read_zenodo_download_files counts every failed download", {
+  httr2::local_mocked_responses(\(req) httr2::response(404))
+  file_entry <- \(key) {
+    list(key = key, links = list(content = glue::glue("https://example.org/{key}")))
+  }
+  zenodo_record <- list(
+    links = list(self_html = "https://zenodo.org/records/1"),
+    files = list(
+      entries = list(
+        file_entry("datapackage.json"),
+        file_entry("tags.csv"),
+        file_entry("observations.csv")
+      )
+    )
+  )
+
+  expect_error(
+    read_zenodo_download_files(zenodo_record, token = "dummy"),
+    "Failed to download 3 files"
+  )
+})
+
 test_that("read_zenodo can read from Zenodo Sandbox", {
   skip_on_cran()
   skip_if_offline()
