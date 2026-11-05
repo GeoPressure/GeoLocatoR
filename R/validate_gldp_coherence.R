@@ -31,8 +31,8 @@ validate_gldp_coherence <- function(pkg) {
 #'
 #' Internal helper that applies additional checks for optional GeoPressure
 #' resources when they are present. These checks cover selected numeric ranges,
-#' datetime windows, duration windows, schema-declared foreign keys, and
-#' unusual-but-non-failing movement metrics in `edges`.
+#' datetime windows, duration windows, schema-declared foreign keys of every
+#' resource, and unusual-but-non-failing values in `edges` and `pressurepaths`.
 #'
 #' @param pkg A GeoLocator Data Package object.
 #'

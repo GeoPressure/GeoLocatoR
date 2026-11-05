@@ -9,10 +9,13 @@
 #' Validation runs in four steps:
 #'
 #' 1. **Package profile validation**
-#'    The package metadata is checked against the GeoLocator-DP profile schema. This includes
-#'    required package-level fields and schema-defined constraints such as type, format,
-#'    uniqueness, enumerated values, regular-expression patterns, and minimum or maximum
-#'    lengths, item counts, and numeric values.
+#'    The package-level properties the GeoLocator-DP profile declares are checked against
+#'    it. From GeoLocator-DP v1.0 the profile declares only `$schema`, so this checks that
+#'    `$schema` is a GeoLocator-DP profile URL. Earlier profiles also declare package
+#'    metadata, checked for presence, type, format, enumerated values, regular-expression
+#'    patterns, item counts, and numeric bounds. Neither the Data Package profile that
+#'    GeoLocator-DP extends nor the profile's rules on resource descriptors (`type`, `path`,
+#'    `$schema`, `schema`, at least three resources) are checked.
 #'
 #' 2. **Resource validation**
 #'    File-backed tables are loaded for field and foreign-key checks; source files
@@ -48,7 +51,8 @@
 #'    - retrieval does not precede equipment for the same `tag_id`;
 #'    - duplicated observations are not present for the same `ring_number`, `datetime`,
 #'      and `observation_type`;
-#'    - `device_status` transitions are plausible across the observation history.
+#'    - `device_status` transitions are plausible across the observation history;
+#'    - `mass` above 10,000 g is reported as a warning only, a guideline rather than a limit.
 #'
 #'    GeoPressure-specific coherence checks are applied when the corresponding resources are
 #'    present. These include:
@@ -56,10 +60,10 @@
 #'    - realistic year windows for datetime fields in `staps`, `twilights`,
 #'      `pressurepaths`, and `edges`;
 #'    - duration checks for `staps` and `edges`;
-#'    - schema-declared foreign key consistency across resources;
+#'    - schema-declared foreign key consistency across all resources, core ones included;
 #'    - warnings for unusual `edges` distances, durations, or wind/ground-speed magnitudes,
-#'      for `pressurepaths$altitude` outside -200 to 10,000 m, and for
-#'      `observations$mass` above 10,000 g. These are guidelines, not limits.
+#'      and for `pressurepaths$altitude` outside -200 to 10,000 m. These are guidelines,
+#'      not limits.
 #'
 #' 4. **Metadata recommendations**
 #'    Additional metadata quality checks are reported without affecting the final validity.
@@ -113,7 +117,8 @@ validate_gldp <- function(pkg) {
 #' Validate GeoLocator Data Package profile
 #'
 #' Internal helper that validates package-level metadata against the GeoLocator-DP
-#' profile schema. Resource definitions are excluded here and validated separately.
+#' profile schema. Resource descriptors are excluded and not checked; resource data
+#' are validated by `validate_gldp_resources()`.
 #'
 #' @param pkg A GeoLocator Data Package object
 #' @return Invisibly returns `TRUE` when the package-level profile validation passes,
@@ -128,7 +133,8 @@ validate_gldp_profile <- function(pkg) {
   required <- unlist(pkg_schema$allOf[[2]]$required)
   properties <- pkg_schema$allOf[[2]]$properties
 
-  # Skip resource validation at the profile level (handled separately)
+  # The profile's rules on resource descriptors are not checked; resource data are
+  # validated by validate_gldp_resources().
   required <- setdiff(required, "resources")
   properties$resources <- NULL
 
