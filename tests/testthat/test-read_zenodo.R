@@ -426,7 +426,7 @@ test_that("read_zenodo_attach_metadata drops absent licence, keyword and grant v
 
   out <- read_zenodo_attach_metadata(pkg, record)
   expect_identical(out$licenses, list(list(title = "Custom licence")))
-  expect_identical(out$grants, "SNSF")
+  expect_identical(out$grants, list("SNSF"))
   expect_false("keywords" %in% names(out))
 
   out <- read_zenodo_attach_metadata(pkg, list(id = "1", metadata = list(), links = list()))

@@ -73,8 +73,11 @@ read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
   } else {
     NULL
   }
-  pkg[["grants"]] <- unlist(purrr::map(m$funding %||% list(), \(x) x$funder$name))
-  pkg[["keywords"]] <- unlist(purrr::map(m$subjects %||% list(), \(x) x$subject))
+  # Lists, so that a single value is written as a JSON array
+  grants <- purrr::compact(purrr::map(m$funding %||% list(), \(x) x$funder$name))
+  pkg[["grants"]] <- if (length(grants) > 0) grants
+  keywords <- purrr::compact(purrr::map(m$subjects %||% list(), \(x) x$subject))
+  pkg[["keywords"]] <- if (length(keywords) > 0) keywords
   pkg$codeRepository <- z$custom_fields$`code:codeRepository` %||% NULL
   pkg$status <- z$status
   pkg$record_type <- m$resource_type$id %||% NULL
