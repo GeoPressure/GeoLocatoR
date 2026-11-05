@@ -117,6 +117,10 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
       logical(1)
     ))
     pkg[["resources"]][read_order] <- purrr::map(pkg[["resources"]][read_order], \(r) {
+      # Only tables are loaded: custom and `params` resources have no table schema.
+      if (is.null(r$schema)) {
+        return(r)
+      }
       resource_name <- as.character(r$name %||% NA_character_)[1]
       resource_path <- as.character(r$path %||% NA_character_)[1]
       resource_location <- if (!is.na(resource_path) && nzchar(resource_path)) {
