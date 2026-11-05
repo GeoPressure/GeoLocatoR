@@ -23,6 +23,10 @@ read_zenodo_fetch_record <- function(
   req |>
     httr2::req_error(
       body = \(resp) {
+        # Zenodo explains errors in JSON, but a gateway error page is HTML
+        if (!grepl("json", httr2::resp_content_type(resp))) {
+          return(NULL)
+        }
         body <- httr2::resp_body_json(resp, simplifyVector = FALSE)
         body$message %||% httr2::resp_status_desc(resp)
       }

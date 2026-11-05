@@ -65,6 +65,14 @@ test_that("read_zenodo_fetch_record does not require token for request construct
   expect_false(auth_called)
 })
 
+test_that("read_zenodo_fetch_record reports an HTTP error without a JSON body", {
+  httr2::local_mocked_responses(\(req) {
+    httr2::response(502, headers = "Content-Type: text/html", body = charToRaw("<html></html>"))
+  })
+
+  expect_error(read_zenodo_fetch_record("1", token = "dummy"), "HTTP 502 Bad Gateway")
+})
+
 test_that("resolve_zenodo_token prefers sandbox env token when sandbox = TRUE", {
   withr::local_envvar(c(
     ZENODO_TOKEN_SANDBOX = "sandbox-token",
