@@ -47,15 +47,20 @@ validate_gldp_geopressure_coherence <- function(pkg) {
   resources <- pkg$resources %||% list()
   resource_names <- vapply(resources, \(x) x$name %||% NA_character_, character(1))
 
-  # Validate numeric columns that should stay below strict thresholds.
-  check_lt <- function(data, resource_name, field, upper) {
+  # Validate numeric columns that should stay below thresholds; `warn_unusual`
+  # reports a guideline rather than a limit.
+  check_lt <- function(data, resource_name, field, upper, warn_unusual = FALSE) {
     if (is.null(data) || !field %in% names(data)) {
       return(invisible(NULL))
     }
 
     values <- suppressWarnings(as.numeric(data[[field]]))
     invalid <- !is.na(values) & values >= upper
-    if (any(invalid)) {
+    if (any(invalid) && warn_unusual) {
+      cli_alert_warning(
+        "{sum(invalid)} value{?s} in {.field {resource_name}${field}} {?is/are} unusually large (>= {.val {upper}})."
+      )
+    } else if (any(invalid)) {
       cli_alert_danger(
         "{sum(invalid)} value{?s} in {.field {resource_name}${field}} must be < {.val {upper}}."
       )
@@ -63,7 +68,8 @@ validate_gldp_geopressure_coherence <- function(pkg) {
     }
   }
 
-  # Validate all date columns against a realistic year window.
+  # Report dates outside a plausible year window, from 1990 to the current year.
+  # A guideline rather than a limit: early geolocator data predate 2000.
   check_datetime_window <- function(data, resource_name, field) {
     if (is.null(data) || !field %in% names(data)) {
       return(invisible(NULL))
@@ -71,12 +77,13 @@ validate_gldp_geopressure_coherence <- function(pkg) {
 
     dt <- suppressWarnings(as.POSIXct(data[[field]], tz = "UTC"))
     year <- suppressWarnings(as.integer(format(dt, "%Y")))
-    invalid <- !is.na(year) & (year <= 2000 | year >= 2050)
+    current_year <- as.integer(format(Sys.Date(), "%Y"))
+    invalid <- !is.na(year) & (year < 1990 | year > current_year)
     if (any(invalid)) {
-      cli_alert_danger(
-        "{sum(invalid)} value{?s} in {.field {resource_name}${field}} must have a year > 2000 and < 2050."
+      cli_alert_warning(
+        "{sum(invalid)} value{?s} in {.field {resource_name}${field}} {?has/have} an unusual year \\
+        (before 1990 or after {current_year})."
       )
-      valid <<- FALSE
     }
   }
 
@@ -232,7 +239,7 @@ validate_gldp_geopressure_coherence <- function(pkg) {
   # Check realistic value ranges in staps.
   if ("staps" %in% resource_names) {
     staps_data <- staps(pkg)
-    check_lt(staps_data, "staps", "stap_id", 300)
+    check_lt(staps_data, "staps", "stap_id", 300, warn_unusual = TRUE)
     check_datetime_window(staps_data, "staps", "start")
     check_datetime_window(staps_data, "staps", "end")
     check_duration_window(
@@ -288,7 +295,7 @@ validate_gldp_geopressure_coherence <- function(pkg) {
   # Check realistic value ranges in paths and edges.
   if ("paths" %in% resource_names) {
     paths_data <- paths(pkg)
-    check_lt(paths_data, "paths", "j", 500)
+    check_lt(paths_data, "paths", "j", 500, warn_unusual = TRUE)
   }
 
   if ("edges" %in% resource_names) {

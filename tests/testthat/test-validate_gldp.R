@@ -409,6 +409,41 @@ test_that("validate_gldp_geopressure_coherence warns on unusual distances", {
   )
 })
 
+test_that("validate_gldp_geopressure_coherence only warns on implausible years, stap_id and j", {
+  pkg <- make_geopressure_test_pkg()
+  # Data from 2000 and the 1990s are accepted without a warning.
+  staps <- gldp_resource(pkg, "staps")
+  staps$data$start <- as.POSIXct("2000-01-01", tz = "UTC")
+  staps$data$end <- as.POSIXct("2000-01-02", tz = "UTC")
+  gldp_resource(pkg, "staps") <- staps
+  twilights <- gldp_resource(pkg, "twilights")
+  twilights$data$twilight <- as.POSIXct("1995-06-01", tz = "UTC")
+  gldp_resource(pkg, "twilights") <- twilights
+  expect_no_message(
+    expect_true(validate_gldp_geopressure_coherence(pkg)),
+    message = "unusual"
+  )
+
+  twilights$data$twilight <- as.POSIXct("1985-01-01", tz = "UTC")
+  gldp_resource(pkg, "twilights") <- twilights
+  expect_message(expect_true(validate_gldp_geopressure_coherence(pkg)), "unusual year")
+
+  pkg <- make_geopressure_test_pkg()
+  for (name in c("staps", "paths", "edges")) {
+    resource <- gldp_resource(pkg, name)
+    resource$data[intersect(c("stap_id", "stap_s", "stap_t"), names(resource$data))] <- 300
+    gldp_resource(pkg, name) <- resource
+  }
+  paths <- gldp_resource(pkg, "paths")
+  paths$data$j <- 500L
+  gldp_resource(pkg, "paths") <- paths
+  msgs <- testthat::capture_messages(
+    expect_true(validate_gldp_geopressure_coherence(pkg))
+  )
+  expect_match(msgs, "staps\\$stap_id.*unusually large", all = FALSE)
+  expect_match(msgs, "paths\\$j.*unusually large", all = FALSE)
+})
+
 test_that("validate_gldp_geopressure_coherence checks foreign keys", {
   pkg <- make_geopressure_test_pkg()
   path_idx <- which(vapply(pkg$resources, \(r) identical(r$name, "paths"), logical(1)))

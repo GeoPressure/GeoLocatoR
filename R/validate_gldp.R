@@ -59,14 +59,14 @@
 #'
 #'    GeoPressure-specific coherence checks are applied when the corresponding resources are
 #'    present. These include:
-#'    - realistic ranges for `staps$stap_id`, `paths$j` and `edges$n`;
-#'    - realistic year windows for datetime fields in `staps`, `twilights`,
-#'      `pressurepaths`, and `edges`;
+#'    - realistic ranges for `edges$n`;
 #'    - duration checks for `staps` and `edges`;
 #'    - schema-declared foreign key consistency across all resources, core ones included;
 #'    - warnings for unusual `edges` distances, durations, or wind/ground-speed magnitudes,
-#'      and for `pressurepaths$altitude` outside -200 to 10,000 m. These are guidelines,
-#'      not limits.
+#'      for `pressurepaths$altitude` outside -200 to 10,000 m, for `staps$stap_id` of 300
+#'      or more, for `paths$j` of 500 or more, and for datetime fields in `staps`,
+#'      `twilights`, `pressurepaths`, and `edges` dated before 1990 or after the current
+#'      year. These are guidelines, not limits.
 #'
 #' 4. **Metadata recommendations**
 #'    Additional metadata quality checks are reported without affecting the final validity.

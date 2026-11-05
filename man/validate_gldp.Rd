@@ -76,14 +76,14 @@ and \code{observation_type};
 GeoPressure-specific coherence checks are applied when the corresponding resources are
 present. These include:
 \itemize{
-\item realistic ranges for \code{staps$stap_id}, \code{paths$j} and \code{edges$n};
-\item realistic year windows for datetime fields in \code{staps}, \code{twilights},
-\code{pressurepaths}, and \code{edges};
+\item realistic ranges for \code{edges$n};
 \item duration checks for \code{staps} and \code{edges};
 \item schema-declared foreign key consistency across all resources, core ones included;
 \item warnings for unusual \code{edges} distances, durations, or wind/ground-speed magnitudes,
-and for \code{pressurepaths$altitude} outside -200 to 10,000 m. These are guidelines,
-not limits.
+for \code{pressurepaths$altitude} outside -200 to 10,000 m, for \code{staps$stap_id} of 300
+or more, for \code{paths$j} of 500 or more, and for datetime fields in \code{staps},
+\code{twilights}, \code{pressurepaths}, and \code{edges} dated before 1990 or after the current
+year. These are guidelines, not limits.
 }
 \item \strong{Metadata recommendations}
 Additional metadata quality checks are reported without affecting the final validity.
