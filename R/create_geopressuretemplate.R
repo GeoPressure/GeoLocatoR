@@ -311,7 +311,8 @@ create_geopressuretemplate_licenses <- function(pkg) {
     mit = list("\\bmit\\b", usethis::use_mit_license),
     apache = list("apache", usethis::use_apache_license),
     cc0 = list("cc[- ]?0", usethis::use_cc0_license),
-    ccby = list("cc[- ]?by", usethis::use_ccby_license),
+    # Only plain CC-BY: SA, NC and ND variants have no usethis template.
+    ccby = list("cc[- ]?by([- ]?[0-9.]+)?$", usethis::use_ccby_license),
     proprietary = list("proprietary", usethis::use_proprietary_license)
   )
 

@@ -198,3 +198,19 @@ test_that("README is written from a plain-text description", {
   create_geopressuretemplate_readme(create_gldp(description = "Tracking data of hoopoes"))
   expect_true("Tracking data of hoopoes" %in% readLines("README.md"))
 })
+
+test_that("CC-BY variants are not written as a plain CC-BY licence", {
+  directory <- tempfile("template-license-")
+  dir.create(directory)
+  old <- setwd(directory)
+  on.exit({
+    setwd(old)
+    unlink(directory, recursive = TRUE)
+  })
+  pkg <- create_gldp(licenses = list(list(name = "CC-BY-SA-4.0")))
+  expect_warning(
+    suppressMessages(create_geopressuretemplate_licenses(pkg)),
+    "No matching license"
+  )
+  expect_false(file.exists("LICENSE.md"))
+})
