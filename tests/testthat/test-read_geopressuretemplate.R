@@ -263,3 +263,15 @@ test_that("a pkg with resources is not overwritten without confirmation", {
     "interactive session"
   )
 })
+
+test_that("raw-tag read failures are reported with their error message", {
+  directory <- tempfile("template-raw-tag-error-")
+  dir.create(file.path(directory, "data", "raw-tag", "ZZ"), recursive = TRUE)
+  on.exit(unlink(directory, recursive = TRUE))
+  file.copy(file.path(system.file("extdata", package = "GeoPressureR"), "config.yml"), directory)
+  writeLines("not a tag", file.path(directory, "data", "raw-tag", "ZZ", "notes.txt"))
+  expect_warning(
+    suppressMessages(read_geopressuretemplate(directory, from = "raw-tag")),
+    "ZZ.*manufacturer"
+  )
+})
