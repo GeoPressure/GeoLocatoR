@@ -80,3 +80,22 @@ test_that("a file sharing no column with its schema is reported", {
     class = "gldp_error_header_unrelated"
   )
 })
+
+test_that("a remote package reads the header of a relative path from its URL", {
+  # The relative path resolves to a URL, which `file.exists()` cannot check.
+  requested <- NULL
+  local_mocked_bindings(
+    read_delim = function(file, ...) {
+      requested <<- file
+      data.frame(tag_id = character(0))
+    },
+    .package = "readr"
+  )
+  pkg <- create_gldp()
+  attr(pkg, "directory") <- "https://example.org/package"
+
+  header <- gldp_resource_header(pkg, list(path = "tags.csv"))
+
+  expect_identical(requested, "https://example.org/package/tags.csv")
+  expect_identical(header, "tag_id")
+})
