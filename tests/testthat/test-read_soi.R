@@ -57,3 +57,15 @@ test_that("read_soi() names the model by the tag type when the hardware version 
   pkg <- suppressMessages(read_soi(gdl))
   expect_identical(tags(pkg)$model, c("GDL3pam-2.4", "GDL3pam"))
 })
+
+test_that("read_soi() describes the attachment from the harness columns, or leaves it missing", {
+  gdl <- tibble(
+    GDL_ID = c("AAAA", "BBBB"),
+    Harness_data = c("leg-loop", NA),
+    HarnessAttachement_data = c("glued", NA),
+    directory = NA_character_
+  )
+
+  pkg <- suppressMessages(read_soi(gdl))
+  expect_identical(tags(pkg)$attachment_type, c("leg-loop|attachment:glued", NA))
+})

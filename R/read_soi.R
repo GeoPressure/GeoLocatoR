@@ -10,7 +10,12 @@
 #'
 #' @param gdl A data frame of SOI export metadata, typically returned by
 #'   [read_soi_gld()]. It must contain at least `GDL_ID` and the fields needed
-#'   to derive package metadata.
+#'   to derive package metadata. `tags$attachment_type` is built from the
+#'   harness columns (`Harness_data`, `HarnessMaterial_data`,
+#'   `HarnessAttachement_data`, `HarnessThickness`, `LegHarnessDiameter`,
+#'   `BreastHarnessDiameterHead` and `BreastHarnessDiameterTail`), which
+#'   `read_soi_gld(filter_col = TRUE)` does not keep: use `filter_col = FALSE`
+#'   to include them.
 #' @param directory_data Path to the directory containing SOI raw tag files or
 #'   folders.
 #' @param generate_observations A logical value indicating whether to create pre-filled
@@ -185,7 +190,7 @@ read_soi <- function(
                   names(vars) &&
                   !is.na(.data$HarnessAttachement_data)
               ) {
-                glue::glue("attachement:{HarnessAttachement_data}")
+                glue::glue("attachment:{HarnessAttachement_data}")
               },
               if (
                 "HarnessThickness" %in%
@@ -220,7 +225,9 @@ read_soi <- function(
           )
         }
       ) |>
-      ungroup()
+      ungroup() |>
+      # NA rather than an empty string when no harness detail is known
+      mutate(attachment_type = na_if(as.character(.data$attachment_type), ""))
 
     t_gdl <- t_gdl |>
       transmute(
