@@ -74,7 +74,12 @@ params_to_tags <- function(params) {
       s <- param$soi_settings
       t <- tryCatch(
         {
-          dplyr::mutate(t, model = s$`HW Version`, firmware = s$`FW Version`)
+          # Older SOI settings files name these HWVersion and SWVersion.
+          dplyr::mutate(
+            t,
+            model = s[["HW Version"]] %||% s$HWVersion,
+            firmware = s[["FW Version"]] %||% s$SWVersion
+          )
         },
         error = function(e) {
           cli_abort(
