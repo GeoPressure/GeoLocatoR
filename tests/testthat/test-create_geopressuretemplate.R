@@ -2,6 +2,7 @@ library(testthat)
 library(GeoLocatoR)
 library(GeoPressureR)
 library(yaml)
+library(usethis)
 
 # pkg_shared is loaded from setup.R
 
@@ -270,4 +271,58 @@ test_that("crop dates survive a read-create-read cycle", {
     config2$A$tag_create[c("crop_start", "crop_end")],
     config$A$tag_create[c("crop_start", "crop_end")]
   )
+})
+
+test_that("an invalid package leaves no project folder", {
+  path <- tempfile("template-invalid-")
+  pkg <- template_config_pkg()
+  pkg[["resources"]] <- NULL
+  expect_error(create_geopressuretemplate(path, pkg = pkg, open = FALSE))
+  expect_false(dir.exists(path))
+})
+
+test_that("the example tags are removed from config.yml whatever their names", {
+  skip_if(!nzchar(Sys.which("git")), "git is not available")
+  # Serve a minimal template from a local repository instead of GitHub
+  repo <- withr::local_tempdir()
+  dir.create(file.path(repo, "data", "raw-tag", "X"), recursive = TRUE)
+  file.create(file.path(repo, "data", "raw-tag", "X", "pressure.csv"))
+  writeLines(c("Package: GeoPressureTemplate", "Version: 1.0"), file.path(repo, "DESCRIPTION"))
+  file.create(file.path(repo, "GeoPressureTemplate.Rproj"))
+  writeLines(
+    c("# comment", "default:", "  tag_set_map:", "    scale: 4", "", "ABC:", "  tag_create:"),
+    file.path(repo, "config.yml")
+  )
+  withr::with_dir(repo, {
+    system2("git", c("init", "--quiet"))
+    system2("git", c("add", "."))
+    system2(
+      "git",
+      c("-c", "user.name=t", "-c", "user.email=t@t", "commit", "--quiet", "-m", "init")
+    )
+  })
+  withr::local_envvar(
+    GIT_CONFIG_COUNT = "1",
+    GIT_CONFIG_KEY_0 = glue::glue("url.file://{repo}.insteadOf"),
+    GIT_CONFIG_VALUE_0 = "https://github.com/GeoPressure/GeoPressureTemplate"
+  )
+
+  project_dir <- suppressMessages(create_geopressuretemplate(tempfile(), open = FALSE))
+  expect_identical(
+    readLines(file.path(project_dir, "config.yml")),
+    c("# comment", "default:", "  tag_set_map:", "    scale: 4", "")
+  )
+})
+
+test_that("writing the licence leaves the active usethis project unchanged", {
+  active <- withr::local_tempdir()
+  local_project(active, force = TRUE, setwd = FALSE, quiet = TRUE)
+  directory <- withr::local_tempdir()
+  withr::with_dir(directory, {
+    suppressMessages(create_geopressuretemplate_licenses(create_gldp(
+      licenses = list(list(name = "CC0-1.0"))
+    )))
+  })
+  expect_true(file.exists(file.path(directory, "LICENSE.md")))
+  expect_identical(normalizePath(proj_get()), normalizePath(active))
 })
