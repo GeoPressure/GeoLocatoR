@@ -87,8 +87,10 @@
 #' return value.
 #'
 #' @examples
+#' \dontrun{
 #' pkg <- read_zenodo("17367319", quiet = TRUE)
 #' validate_gldp(pkg)
+#' }
 #'
 #' @export
 validate_gldp <- function(pkg) {
