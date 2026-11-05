@@ -145,7 +145,7 @@ test_that("read_gldp reads tables whose schema is a path or a patch-ref URL", {
   pkg <- read_gldp(directory)
 
   expect_identical(gldp_resource(pkg, "custom")$path, "custom.csv")
-  expect_identical(gldp_resource(pkg, "tags")$schema, gldp_resource_schema("v1.2", "tags"))
+  expect_identical(gldp_resource(pkg, "tags")$schema, gldp_resource_schema("v1.3", "tags"))
   expect_identical(tags(pkg)$tag_id, "A")
 })
 
@@ -239,7 +239,7 @@ test_that("read_gldp reads a v1.0 package giving the table schema in $schema", {
     pkg <- suppressMessages(read_gldp(directory, force_read = force_read))
     resource <- gldp_resource(pkg, "tags")
     expect_identical(tags(pkg)$tag_id, "A")
-    expect_identical(resource$schema$fields, gldp_resource_schema("v1.2", "tags")$fields)
+    expect_identical(resource$schema$fields, gldp_resource_schema("v1.3", "tags")$fields)
     expect_identical(resource[["$schema"]], .gldp_data_resource_profile)
     expect_identical(resource$type, "table")
   }
