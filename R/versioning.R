@@ -25,13 +25,13 @@
 #' Get GeoLocator DP version
 #'
 #' @description
-#' Extract the GeoLocator-DP version from `x$schema`.
-#'
-#' @param x A GeoLocator Data Package object.
-#' @return Character string version (e.g. `"v1.0"`).
+#' Extract the GeoLocator-DP version from `` x$`$schema` ``.
 #'
 #' The function aborts if `$schema` is missing, cannot be parsed, or refers to
 #' an unsupported version.
+#'
+#' @param x A GeoLocator Data Package object.
+#' @return Character string version (e.g. `"v1.0"`).
 #' @family misc functions
 #' @export
 gldp_version <- function(x) {
@@ -40,7 +40,7 @@ gldp_version <- function(x) {
   schema <- purrr::pluck(x, "$schema", .default = NULL)
 
   if (is.null(schema) || !nzchar(schema)) {
-    cli_abort("{.field $schema} is missing or empty, cannot determine the GLDP version.")
+    cli_abort("{.field $schema} is missing or empty, cannot determine the GeoLocator-DP version.")
   }
 
   # The profile accepts a short ref (`v1.2`) or a tag ref (`refs/tags/v1.2`).
