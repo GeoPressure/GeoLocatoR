@@ -36,24 +36,6 @@ read_gdl <- function(
   )
 }
 
-#' Deprecated: `version()`
-#'
-#' @description
-#' `r lifecycle::badge("deprecated")`
-#'
-#' `version()` was renamed to [gldp_version()].
-#'
-#' @param x A GeoLocator Data Package object.
-#' @return A GLDP version string.
-version <- function(x) {
-  lifecycle::deprecate_warn(
-    when = "1.0.0",
-    what = "version()",
-    with = "gldp_version()"
-  )
-  gldp_version(x)
-}
-
 #' Deprecated: `config2tibble()`
 #'
 #' @description

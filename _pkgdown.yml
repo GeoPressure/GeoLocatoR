@@ -64,7 +64,6 @@ reference:
       - zenodo_to_gldp
       - config2tibble
       - gldp_to_zenodo
-      - version
       - update_gldp_deprecated
 
 navbar:
