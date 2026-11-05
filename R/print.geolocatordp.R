@@ -22,12 +22,10 @@ print.geolocatordp <- function(x, ...) {
   cli_h1("A GeoLocator Data Package `pkg` ({gldp_version(x)})")
 
   cli::cli_h3("Metadata")
-  cat_line(
-    format_inline(
-      "{.strong Note}: All {.field green} texts are fields of `pkg` which can be accessed with `pkg${.field field}`)."
-    ),
-    col = "silver"
-  )
+  # Through cli like the rest of the output, so that it keeps its place when captured
+  cli_text(col_silver(format_inline(
+    "{.strong Note}: All {.field green} texts are fields of `pkg` which can be accessed with `pkg${.field field}`)."
+  )))
   if (isTRUE(x$is_draft)) {
     cli_bullets(c("!" = "{.field status}: {.strong draft}"))
   }
@@ -111,7 +109,9 @@ print.geolocatordp <- function(x, ...) {
     licenses <- licenses[!is.na(licenses) & nzchar(trimws(licenses))]
     if (length(licenses) > 0) {
       # Licences are pre-escaped strings with {.url} markup, so they form the format string.
-      cli_bullets(c("*" = paste0("{.field licenses}: ", glue::glue_collapse(licenses, sep = ", "))))
+      cli_bullets(c(
+        "*" = glue::glue("{{.field licenses}}: {glue::glue_collapse(licenses, sep = ', ')}")
+      ))
     }
   }
 
@@ -135,6 +135,7 @@ print.geolocatordp <- function(x, ...) {
 
   communities <- as.character(unlist(x$communities, recursive = TRUE, use.names = FALSE))
   communities <- communities[!is.na(communities) & nzchar(trimws(communities))]
+  # GeoLocator-DP community on Zenodo and on Zenodo Sandbox
   allowed_communities <- c(
     "b7c70316-310b-435e-9a8b-84188d60a3cc",
     "6e9c24fb-954a-4087-ae9b-71fcba41a624"
@@ -206,10 +207,10 @@ print.geolocatordp <- function(x, ...) {
   bullets(x, "taxonomic")
 
   if (has_value(x$numberTags)) {
-    number_tags_values <- suppressWarnings(as.numeric(purrr::map_dbl(
+    number_tags_values <- suppressWarnings(purrr::map_dbl(
       x$numberTags,
       \(v) as.numeric(v %||% NA)[1]
-    )))
+    ))
     number_tags <- names(x$numberTags)[!is.na(number_tags_values) & number_tags_values > 0]
     if (length(number_tags) > 0) {
       number_tags_inline <- purrr::map_chr(
@@ -250,7 +251,7 @@ print.geolocatordp <- function(x, ...) {
       if (is.na(n)) {
         cli_bullets(c("*" = label))
       } else {
-        cli_bullets(c("*" = paste0(label, " (n={format(n, big.mark=',')})")))
+        cli_bullets(c("*" = glue::glue("{label} (n={format(n, big.mark = ',')})")))
       }
     })
   }

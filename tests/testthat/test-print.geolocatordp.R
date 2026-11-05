@@ -4,19 +4,16 @@ library(GeoLocatoR)
 # pkg_shared is loaded from setup.R
 
 test_that("print.geolocatordp displays package information", {
-  # Should print without error
-  suppressMessages({
-    expect_output(print(pkg_shared))
-  })
+  out <- cli::cli_fmt(print(pkg_shared))
+  expect_true(any(grepl("Resources", out, fixed = TRUE)))
 })
 
 test_that("print.geolocatordp renders HTML description as plain text", {
   pkg <- pkg_shared
   pkg[["description"]] <- "<p>This is <strong>HTML</strong> &amp; text.</p>"
 
-  suppressMessages({
-    expect_output(print(pkg))
-  })
+  out <- cli::cli_fmt(print(pkg))
+  expect_true(any(grepl("This is HTML & text.", out, fixed = TRUE)))
 })
 
 test_that("print.geolocatordp prints a plain-text description", {
@@ -43,4 +40,13 @@ test_that("html_to_text handles plain text, HTML and malformed fragments", {
   expect_identical(html_to_text("<p>a <strong>b</strong></p>"), "a b")
   expect_identical(html_to_text(NA_character_), NA_character_)
   expect_match(html_to_text(strrep("x", 300)), "\\.\\.\\.$")
+})
+
+test_that("print.geolocatordp prints the field note in order with the other lines", {
+  pkg <- create_gldp()
+  pkg[["title"]] <- "Title"
+
+  out <- cli::cli_fmt(print(pkg))
+  expect_lt(grep("Metadata", out), grep("Note", out))
+  expect_lt(grep("Note", out), grep("title", out))
 })
