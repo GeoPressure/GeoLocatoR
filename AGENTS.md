@@ -14,7 +14,9 @@
 - Do run it when handing work over: before opening or updating a pull
   request, before a release, and whenever a change alters behaviour rather
   than only shape. Report what it said rather than asserting the change works.
-- Do not run `devtools::document()` or regenerate roxygen outputs unless explicitly asked.
+- Run `devtools::document()` when roxygen sources change and before opening or updating a
+  pull request or a release, and commit the regenerated `man/` and `NAMESPACE` with the
+  change. Do not run it while iterating on unrelated edits.
 - Do not use `:::` or `::` in tests.
 
 Comments
