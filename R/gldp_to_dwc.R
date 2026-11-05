@@ -274,24 +274,6 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
     dplyr::left_join(pressurepath_elevation, by = c("tag_id", "stap_id")) |>
     dplyr::left_join(obs_staps, by = c("tag_id", "stap_id"))
 
-  # Ensure optional fields from observations / paths exist; otherwise create empty columns
-  if (!("observation_sex" %in% names(occurrence))) {
-    occurrence$observation_sex <- NA_character_
-  }
-  if (!("observation_life_stage" %in% names(occurrence))) {
-    occurrence$observation_life_stage <- NA_character_
-  }
-  if (!("eventRemarks" %in% names(occurrence))) {
-    occurrence$eventRemarks <- NA_character_
-  }
-  if (!("observation_dynamic_properties" %in% names(occurrence))) {
-    occurrence$observation_dynamic_properties <- NA_character_
-  }
-  if (!("coordinateUncertaintyInMeters" %in% names(occurrence))) {
-    occurrence$coordinateUncertaintyInMeters <- NA_real_
-  }
-
-  path_has_known <- "known" %in% names(occurrence)
   stap_has_known <- all(c("known_lat", "known_lon") %in% names(occurrence))
 
   # Match each tag’s analysis grid; missing scales use the ERA5 0.25-degree grid.
@@ -302,9 +284,7 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
 
   occurrence <- occurrence |>
     dplyr::mutate(
-      location_is_known = if (path_has_known) {
-        as.logical(.data$known)
-      } else if (stap_has_known) {
+      location_is_known = if (stap_has_known) {
         !is.na(.data$known_lat) & !is.na(.data$known_lon)
       } else {
         FALSE

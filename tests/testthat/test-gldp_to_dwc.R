@@ -231,3 +231,59 @@ test_that("gldp_to_dwc keeps datasetID for a package without id", {
   expect_true("datasetID" %in% names(occurrence))
   expect_true(is.na(occurrence$datasetID))
 })
+
+# Minimal offline package with one stationary period and the given observations.
+dwc_offline_pkg <- function(observations) {
+  pkg <- create_gldp(title = "Example package")
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = "AA",
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "soi",
+      model = "GDL3"
+    )
+  )
+  pkg <- add_gldp_resource(pkg, "observations", observations)
+  pkg <- add_gldp_resource(
+    pkg,
+    "staps",
+    data.frame(
+      tag_id = "AA",
+      stap_id = c(1, 2),
+      start = as.POSIXct(c("2020-01-01", "2020-01-06"), tz = "UTC"),
+      end = as.POSIXct(c("2020-01-05", "2020-03-01"), tz = "UTC")
+    )
+  )
+  add_gldp_resource(
+    pkg,
+    "paths",
+    data.frame(tag_id = "AA", type = "most_likely", stap_id = c(1, 2), lat = 46, lon = 7, j = 1L)
+  )
+}
+
+test_that("gldp_to_dwc leaves observation and uncertainty fields empty without matches", {
+  # The only observation is more than 14 days from every stationary period.
+  pkg <- dwc_offline_pkg(data.frame(
+    ring_number = "R1",
+    tag_id = "AA",
+    observation_type = "equipment",
+    datetime = as.POSIXct("2019-01-01", tz = "UTC"),
+    latitude = 46,
+    longitude = 7,
+    age_class = "4",
+    sex = "M"
+  ))
+  occurrence <- gldp_to_dwc(pkg, NULL)
+  expect_equal(nrow(occurrence), 2)
+  expect_true(all(is.na(occurrence$sex)))
+  expect_true(all(is.na(occurrence$lifeStage)))
+  expect_true(all(is.na(occurrence$coordinateUncertaintyInMeters)))
+  expect_match(occurrence$eventRemarks, "^Location reconstructed")
+  expect_equal(
+    occurrence$dynamicProperties[1],
+    '{"pathType":"most_likely","locationSource":"reconstructed"}'
+  )
+})
