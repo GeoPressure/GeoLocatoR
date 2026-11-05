@@ -377,7 +377,7 @@ validate_gldp_core_coherence <- function(pkg) {
     !(min_res_required %in% sapply(pkg$resources, \(x) x$name))
   ]
   if (length(res_missing) > 0) {
-    cli::cli_alert_warning(
+    cli_alert_danger(
       "{.arg pkg} is missing {.val {res_missing}}. We could not check package coherence."
     )
     valid <- FALSE
@@ -455,8 +455,8 @@ validate_gldp_core_coherence <- function(pkg) {
     # valid <- FALSE
   }
 
-  # Check for missing equipment or retrieval while measurement are present
-  # If measurements are present, there should be at least one equipment or retrieval observation.
+  # Check for missing equipment or retrieval while measurements are present.
+  # A tag with measurements needs both an equipment and a retrieval observation.
   tidmissingequip <- setdiff(
     unique(m$tag_id),
     unique(o$tag_id[o$observation_type == "equipment"])
@@ -593,7 +593,7 @@ validate_gldp_observations <- function(o) {
     valid <- FALSE
   }
 
-  # Check 6: A tag_id must follow an equipment event
+  # Check 6: Each tag_id must have an equipment event (its order is check 7).
   tag_without_equipment <- o |>
     group_by(.data$ring_number, .data$tag_id) |>
     filter(!is.na(.data$tag_id)) |>
@@ -602,7 +602,7 @@ validate_gldp_observations <- function(o) {
   if (nrow(tag_without_equipment) > 0) {
     error_tag <- unique(tag_without_equipment$tag_id)
     cli_alert_danger(
-      "{length(error_tag)} tag{?s} {?was/were} recorded without a preceding equipment event. Check: {.field {error_tag}}"
+      "{length(error_tag)} tag{?s} {?was/were} recorded without an equipment event. Check: {.field {error_tag}}"
     )
     valid <- FALSE
   }
