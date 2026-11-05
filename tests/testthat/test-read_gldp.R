@@ -125,7 +125,7 @@ test_that("read_gldp reads the GeoLocator-DP example package offline", {
   # Its measurements use `acceleration`, which is not a v1.2 sensor.
   expect_warning(pkg <- read_gldp(directory), "measurements")
 
-  expect_identical(gldp_resource(pkg, "tags")$schema, gldp_resource_schema("v1.2", "tags"))
+  expect_identical(gldp_resource(pkg, "tags")$schema, gldp_resource_schema("v1.3", "tags"))
   expect_identical(nrow(tags(pkg)), 8L)
   expect_identical(nrow(observations(pkg)), 18L)
 

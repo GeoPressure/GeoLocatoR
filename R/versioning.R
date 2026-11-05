@@ -12,7 +12,8 @@
   "v0.6",
   "v1.0",
   "v1.1",
-  "v1.2"
+  "v1.2",
+  "v1.3"
 )
 
 #' Data Package profile of a tabular resource descriptor
