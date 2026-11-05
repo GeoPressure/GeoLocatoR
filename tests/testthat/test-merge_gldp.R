@@ -384,3 +384,30 @@ test_that("merge_gldp_contributors keeps equal names with different ORCIDs apart
   # The ORCID-less entry is ambiguous, so it stays on its own.
   expect_length(merge_gldp_contributors(ctr), 3)
 })
+
+test_that("merge_gldp_contributors keeps unrelated names apart", {
+  ctr <- list(
+    list(title = "王伟", roles = list("researcher")),
+    list(title = "李娜", roles = list("datacollector")),
+    list(organization = "Institute A"),
+    list(organization = "Institute B")
+  )
+  out <- merge_gldp_contributors(ctr)
+  expect_length(out, 4)
+  expect_identical(out[[3]]$organization, "Institute A")
+})
+
+test_that("merge_gldp_contributors ignores accents in names", {
+  # Transliteration depends on the iconv build and the locale.
+  skip_if_not(
+    identical(gsub("[\"'`^~?]", "", iconv("ü", "UTF-8", "ASCII//TRANSLIT")), "u"),
+    "iconv cannot transliterate in this locale"
+  )
+  ctr <- list(
+    list(title = "Müller, Jürgen"),
+    list(title = "Jurgen Muller", organization = "Lab")
+  )
+  out <- merge_gldp_contributors(ctr)
+  expect_length(out, 1)
+  expect_identical(out[[1]]$organization, "Lab")
+})

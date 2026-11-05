@@ -476,9 +476,13 @@ merge_gldp_contributors <- function(contributors) {
     if (is.na(title) || !nzchar(trimws(title))) {
       title <- paste(ctr$givenName %||% "", ctr$familyName %||% "")
     }
-    title <- iconv(tolower(title), to = "ASCII//TRANSLIT")
-    words <- strsplit(gsub("[^a-z ]", " ", title %||% ""), " +")[[1]]
-    paste(sort(words[nzchar(words)]), collapse = " ")
+    # Drop accents. Some iconv builds leave marks ("u, 'i) or substitute "?": remove them
+    # rather than split the word. `from` is needed for non-ASCII names in a C locale.
+    ascii <- gsub("[\"'`^~?]", "", iconv(tolower(title), from = "UTF-8", to = "ASCII//TRANSLIT"))
+    words <- strsplit(gsub("[^a-z ]", " ", ascii), " +")[[1]]
+    key <- paste(sort(words[nzchar(words)]), collapse = " ")
+    # A name with no ASCII form (e.g. in another script) is compared as written.
+    if (nzchar(key)) key else trimws(tolower(title))
   }
   orcid <- purrr::map_chr(contributors, \(ctr) {
     path <- as.character(ctr$path %||% "")[1]
@@ -487,8 +491,11 @@ merge_gldp_contributors <- function(contributors) {
   })
   name <- purrr::map_chr(contributors, name_key)
   key <- ifelse(is.na(orcid), paste0("name:", name), paste0("orcid:", orcid))
+  # An entry with neither ORCID nor name is never merged.
+  unnamed <- which(is.na(orcid) & !nzchar(name))
+  key[unnamed] <- glue::glue("entry:{unnamed}")
   # A name shared by exactly one ORCID identifies that person.
-  for (k in which(is.na(orcid))) {
+  for (k in setdiff(which(is.na(orcid)), unnamed)) {
     match <- unique(orcid[!is.na(orcid) & name == name[k]])
     if (length(match) == 1) key[k] <- paste0("orcid:", match)
   }
