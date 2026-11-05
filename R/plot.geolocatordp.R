@@ -109,7 +109,8 @@ plot_pkg_coverage <- function(x) {
   ) +
     ggplot2::geom_tile() +
     ggplot2::facet_grid(.data$tag_id ~ ., scales = "free_y") +
-    ggplot2::scale_fill_manual(values = c("black", "grey")) +
+    # Named, so that days with data are black whether or not days without data exist
+    ggplot2::scale_fill_manual(values = c("TRUE" = "black", "FALSE" = "grey")) +
     ggplot2::geom_vline(
       data = o |>
         filter(.data$observation_type %in% c("equipment", "retrieval")),
