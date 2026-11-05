@@ -247,6 +247,25 @@ test_that("gldp_to_tag reuses saved GeoPressureR parameters", {
   expect_equal(tag$param$tag_set_map$scale, 1.5)
 })
 
+test_that("gldp_to_tag returns saved params without class as a GeoPressureR param", {
+  pkg <- pkg_shared
+  tag_id <- unique(tags(pkg)$tag_id)[1]
+  # As read from plain JSON, or as kept by read_soi().
+  pkg$params <- list(list(
+    id = tag_id,
+    GeoPressureR_version = "3.8.0",
+    tag_create = list(mag_axis = c("right", "forward", "down"))
+  ))
+
+  tag <- gldp_to_tag(pkg, tag_id)
+
+  expect_s3_class(tag$param, "param")
+  expect_equal(tag$param$tag_create$manufacturer, "datapackage")
+  expect_equal(tag$param$tag_create$mag_axis, c("right", "forward", "down"))
+  suppressMessages(expect_no_error(print(tag)))
+  suppressMessages(expect_no_error(print(tag$param)))
+})
+
 test_that("gldp_to_tag extracts stap and twilight data correctly", {
   pkg <- pkg_shared
 
