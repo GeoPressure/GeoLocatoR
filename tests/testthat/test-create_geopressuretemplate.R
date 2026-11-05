@@ -232,3 +232,21 @@ test_that("README DOI badge uses the package DOI", {
     fixed = TRUE
   )))
 })
+
+test_that("unlabelled tags are exported for labelling, not as final labels", {
+  directory <- tempfile("template-data-")
+  dir.create(file.path(directory, "data"), recursive = TRUE)
+  old <- setwd(directory)
+  on.exit({
+    setwd(old)
+    unlink(directory, recursive = TRUE)
+  })
+  pkg <- template_config_pkg()
+  m <- measurements(pkg)
+  m$label[m$tag_id == "A" & m$sensor == "pressure"][2] <- "flight"
+  pkg <- add_gldp_resource(pkg, "measurements", m, replace = TRUE)
+  suppressMessages(create_geopressuretemplate_data(pkg))
+  expect_true(file.exists("data/tag-label/A-labeled.csv"))
+  expect_true(file.exists("data/tag-label/B.csv"))
+  expect_false(file.exists("data/tag-label/B-labeled.csv"))
+})

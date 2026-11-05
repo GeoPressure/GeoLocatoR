@@ -388,9 +388,15 @@ create_geopressuretemplate_data <- function(pkg) {
       })
 
       if ("pressure" %in% names(tag)) {
+        # Only package labels are final. Without them, tag_label_write() fills in
+        # automatic labels, so write the file to be labelled in TRAINSET instead.
+        labelled <- any(purrr::map_lgl(tag[c("pressure", "acceleration")], \(x) {
+          "label" %in% names(x)
+        }))
+        suffix <- if (labelled) "-labeled" else ""
         GeoPressureR::tag_label_write(
           tag = tag,
-          file = glue::glue("{path_label}/{tag_id}-labeled.csv"),
+          file = glue::glue("{path_label}/{tag_id}{suffix}.csv"),
           quiet = TRUE
         )
       }
