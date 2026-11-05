@@ -358,9 +358,9 @@ read_soi <- function(
 
   # Update metadata
   pkg <- pkg |>
-    update_gldp_taxonomic() |>
-    update_gldp_number_tags() |>
-    update_gldp_temporal()
+    gldp_update_taxonomic() |>
+    gldp_update_number_tags() |>
+    gldp_update_temporal()
 
   cli_progress_done()
 
