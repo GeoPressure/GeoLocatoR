@@ -265,6 +265,11 @@ validate_gldp_item <- function(item, prop, field) {
   # validate format
   valid <- valid && check_format(item, prop$format, field)
 
+  # Bounds and lengths compared on a value of the wrong type mislead, e.g. "100" < "90".
+  if (!valid) {
+    return(FALSE)
+  }
+
   # Check if 'required' property exists and is TRUE
   if (!is.null(prop$required) && is.logical(prop$required) && prop$required) {
     if (is.null(item)) {
