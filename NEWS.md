@@ -1,4 +1,4 @@
-# GeoLocatoR (development version)
+# GeoLocatoR v1.4.0
 
 ## Main
 
@@ -18,6 +18,8 @@
 - `gldp_to_eml()` [returns the EML without writing when `directory = NULL`](https://github.com/GeoPressure/GeoLocatoR/commit/f76c92a) and [identifies a DOI `packageId` as such](https://github.com/GeoPressure/GeoLocatoR/commit/6319a58). `merge_gldp()` [drops custom resources with a message instead of aborting](https://github.com/GeoPressure/GeoLocatoR/commit/ecefd8b) and [records source DOIs as bare DOIs](https://github.com/GeoPressure/GeoLocatoR/commit/e7d84ff).
 - `print()` [writes everything through cli](https://github.com/GeoPressure/GeoLocatoR/commit/48f8b9f), so `capture.output(print(pkg))` is now empty, and `plot(type = "map")` [sizes markers on one scale and errors when there is no most-likely path](https://github.com/GeoPressure/GeoLocatoR/commit/d23a18b).
 - [Add Peter Desmet as an author](https://github.com/GeoPressure/GeoLocatoR/commit/168bf3e).
+
+**Full Changelog**: <https://github.com/GeoPressure/GeoLocatoR/compare/v1.3.2...v1.4.0>
 
 # GeoLocatoR v1.3.2
 
