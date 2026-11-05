@@ -2,13 +2,13 @@
 #'
 #' @description
 #' Add a standard GeoLocator-DP resource to a package. This essentially wraps
-#' [frictionless::add_resource()] but with prepartions steps of the data:
+#' [frictionless::add_resource()], preparing the data first:
 #' - extending the schema with extra columns present in `data` when allowed by
 #'   `fieldsMatch`;
 #' - adding missing schema columns to `data` with typed `NA` values when
 #'   needed;
 #' - reordering `data` columns to match the schema, because
-#'   [frictionless::add_resource()] expects fields in schema order.
+#'   [frictionless::add_resource()] expects fields in schema order;
 #' - casting columns to schema types when `cast_type = TRUE`, for example
 #'   converting strings to dates, numbers, or integers when required by the
 #'   schema, so the stored resource is consistent with the declared schema.
@@ -23,6 +23,8 @@
 #' adjusted according to the schema.
 #' @param cast_type A logical value indicating whether the data frame should be cast to the types
 #' specified in the schema. Defaults to `FALSE`.
+#' @param delim Not used: [frictionless::add_resource()] only uses it when
+#'   `data` is a path to a file, and `data` is always a data frame here.
 #' @inheritParams frictionless::add_resource
 #'
 #' @return The updated GeoLocator Data Package object with the new resource added.
@@ -42,7 +44,7 @@ add_gldp_resource <- function(
   check_gldp(pkg)
   version <- gldp_version(pkg)
 
-  # Retrieve full schema (pkg$resources) does not have schema at first
+  # The profile lists the tables, whose schemas are not in `pkg` until added.
   pkg_schema <- gldp_profile_schema(version)
   # The first branch is the one for the fixed tables.
   possible_gldp_resources <-
@@ -50,8 +52,8 @@ add_gldp_resource <- function(
 
   if (!resource_name %in% possible_gldp_resources) {
     cli_abort(c(
-      "x" = "{.val {resource_name}} is not a supported GeoLocatoR resource for {.fn add_gldp_resource}.",
-      "i" = "Supported GeoLocatoR resources are: {.val {possible_gldp_resources}}.",
+      "x" = "{.val {resource_name}} is not a GeoLocator-DP table supported by {.fn add_gldp_resource}.",
+      "i" = "Supported GeoLocator-DP tables are: {.val {possible_gldp_resources}}.",
       "i" = "To add custom resources, use {.fn frictionless::add_resource} directly."
     ))
   }
