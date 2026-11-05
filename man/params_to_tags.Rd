@@ -19,9 +19,9 @@ Convert a list of GeoPressureR parameter objects into a \code{tags} tibble
 following the GeoLocator Data Package structure.
 }
 \details{
-Manufacturer names are normalised for common GeoPressure sources, and SOI or
-Migrate Technology model metadata are propagated when present in the parameter
-objects.
+Manufacturer names are normalised for common GeoPressure sources. Model and
+firmware are read from \code{param$tag_create$settings} (GeoPressureR >= 3.8.0),
+else from the older \code{param$soi_settings} and \code{param$migratec_model}.
 }
 \seealso{
 \code{\link[=params_to_observations]{params_to_observations()}} and \code{\link[=tags_to_measurements]{tags_to_measurements()}} for related
