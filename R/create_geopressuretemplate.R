@@ -497,10 +497,10 @@ create_geopressuretemplate_config <- function(pkg) {
         co$sex <- usex
       }
 
-      # Add crop date from equipment and retrieval
-      co$tag_create <- list(
+      # Add crop date from equipment and retrieval, when their date is known
+      co$tag_create <- purrr::compact(list(
         crop_start = k |>
-          filter(.data$stap_id == 1) |>
+          filter(.data$stap_id == 1, !is.na(.data$datetime)) |>
           mutate(
             dt = format(
               .data$datetime + as.difftime(1, units = "days"),
@@ -510,10 +510,10 @@ create_geopressuretemplate_config <- function(pkg) {
           pull(.data$dt),
         # we start one day after equipment (at 00:00)
         crop_end = k |>
-          filter(.data$stap_id == -1) |>
+          filter(.data$stap_id == -1, !is.na(.data$datetime)) |>
           mutate(dt = format(.data$datetime, "%Y-%m-%d")) |>
           pull(.data$dt)
-      )
+      ))
 
       # `!!` is required: a bare `tag_id` would refer to the column itself.
       sensor <- m |>

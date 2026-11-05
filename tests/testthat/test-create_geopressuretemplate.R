@@ -201,6 +201,21 @@ test_that("generated config parses with unassigned and long known positions", {
   expect_length(unlist(config$A$tag_set_map$known$known_lat), 32)
 })
 
+test_that("generated config keeps the param crop dates without equipment or retrieval date", {
+  pkg <- template_config_pkg()
+  o <- observations(pkg)
+  o$datetime[o$tag_id == "A" & o$observation_type == "equipment"] <- NA
+  o$observation_type[o$tag_id == "A" & o$observation_type == "retrieval"] <- "capture"
+  pkg <- add_gldp_resource(pkg, "observations", o, replace = TRUE)
+  param <- param_create("A", default = TRUE)
+  param$tag_create$crop_start <- "2020-01-05"
+  param$tag_create$crop_end <- "2020-02-01"
+  pkg[["params"]] <- list(param)
+  config <- template_config_write(pkg)
+  expect_identical(config$A$tag_create$crop_start, "2020-01-05")
+  expect_identical(config$A$tag_create$crop_end, "2020-02-01")
+})
+
 test_that("README is written from a plain-text description", {
   directory <- tempfile("template-readme-")
   dir.create(directory)
