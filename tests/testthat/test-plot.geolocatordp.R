@@ -112,3 +112,17 @@ test_that("plot.geolocatordp shows the mean z acceleration with activity", {
   activity_dates <- p$data$date[p$data$tag_id == "T1" & p$data$sensor == "activity"]
   expect_identical(sort(activity_dates), as.Date(c("2020-02-02", "2020-02-03")))
 })
+
+test_that("plot.geolocatordp colours days with data alike with and without empty days", {
+  pkg <- local_plot_pkg()
+  m <- measurements(pkg)
+  fill_with_data <- function(pkg) {
+    b <- ggplot2::ggplot_build(plot(pkg, "coverage"))
+    unique(b$data[[1]]$fill[b$plot$data$has_data])
+  }
+
+  expect_identical(fill_with_data(pkg), "black")
+  m$value[1] <- NA
+  pkg <- add_gldp_resource(pkg, "measurements", m, replace = TRUE)
+  expect_identical(fill_with_data(pkg), "black")
+})
