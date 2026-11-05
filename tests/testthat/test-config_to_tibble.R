@@ -40,3 +40,14 @@ test_that("config_to_tibble keeps id for a single tag", {
   writeLines(c("default:", "  use: true", "tag1:", "  inherits: default"), file)
   expect_identical(config_to_tibble(file)$id, "tag1")
 })
+
+test_that("config_to_tibble keeps top-level tag fields", {
+  file <- tempfile(fileext = ".yml")
+  writeLines(
+    c("default:", "  use: true", "tag1:", "  ring_number: 12345", "  tag_comments: note"),
+    file
+  )
+  cfg <- config_to_tibble(file, filter_return = FALSE)
+  expect_identical(cfg$ring_number, "12345")
+  expect_identical(cfg$tag_comments, "note")
+})
