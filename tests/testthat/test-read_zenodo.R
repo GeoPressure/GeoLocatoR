@@ -133,6 +133,26 @@ test_that("read_zenodo reuses sandbox-resolved token for fetch and download", {
   expect_equal(download_timeout, 1200)
 })
 
+test_that("read_zenodo reads a Sandbox URL or DOI from Zenodo Sandbox", {
+  fetch_sandbox <- logical()
+  local_mocked_bindings(
+    resolve_zenodo_token = function(token = NULL, sandbox = FALSE) NULL,
+    read_zenodo_fetch_record = function(id, token, draft, sandbox) {
+      fetch_sandbox <<- c(fetch_sandbox, sandbox)
+      list()
+    },
+    read_zenodo_download_files = function(zenodo_record, token, sandbox, timeout) NULL,
+    read_zenodo_attach_metadata = function(pkg, zenodo_record) pkg,
+    update_gldp = function(pkg) pkg,
+    .package = "GeoLocatoR"
+  )
+
+  read_zenodo("https://sandbox.zenodo.org/records/5", quiet = TRUE)
+  read_zenodo("10.5072/zenodo.5", quiet = TRUE)
+  read_zenodo("https://zenodo.org/records/5", quiet = TRUE)
+  expect_identical(fetch_sandbox, c(TRUE, TRUE, FALSE))
+})
+
 test_that("read_zenodo_download_files aborts when parallel downloads fail", {
   local_mocked_bindings(
     req_perform_parallel = function(...) {
