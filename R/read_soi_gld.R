@@ -89,9 +89,14 @@ read_soi_gld <- function(
     summarize(
       NumberOrdered = sum(.data$NumberOrdered),
       NumberDelivered = sum(.data$NumberDelivered),
+      # Concatenate the unique known values of non-numeric columns, NA when none is known
       across(
         where(~ !is.numeric(.)),
-        ~ paste(unique(.), collapse = ", ") # Concatenate unique values for non-numeric columns
+        ~ if (all(is.na(.x))) {
+          NA_character_
+        } else {
+          as.character(glue::glue_collapse(unique(.x[!is.na(.x)]), sep = ", "))
+        }
       )
     ) |>
     select(-c("GDL_Type", "Species"))

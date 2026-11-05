@@ -35,6 +35,8 @@ test_that("read_soi_gld() keeps retrieval coordinates and handles column selecti
   expect_true(all(c("LongitudeRemoved", "LatitudeRemoved") %in% names(gdl)))
   expect_equal(gdl$LatitudeRemoved, c(47.47, NA))
   expect_equal(gdl$LongitudeRemoved, c(8.31, NA))
+  # Missing order remarks stay missing rather than becoming the text "NA"
+  expect_identical(gdl$RemarksOrder, c(NA_character_, NA_character_))
 
   # A character vector selects these columns
   gdl <- read_soi_gld(data_file = d, order_file = o, filter_col = c("GDL_ID", "Client"))
