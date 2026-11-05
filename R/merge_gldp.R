@@ -24,7 +24,9 @@
 #' - The merge aborts if `tags$datapackage_id` overlaps between the two inputs.
 #'
 #' **Metadata merging rules:**
-#' - **version**: Uses the package default version from `create_gldp()`.
+#' - **`$schema`**: The latest GeoLocator-DP version, as set by `create_gldp()`. The
+#'   source packages' `version` is not kept on the merged package; it is listed in
+#'   `datapackages$version`.
 #' - **title**: Combined from both packages, separated by a "/".
 #' - **contributors**: Combined from both packages. Entries for the same person
 #'   (same ORCID in `path`, or the same name when no ORCID is given) are merged
@@ -36,11 +38,12 @@
 #' - **codeRepository**: Combined from both packages, with duplicates removed.
 #' - **datapackages**: Carries the merged provenance table described above.
 #' - **relatedIdentifiers**: Combined, with duplicates removed, and each unique
-#'   source `datapackage_id` (or package `id`) is added as `IsCompiledBy`.
+#'   source `datapackage_id` (or package `id`) is added as `IsCompiledBy`, a DOI
+#'   without its `https://doi.org/` prefix.
 #' - **params**: Concatenated from all inputs; every entry must contain a
 #'   non-empty `param$id`.
 #' - **created**: Set to the current timestamp at the time of merging.
-#' - All others are dropped
+#' - All others are dropped.
 #'
 #' **datapackages provenance table:**
 #' - `pkg$datapackages` is a one-row-per-source tibble keyed by
