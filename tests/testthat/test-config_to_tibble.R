@@ -51,3 +51,33 @@ test_that("config_to_tibble keeps top-level tag fields", {
   expect_identical(cfg$ring_number, "12345")
   expect_identical(cfg$tag_comments, "note")
 })
+
+test_that("config_to_tibble shows known positions", {
+  file <- tempfile(fileext = ".yml")
+  writeLines(
+    c(
+      "default:",
+      "  use: true",
+      "tag1:",
+      "  tag_set_map:",
+      "    known:",
+      "      stap_id: [1, -1]",
+      "      known_lon: 17",
+      "      known_lat: 48",
+      "tag2:",
+      "  tag_set_map:",
+      "    known:",
+      "      stap_id: 1",
+      "      known_lon: 7",
+      "      known_lat: 46",
+      "tag3:",
+      "  use: true"
+    ),
+    file
+  )
+  cfg <- config_to_tibble(file)
+  expect_identical(
+    as.character(cfg$tag_set_map.known),
+    c("1: 17, 48; -1: 17, 48", "1: 7, 46", "")
+  )
+})

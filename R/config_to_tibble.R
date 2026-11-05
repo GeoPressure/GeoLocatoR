@@ -90,8 +90,11 @@ config_to_tibble <- function(
     "tag_set_map.include_stap_id" = parse_fun,
     "tag_set_map.include_min_duration" = as.numeric,
     "tag_set_map.extent" = \(x) list(x),
+    # Show the positions, so tags with different known locations differ. eval() builds
+    # GeoPressureR's default, stored as an unevaluated data.frame() call.
     "tag_set_map.known" = \(x) {
-      glue::glue("data.frame({glue::glue_collapse(names(x), sep = ',')})")
+      k <- as.data.frame(eval(x))
+      glue::glue_collapse(glue::glue("{k$stap_id}: {k$known_lon}, {k$known_lat}"), sep = "; ")
     },
     "geopressure_map.compute_known" = as.logical,
     "geopressure_map.max_sample" = as.numeric,
