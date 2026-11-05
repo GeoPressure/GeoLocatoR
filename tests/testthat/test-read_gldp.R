@@ -231,6 +231,17 @@ test_that("write_gldp/read_gldp roundtrip keeps pkg$params via params.json", {
   expect_equal(pkg_back$params[[1]]$id, "TEST-PARAM")
 })
 
+test_that("write_gldp does not write an empty params.json", {
+  directory <- tempfile("write-no-params-")
+  on.exit(unlink(directory, recursive = TRUE), add = TRUE)
+  pkg <- add_gldp_resource(create_gldp(), "tags", data.frame(tag_id = "A", ring_number = "R1"))
+  pkg[["params"]] <- list()
+
+  write_gldp(pkg, directory)
+
+  expect_false(file.exists(file.path(directory, "params.json")))
+})
+
 test_that("read_gldp restores the provenance table after a JSON round trip", {
   pkg <- add_gldp_resource(create_gldp(), "tags", data.frame(tag_id = "tag-1"))
   pkg[["datapackages"]] <- data.frame(
