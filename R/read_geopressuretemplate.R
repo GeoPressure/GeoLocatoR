@@ -90,8 +90,7 @@ read_geopressuretemplate <- function(
   m <- NULL
   params <- list()
 
-  # Change working directory to the specified directory so that GeoPressureR can work with default
-  # value: setwd(directory)
+  # Work inside the project so that GeoPressureR default paths resolve
   pkg <- withr::with_dir(directory, {
     project_files <- geopressuretemplate_project_files()
 
@@ -160,7 +159,7 @@ read_geopressuretemplate <- function(
         }
       }
 
-      # Crete tag resource
+      # Create tag resource
       t <- params_to_tags(interim$param)
 
       # Create observations resource

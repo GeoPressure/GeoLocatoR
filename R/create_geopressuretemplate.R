@@ -77,7 +77,7 @@ create_geopressuretemplate <- function(path, pkg = NULL, open = interactive()) {
   }
   unlink(clone_stderr)
   cli_alert_success(
-    "Cloning repo from {.url https://github.com/GeoPressure/GeoPressureTemplate/} into {.path {path}}."
+    "Cloned repo from {.url https://github.com/GeoPressure/GeoPressureTemplate/} into {.path {path}}."
   )
   project_name <- basename(path)
 
@@ -86,9 +86,7 @@ create_geopressuretemplate <- function(path, pkg = NULL, open = interactive()) {
     to = file.path(path, glue::glue("{project_name}.Rproj"))
   )
 
-  # setwd(path)
   withr::with_dir(path, {
-    # setwd(path)
     d <- desc::desc()
     d$set("Package", gsub("[^a-zA-Z0-9\\.]", "", project_name))
     d$write()
@@ -294,7 +292,7 @@ create_geopressuretemplate_licenses <- function(pkg) {
   } else {
     as.character(lic)[1]
   }
-  # 5. Abort if no usable license identifier is available
+  # 5. Stop with a warning if no usable license identifier is available
   if (is.null(license_name) || is.na(license_name) || !nzchar(license_name)) {
     cli_warn(c(
       "!" = "No license name or path provided.",
@@ -339,7 +337,7 @@ create_geopressuretemplate_licenses <- function(pkg) {
 create_geopressuretemplate_data <- function(pkg) {
   check_gldp(pkg)
 
-  # Observations
+  # Tags and observations
   readr::write_csv(tags(pkg), "./data/tags.csv")
   readr::write_csv(observations(pkg), "./data/observations.csv")
 
@@ -487,7 +485,7 @@ create_geopressuretemplate_config <- function(pkg) {
         co$sex <- usex
       }
 
-      # Add crop date from equipement and retrieval
+      # Add crop date from equipment and retrieval
       co$tag_create <- list(
         crop_start = k |>
           filter(.data$stap_id == 1) |>
@@ -630,8 +628,6 @@ create_geopressuretemplate_config <- function(pkg) {
             x <- glue::glue('"{x}"')
           }
           tmp <- glue::glue("[{glue::glue_collapse(x, sep = ', ')}]")
-
-          # class(tmp) <- "verbatim" # does not work
           glue::glue("{tmp}{add_text}")
         })
         names(tmp) <- names(k)
