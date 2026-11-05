@@ -73,6 +73,19 @@ test_that("gldp_to_tag keeps pressure labels when only acceleration is labelled"
   expect_true(tag_assert(tag, "label", "logical"))
 })
 
+test_that("gldp_to_tag turns missing twilight labels into empty strings", {
+  datetime <- as.POSIXct("2020-01-01", tz = "UTC") + 3600 * 0:1
+  pkg <- local_tag_pkg(data.frame(tag_id = "AA", sensor = "light", datetime = datetime, value = 1))
+  pkg <- add_gldp_resource(
+    pkg,
+    "twilights",
+    data.frame(tag_id = "AA", twilight = datetime, rise = c(TRUE, FALSE), label = c(NA, "discard"))
+  )
+
+  tag <- gldp_to_tag(pkg, "AA")
+  expect_equal(tag$twilight$label, c("", "discard"))
+})
+
 test_that("gldp_to_tag converts single tag correctly", {
   pkg <- pkg_shared
   # Get the first tag_id
