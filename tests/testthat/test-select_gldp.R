@@ -34,3 +34,36 @@ test_that("file-backed selection materialises filtered resources without changin
   expect_true(all(vapply(selected$resources, function(r) is.null(r$path), logical(1))))
   expect_identical(paths(select_gldp(lazy, -"BB")), paths(selected))
 })
+
+test_that("observations without tag_id follow the ring of a kept tag", {
+  pkg <- create_gldp()
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = c("AA", "BB"),
+      ring_number = c("R1", "R2"),
+      scientific_name = "Upupa epops",
+      manufacturer = "soi",
+      model = "GDL3"
+    )
+  )
+  pkg <- add_gldp_resource(
+    pkg,
+    "observations",
+    data.frame(
+      ring_number = c("R1", "R1", "R2", "R2"),
+      tag_id = c("AA", NA, "BB", NA),
+      observation_type = c("equipment", "capture", "equipment", "capture"),
+      datetime = as.POSIXct("2020-01-01", tz = "UTC"),
+      latitude = 46,
+      longitude = 7,
+      age_class = "4",
+      sex = "M"
+    )
+  )
+
+  selected <- observations(select_gldp(pkg, -"BB"))
+  expect_identical(selected$ring_number, c("R1", "R1"))
+  expect_identical(selected$tag_id, c("AA", NA))
+})

@@ -4,7 +4,8 @@
 #' `r lifecycle::badge("experimental")`
 #'
 #' Keeps or removes rows linked to selected `tag_id` values in every resource that has
-#' a `tag_id` column.
+#' a `tag_id` column. Observations without `tag_id` are kept when their `ring_number`
+#' belongs to a kept tag.
 #'
 #' Use a negative selection to drop tags:
 #' `select_gldp(pkg, -"14AC")` or `select_gldp(pkg, -c("14AC", "15BC"))`.
@@ -36,7 +37,8 @@ select_gldp <- function(pkg, tag_id) {
     cli::cli_abort("{.arg tag_id} must contain at least one non-empty value.")
   }
 
-  available_tag_ids <- unique(as.character(tags(pkg)$tag_id))
+  tags_data <- tags(pkg)
+  available_tag_ids <- unique(as.character(tags_data$tag_id))
   available_tag_ids <- available_tag_ids[!is.na(available_tag_ids)]
 
   missing_tag_ids <- setdiff(tag_id, available_tag_ids)
@@ -48,6 +50,7 @@ select_gldp <- function(pkg, tag_id) {
   }
 
   keep_tag_ids <- if (exclude) setdiff(available_tag_ids, tag_id) else tag_id
+  keep_rings <- tags_data$ring_number[tags_data$tag_id %in% keep_tag_ids]
 
   for (i in seq_along(pkg$resources)) {
     data <- pkg$resources[[i]]$data
@@ -62,7 +65,12 @@ select_gldp <- function(pkg, tag_id) {
       next
     }
 
-    pkg$resources[[i]][["data"]] <- data[data$tag_id %in% keep_tag_ids, , drop = FALSE]
+    keep <- data$tag_id %in% keep_tag_ids
+    # Observations without tag_id (e.g. a capture before deployment) follow the bird's ring.
+    if ("ring_number" %in% names(data)) {
+      keep <- keep | (is.na(data$tag_id) & data$ring_number %in% keep_rings)
+    }
+    pkg$resources[[i]][["data"]] <- data[keep, , drop = FALSE]
     # Store the selected rows in memory; a resource cannot carry both data and path.
     pkg$resources[[i]][["path"]] <- NULL
   }
