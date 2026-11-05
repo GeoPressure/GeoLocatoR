@@ -342,6 +342,27 @@ test_that("upgrade_gldp migrates a v1.0 package to v1.1", {
   expect_false(is.null(tags_res$schema$fields))
 })
 
+test_that("upgrade_gldp to v1.2 treats an observation mass of 0 as missing", {
+  # v1.2 requires mass > 0, because a mass of 0 is a missing value.
+  pkg <- create_gldp(version = "v1.1")
+  pkg <- add_gldp_resource(
+    pkg,
+    "observations",
+    data.frame(tag_id = "A", ring_number = "R1", mass = c(0, 25.5)),
+    cast_type = TRUE
+  )
+  directory <- tempfile("upgrade-mass-")
+  on.exit(unlink(directory, recursive = TRUE), add = TRUE)
+  write_gldp(pkg, directory)
+
+  expect_message(upgraded <- upgrade_gldp(pkg), "missing on 1")
+  expect_identical(observations(upgraded)$mass, c(NA, 25.5))
+
+  # A file-backed table is loaded so that its values can be changed.
+  lazy <- suppressMessages(read_gldp(directory, force_read = FALSE))
+  expect_identical(observations(lazy)$mass, c(NA, 25.5))
+})
+
 test_that("upgrade_gldp updates the descriptor of a file-backed table", {
   # v1.0 used the resource `$schema` for the table schema URL. From v1.1 it holds
   # the Data Package resource profile, and `type: "table"` is required.

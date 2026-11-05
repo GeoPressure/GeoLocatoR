@@ -393,17 +393,21 @@ upgrade_gldp_v1_1_to_v1_2 <- function(x) {
   # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v1.2
   # `j` became required on trajectory tables, which also gained primary keys.
   # GeoPressureR <= 3.6.3 left `j` empty on pressurepaths flight rows, so fill it.
-  # A file-backed table is loaded: the gaps cannot be known without reading it.
-  resource <- gldp_resource(x, "pressurepaths")
-  if (!is.null(resource)) {
-    data <- gldp_read_resource(x, "pressurepaths")
-    if (!is.null(resource$path)) {
-      data <- cast_table(data, resource$schema)
-      resource[["path"]] <- NULL
+  x <- mutate_resource(x, "pressurepaths", \(d) gldp_fill_pressurepaths_j(d, quiet = FALSE))
+
+  # `observations$mass` must be greater than 0: a mass of 0 is a missing value.
+  x <- mutate_resource(x, "observations", \(d) {
+    zero <- d$mass %in% 0
+    if (any(zero)) {
+      d$mass[zero] <- NA
+      cli_inform(c(
+        "i" = "Set {.field mass} to missing on {sum(zero)} {.field observations} \\
+        {cli::qty(sum(zero))}row{?s} where it was 0."
+      ))
     }
-    resource[["data"]] <- gldp_fill_pressurepaths_j(data, quiet = FALSE)
-    gldp_resource(x, "pressurepaths") <- resource
-  }
+    d
+  })
+
   x[["$schema"]] <- gldp_schema_url("v1.2")
   x
 }
@@ -411,7 +415,12 @@ upgrade_gldp_v1_1_to_v1_2 <- function(x) {
 #' @noRd
 mutate_resource <- function(pkg, resource_name, fn) {
   resource <- gldp_resource(pkg, resource_name)
-  if (is.null(resource) || !is.data.frame(resource$data)) {
+  # A file-backed table is loaded: its values cannot be changed in the file.
+  if (!is.null(resource$path)) {
+    resource[["data"]] <- cast_table(gldp_read_resource(pkg, resource_name), resource$schema)
+    resource[["path"]] <- NULL
+  }
+  if (!is.data.frame(resource$data)) {
     return(pkg)
   }
 
