@@ -9,7 +9,8 @@
 #' ](https://geopressure.org/GeoPressureR/reference/param_create.html) for more information.
 #'
 #' @return A [tibble::tibble()] data frame with columns `tag_id` and `ring_number` (always
-#' missing), plus `manufacturer`, `scientific_name`, `model` and `firmware` when available.
+#' missing), plus `manufacturer`, `scientific_name`, `model` and `firmware` when available. All
+#' six columns are returned when `params` is empty.
 #'
 #' @details
 #' Manufacturer names are normalised for common GeoPressure sources, and SOI or
