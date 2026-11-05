@@ -310,7 +310,7 @@ read_geopressuretemplate <- function(
         # Read raw tag data with raw_tag_id_to_tag function
         dtags <- list_id |>
           purrr::map(
-            purrr::possibly(raw_tag_id_to_tag, NULL),
+            purrr::safely(raw_tag_id_to_tag),
             .progress = list(
               type = "custom",
               format = "{cli::pb_spin} Reading {cli::pb_current}/{cli::pb_total} raw tag{?s}.",
@@ -320,18 +320,22 @@ read_geopressuretemplate <- function(
             )
           )
 
-        # Check for failed tag reads and warn
-        failed_tags <- list_id[sapply(dtags, is.null)]
-        if (length(failed_tags) > 0) {
+        # Warn about failed tag reads with their error message. The bullets refer to the
+        # values by index so that braces in messages are not interpolated by cli.
+        failed <- purrr::map_lgl(dtags, \(x) !is.null(x$error))
+        if (any(failed)) {
+          failed_ids <- list_id[failed]
+          failed_msg <- purrr::map_chr(dtags[failed], \(x) conditionMessage(x$error))
+          i <- seq_along(failed_ids)
           cli_warn(c(
-            "!" = "Failed to read {.val {length(failed_tags)}} {?tag/tags}:",
-            "i" = "{.field {failed_tags}}",
-            ">" = "These tags will be skipped."
+            "!" = "Failed to read {.val {length(failed_ids)}} tag{?s}, which will be skipped:",
+            stats::setNames(
+              glue::glue("{{.field {{failed_ids[{i}]}}}}: {{failed_msg[{i}]}}"),
+              rep("x", length(i))
+            )
           ))
         }
-
-        # Remove NULL entries
-        dtags <- purrr::compact(dtags)
+        dtags <- purrr::map(dtags[!failed], "result")
 
         # Collect GeoPressureR param objects
         params <- c(params, purrr::map(dtags, ~ .x$param))
@@ -571,10 +575,9 @@ read_geopressuretemplate <- function(
 #' by reading the configuration and data files.
 #'
 #' @param id Character string of the tag identifier
-#' @param display_config_error Logical indicating whether to display configuration errors
 #' @return A tag object with parameter and data information
 #' @noRd
-raw_tag_id_to_tag <- function(id, display_config_error = TRUE) {
+raw_tag_id_to_tag <- function(id) {
   config <- tryCatch(
     {
       GeoPressureR::geopressuretemplate_config(
@@ -583,15 +586,12 @@ raw_tag_id_to_tag <- function(id, display_config_error = TRUE) {
       )
     },
     error = function(e) {
-      if (display_config_error) {
-        # Warn that the configuration file could not be read and display the error
-        cli_warn(c(
-          "i" = "Configuration file {.file config.yml} could not be read for {.field {id}}.",
-          ">" = "Create the tag with default values using {.fun GeoPressureR::param_create}.",
-          "!" = "Error: {e$message}"
-        ))
-        display_config_error <- FALSE
-      }
+      # Warn that the configuration file could not be read and display the error
+      cli_warn(c(
+        "i" = "Configuration file {.file config.yml} could not be read for {.field {id}}.",
+        ">" = "Create the tag with default values using {.fun GeoPressureR::param_create}.",
+        "!" = "Error: {e$message}"
+      ))
       GeoPressureR::param_create(
         id,
         default = TRUE,

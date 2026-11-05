@@ -253,3 +253,15 @@ test_that("xlsx metadata is parsed by column name", {
   expect_identical(observations(pkg)$mass, 30)
   expect_equal(observations(pkg)$datetime, as.POSIXct("2020-01-01 06:00:00", tz = "UTC"))
 })
+
+test_that("raw-tag read failures are reported with their error message", {
+  directory <- tempfile("template-raw-tag-error-")
+  dir.create(file.path(directory, "data", "raw-tag", "ZZ"), recursive = TRUE)
+  on.exit(unlink(directory, recursive = TRUE))
+  file.copy(file.path(system.file("extdata", package = "GeoPressureR"), "config.yml"), directory)
+  writeLines("not a tag", file.path(directory, "data", "raw-tag", "ZZ", "notes.txt"))
+  expect_warning(
+    suppressMessages(read_geopressuretemplate(directory, from = "raw-tag")),
+    "ZZ.*manufacturer"
+  )
+})
