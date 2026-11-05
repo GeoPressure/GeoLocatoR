@@ -197,7 +197,8 @@ create_geopressuretemplate_desc <- function(pkg) {
 
   # Optional fields
   if (!is.null(pkg$description)) {
-    description_text <- as.character(pkg$description)[1] |>
+    # Wrap in a tag so that plain text is not read as a file path.
+    description_text <- glue::glue("<div>{as.character(pkg$description)[1]}</div>") |>
       rvest::read_html() |>
       rvest::html_text2()
     if (nzchar(description_text)) {
@@ -230,7 +231,8 @@ create_geopressuretemplate_readme <- function(pkg) {
     ""
   }
   description_text <- if (!is.null(pkg$description)) {
-    as.character(pkg$description)[1] |>
+    # Wrap in a tag so that plain text is not read as a file path.
+    glue::glue("<div>{as.character(pkg$description)[1]}</div>") |>
       rvest::read_html() |>
       rvest::html_text2()
   } else {
