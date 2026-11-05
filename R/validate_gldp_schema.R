@@ -41,8 +41,7 @@ validate_gldp_object <- function(
 
       if (isTRUE(prop$type == "object")) {
         if (!is.null(prop$`$ref`) && !startsWith(prop$`$ref`, "#/$defs/")) {
-          # Not easy to implement as rely on more complex schema with anyOf, allOf etc...
-          # prop <- jsonlite::fromJSON(properties[[field]]$`$ref`, simplifyVector = FALSE)
+          # External schemas rely on anyOf, allOf etc., which are not implemented.
           cli::cli_alert_warning(
             "{.field {field}} cannot be validated (external schema)."
           )
@@ -618,7 +617,7 @@ get_type_map <- function() {
     string = function(v) is.character(v),
     # Data Package v2 `list` fields are read as character by frictionless.
     list = function(v) is.character(v),
-    number = function(v) is.numeric(v) && !is.logical(v),
+    number = function(v) is.numeric(v),
     integer = function(v) {
       is.integer(v) || (is.numeric(v) && all(v == floor(v), na.rm = TRUE))
     },

@@ -451,8 +451,7 @@ validate_gldp_core_coherence <- function(pkg) {
     cli::cli_alert_warning(
       "No observations found for {.val {tidmissing}} declared in {.field tags}."
     )
-    # Still valid
-    # valid <- FALSE
+    # A warning only: the package stays valid.
   }
 
   # Check for missing equipment or retrieval while measurements are present.
