@@ -36,15 +36,17 @@ sync_gldp_schemas <- function(
       simplifyVector = TRUE
     )
 
-    resource_names <- unique(gldp_profile_resource_names(profile))
+    # Only the tables have a table schema; the `params` resource has none.
+    resource_names <- gldp_profile_resource_branches(profile)[[1]]$properties$name$enum
 
     for (resource_name in resource_names) {
       schema_url <- glue::glue("{base_url}/{resource_name}-table-schema.json")
       schema_path <- file.path(out_dir, glue::glue("{resource_name}-table-schema.json"))
+      # v0.1 declares `maps` and `configs` tables that never had a schema, so a
+      # failed download is reported rather than stopping the sync.
       tryCatch(
         utils::download.file(schema_url, schema_path, mode = "wb", quiet = TRUE),
-        warning = function(...) NULL,
-        error = function(...) NULL
+        error = \(e) warning(glue::glue("Could not download {schema_url}."), call. = FALSE)
       )
     }
   }
