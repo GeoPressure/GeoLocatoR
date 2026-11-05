@@ -1,8 +1,8 @@
 #' Inspect GeoPressureTemplate files
 #'
+#' @description
 #' `r lifecycle::badge("experimental")`
 #'
-#' @description
 #' Summarize which tags are discoverable in a GeoPressureTemplate project from
 #' `config.yml`, `data/interim`, and `data/raw-tag`. Use this before importing
 #' a project to see which tags are available from each source and, optionally,

@@ -1,8 +1,8 @@
 #' Convert GeoPressureTemplate config.yml to tibble
 #'
+#' @description
 #' `r lifecycle::badge("experimental")`
 #'
-#' @description
 #' Reads a GeoPressureTemplate `config.yml` file and converts it into a tibble format with
 #' one row per tag and columns for each configuration parameter. This is useful for comparing
 #' configurations across multiple tags or for programmatic analysis of tag settings.
@@ -26,7 +26,7 @@
 #'
 #' The function handles various GeoPressureR configuration parameters including:
 #' - Tag creation settings (manufacturer, file paths, crop dates)
-#' - Labeling parameters (flight/stap duration warnings)
+#' - Labelling file
 #' - Map settings (extent, known locations, pressure/light thresholds)
 #' - Graph creation and movement model parameters
 #' - Bird characteristics (mass, wing measurements)
@@ -84,8 +84,6 @@ config_to_tibble <- function(
     "tag_create.crop_start" = as.character, # date stored as string
     "tag_create.crop_end" = as.character, # datetime stored as string
     "tag_label.file" = parse_fun,
-    "tag_label.warning_flight_duration" = as.numeric,
-    "tag_label.warning_stap_duration" = as.numeric,
     "tag_set_map.scale" = as.numeric,
     "tag_set_map.include_stap_id" = parse_fun,
     "tag_set_map.include_min_duration" = as.numeric,
@@ -125,7 +123,6 @@ config_to_tibble <- function(
     "bird_create.body_frontal_area" = as.numeric,
     "bird_create.scientific_name" = as.character,
     "graph_add_wind.file" = parse_fun,
-    "graph_add_wind.variable" = parse_fun,
     "graph_add_wind.rounding_interval" = as.numeric,
     "graph_add_wind.interp_spatial_linear" = as.logical,
     "graph_add_wind.thr_as" = as.numeric,
