@@ -12,7 +12,9 @@ validate_gldp_coherence <- function(pkg) {
   cli_h3("Check Coherence")
 
   valid_pkg <- validate_gldp_core_coherence(pkg)
-  valid_obs <- validate_gldp_observations(observations(pkg))
+  # A missing observations resource is already reported by the core checks.
+  valid_obs <- !"observations" %in% frictionless::resource_names(pkg) ||
+    validate_gldp_observations(observations(pkg))
   valid_gp <- validate_gldp_geopressure_coherence(pkg)
   valid <- valid_pkg & valid_obs & valid_gp
 
@@ -174,11 +176,20 @@ validate_gldp_geopressure_coherence <- function(pkg) {
           next
         }
 
-        if (!all(child_fields %in% names(child_data))) {
-          cli_alert_danger(
-            "Foreign key check for {.field {child_name}} failed: missing child fields: {.field {child_fields}}."
+        absent_child_fields <- setdiff(child_fields, names(child_data))
+        if (length(absent_child_fields) > 0) {
+          # A column the schema declares optional (e.g. `observations$tag_id`)
+          # may be left out of the file and then holds no key to check.
+          optional_fields <- purrr::map_chr(
+            purrr::discard(resource$schema$fields, \(f) isTRUE(f$constraints$required)),
+            "name"
           )
-          valid <<- FALSE
+          if (!all(absent_child_fields %in% optional_fields)) {
+            cli_alert_danger(
+              "Foreign key check for {.field {child_name}} failed: missing child fields: {.field {child_fields}}."
+            )
+            valid <<- FALSE
+          }
           next
         }
         if (!all(parent_fields %in% names(parent_data))) {
@@ -373,6 +384,9 @@ validate_gldp_core_coherence <- function(pkg) {
   o <- observations(pkg)
   m <- measurements(pkg)
 
+  # `tag_id` and `device_status` are optional columns: an absent one is empty.
+  o[setdiff(c("tag_id", "device_status"), names(o))] <- NA_character_
+
   # Check for conflicting species assignments:
   # A single ring_number should be linked to only one scientific_name.
   conflicting_ring_numbers <- t |>
@@ -480,6 +494,9 @@ validate_gldp_core_coherence <- function(pkg) {
 #' @noRd
 validate_gldp_observations <- function(o) {
   valid <- TRUE
+
+  # `tag_id` and `device_status` are optional columns: an absent one is empty.
+  o[setdiff(c("tag_id", "device_status"), names(o))] <- NA_character_
 
   o <- o |>
     arrange(
@@ -589,6 +606,7 @@ validate_gldp_observations <- function(o) {
   }
 
   # Check 7: Retrieval datetime must be equal to or after equipment datetime per tag_id.
+  # The earliest event of each kind is kept without summarising, which warns on an empty table.
   equipment_dates <- o |>
     filter(
       !is.na(.data$tag_id),
@@ -596,8 +614,9 @@ validate_gldp_observations <- function(o) {
     ) |>
     mutate(datetime = suppressWarnings(as.POSIXct(.data$datetime, tz = "UTC"))) |>
     filter(!is.na(.data$datetime)) |>
-    group_by(.data$tag_id) |>
-    summarize(equipment_datetime = min(.data$datetime), .groups = "drop")
+    arrange(.data$datetime) |>
+    distinct(.data$tag_id, .keep_all = TRUE) |>
+    select("tag_id", equipment_datetime = "datetime")
 
   retrieval_dates <- o |>
     filter(
@@ -606,8 +625,9 @@ validate_gldp_observations <- function(o) {
     ) |>
     mutate(datetime = suppressWarnings(as.POSIXct(.data$datetime, tz = "UTC"))) |>
     filter(!is.na(.data$datetime)) |>
-    group_by(.data$tag_id) |>
-    summarize(retrieval_datetime = min(.data$datetime), .groups = "drop")
+    arrange(.data$datetime) |>
+    distinct(.data$tag_id, .keep_all = TRUE) |>
+    select("tag_id", retrieval_datetime = "datetime")
 
   invalid_equipment_retrieval_order <- inner_join(
     equipment_dates,
