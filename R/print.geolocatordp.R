@@ -10,8 +10,10 @@
 #' @return Invisibly returns `x`.
 #'
 #' @examples
+#' \dontrun{
 #' pkg <- read_zenodo("17367319", quiet = TRUE)
 #' print(pkg)
+#' }
 #'
 #' @family print functions
 #' @export
