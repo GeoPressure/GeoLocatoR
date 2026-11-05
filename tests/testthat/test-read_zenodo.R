@@ -215,6 +215,24 @@ test_that("read_zenodo_download_files counts every failed download", {
   )
 })
 
+test_that("read_zenodo_download_files downloads each call to its own folder", {
+  local_mocked_bindings(
+    req_perform_parallel = function(reqs, ...) as.list(seq_along(reqs)),
+    .package = "httr2"
+  )
+  zenodo_record <- list(
+    links = list(self_html = "https://zenodo.org/records/1"),
+    files = list(
+      entries = list(
+        list(key = "datapackage.json", links = list(content = "https://example.org/dp.json"))
+      )
+    )
+  )
+
+  dirs <- replicate(2, read_zenodo_download_files(zenodo_record, token = "dummy"))
+  expect_false(dirs[1] == dirs[2])
+})
+
 test_that("read_zenodo can read from Zenodo Sandbox", {
   skip_on_cran()
   skip_if_offline()

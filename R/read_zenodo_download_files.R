@@ -35,10 +35,8 @@ read_zenodo_download_files <- function(
     ))
   }
 
-  download_dir <- file.path(
-    tempdir(),
-    glue::glue("geolocator-zenodo-{as.integer(Sys.time())}")
-  )
+  # A unique folder per call, so that two downloads never share files
+  download_dir <- tempfile("geolocator-zenodo-")
   dir.create(download_dir, recursive = TRUE, showWarnings = FALSE)
   local_paths <- file.path(download_dir, purrr::map_chr(files, "key"))
 
