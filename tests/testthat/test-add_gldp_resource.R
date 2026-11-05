@@ -95,3 +95,23 @@ test_that("add_gldp_resource fills absent columns of a base data.frame by row co
     class = "frictionless_error_data_invalid"
   )
 })
+
+test_that("add_gldp_resource casts factors and ISO 8601 datetimes", {
+  # Factors are cast from their labels, not their level codes, and the time of
+  # an ISO 8601 datetime is kept.
+  data <- data.frame(
+    tag_id = "A",
+    sensor = "pressure",
+    datetime = c("2020-01-01T12:30:00Z", "2020-01-02 06:00:00"),
+    value = factor(c("1008.4", "1003.5"))
+  )
+
+  pkg <- add_gldp_resource(create_gldp(), "measurements", data, cast_type = TRUE)
+  out <- pkg$resources[[1]]$data
+
+  expect_identical(out$value, c(1008.4, 1003.5))
+  expect_identical(
+    out$datetime,
+    as.POSIXct(c("2020-01-01 12:30:00", "2020-01-02 06:00:00"), tz = "UTC")
+  )
+})
