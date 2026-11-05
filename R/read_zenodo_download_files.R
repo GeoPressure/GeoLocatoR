@@ -39,6 +39,9 @@ read_zenodo_download_files <- function(
   # A unique folder per call, so that two downloads never share files
   download_dir <- tempfile("geolocator-zenodo-")
   dir.create(download_dir, recursive = TRUE, showWarnings = FALSE)
+  # Delete the folder if the download fails; read_zenodo() deletes it after reading.
+  downloaded <- FALSE
+  on.exit(if (!downloaded) unlink(download_dir, recursive = TRUE), add = TRUE)
 
   # Download the record files named in `wanted` and check them against their MD5
   download <- function(wanted) {
@@ -112,5 +115,6 @@ read_zenodo_download_files <- function(
   }
   download(c(paths, intersect("params.json", keys)))
 
+  downloaded <- TRUE
   download_dir
 }
