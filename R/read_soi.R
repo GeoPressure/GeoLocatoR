@@ -127,8 +127,8 @@ read_soi <- function(
       )
     )
 
-  # Adding measurement resource
-  m <- bind_rows(m, tags_to_measurements(dtags))
+  # Adding measurement resource, without the tags that could not be read
+  m <- bind_rows(m, tags_to_measurements(purrr::compact(dtags)))
 
   if (nrow(m) > 0) {
     cli_progress_step("Add {.field measurements} to {.pkg pkg}")
