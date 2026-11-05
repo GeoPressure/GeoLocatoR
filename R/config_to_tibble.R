@@ -58,9 +58,6 @@ config_to_tibble <- function(
   filter_return = TRUE
 ) {
   config_ids <- geopressuretemplate_config_ids(file)
-  raw_config <- yaml::yaml.load_file(file, eval.expr = FALSE)
-  # Top-level tag fields are not preserved by GeoPressureR config parsing.
-  config_tag_fields <- c("ring_number", "tag_comments")
 
   parse_fun <- \(x) {
     if (is.function(x) || is.call(x)) {
@@ -144,7 +141,7 @@ config_to_tibble <- function(
   )
 
   cfg <- purrr::map_df(config_ids, \(id) {
-    # Parse GeoPressureR fields, then restore top-level tag fields from raw YAML.
+    # GeoPressureR keeps top-level tag fields such as ring_number in the parsed config.
     config <- GeoPressureR::geopressuretemplate_config(
       id,
       config = config::get(config = id, file = file),
@@ -153,8 +150,6 @@ config_to_tibble <- function(
     )
 
     class(config) <- NULL
-    config_fields <- intersect(names(raw_config[[id]]), config_tag_fields)
-    config[config_fields] <- raw_config[[id]][config_fields]
 
     # Flatten nested config sections and apply column-specific type conversions.
     config <- purrr::list_flatten(
