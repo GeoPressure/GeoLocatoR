@@ -46,25 +46,31 @@ A \code{geolocatordp} object from the Zenodo record.
 Retrieve a GeoLocator Data Package from a Zenodo record identifier:
 \enumerate{
 \item Resolve and fetch Zenodo record metadata from the REST API.
-\item Validate record files and download them to a temporary directory.
-\item Read \code{datapackage.json} with \code{\link[=read_gldp]{read_gldp()}}.
+\item Download \code{datapackage.json}, then the files its resources refer to and
+\code{params.json} when the record has one, to a temporary directory. Other
+files of the record are not downloaded. Each file is checked against the
+MD5 checksum Zenodo records for it.
+\item Read \code{datapackage.json} with \code{\link[=read_gldp]{read_gldp()}}, loading every table into
+memory, then delete the temporary directory.
 \item Attach Zenodo metadata and recompute derived package properties with
 \code{\link[=update_gldp]{update_gldp()}}.
 }
 }
 \details{
 \itemize{
-\item If files are not visible/downloadable (for example restricted record access),
-the function returns a metadata-only package created with \code{\link[=create_gldp]{create_gldp()}}
-and emits a warning.
-\item If the record does not contain \code{datapackage.json}, the function aborts.
-\item If one or more file downloads fail, the function aborts with download
-details.
+\item If the record has no files, because it is metadata-only or its files are
+restricted or embargoed, the function warns and returns a package with
+only metadata, created with \code{\link[=create_gldp]{create_gldp()}}.
+\item If the record does not contain \code{datapackage.json} or a file it refers to,
+the function aborts.
+\item If one or more file downloads fail or do not match their checksum, the
+function aborts with download details.
 }
 
-Downloaded files are written under \code{tempdir()} in a run-specific folder. This
-directory is temporary and may be removed by the operating system after the
-R session.
+Downloaded files are written under \code{tempdir()} in a run-specific folder,
+which is deleted once the package is read. A resource without a table
+schema, which is not loaded into memory, keeps a \code{path} into that deleted
+folder.
 
 To read a draft:
 \enumerate{

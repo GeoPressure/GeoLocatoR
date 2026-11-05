@@ -4,23 +4,29 @@
 #' Retrieve a GeoLocator Data Package from a Zenodo record identifier:
 #'
 #' 1. Resolve and fetch Zenodo record metadata from the REST API.
-#' 2. Validate record files and download them to a temporary directory.
-#' 3. Read `datapackage.json` with [read_gldp()].
+#' 2. Download `datapackage.json`, then the files its resources refer to and
+#'    `params.json` when the record has one, to a temporary directory. Other
+#'    files of the record are not downloaded. Each file is checked against the
+#'    MD5 checksum Zenodo records for it.
+#' 3. Read `datapackage.json` with [read_gldp()], loading every table into
+#'    memory, then delete the temporary directory.
 #' 4. Attach Zenodo metadata and recompute derived package properties with
 #'    [update_gldp()].
 #'
 #' @details
 #'
-#' - If files are not visible/downloadable (for example restricted record access),
-#'   the function returns a metadata-only package created with [create_gldp()]
-#'   and emits a warning.
-#' - If the record does not contain `datapackage.json`, the function aborts.
-#' - If one or more file downloads fail, the function aborts with download
-#'   details.
+#' - If the record has no files, because it is metadata-only or its files are
+#'   restricted or embargoed, the function warns and returns a package with
+#'   only metadata, created with [create_gldp()].
+#' - If the record does not contain `datapackage.json` or a file it refers to,
+#'   the function aborts.
+#' - If one or more file downloads fail or do not match their checksum, the
+#'   function aborts with download details.
 #'
-#' Downloaded files are written under `tempdir()` in a run-specific folder. This
-#' directory is temporary and may be removed by the operating system after the
-#' R session.
+#' Downloaded files are written under `tempdir()` in a run-specific folder,
+#' which is deleted once the package is read. A resource without a table
+#' schema, which is not loaded into memory, keeps a `path` into that deleted
+#' folder.
 #'
 #' To read a draft:
 #' 1. Create or identify the Zenodo deposition and note its record id.
@@ -105,7 +111,7 @@ read_zenodo <- function(
     sandbox = sandbox
   )
 
-  # 2) Validate and download record files
+  # 2) Download the files the package uses
   if (!quiet) {
     cli_progress_step("Download files from Zenodo")
   }
@@ -116,12 +122,13 @@ read_zenodo <- function(
     timeout = timeout
   )
 
-  # 3) Read downloaded datapackage
+  # 3) Read the tables into memory, so the downloaded files can be deleted
   if (!is.null(download_dir)) {
+    on.exit(unlink(download_dir, recursive = TRUE), add = TRUE)
     if (!quiet) {
       cli_progress_step("Read and upgrade GeoLocator-DP")
     }
-    pkg <- read_gldp(file.path(download_dir, "datapackage.json"))
+    pkg <- read_gldp(file.path(download_dir, "datapackage.json"), force_read = TRUE)
   } else {
     pkg <- create_gldp()
   }
