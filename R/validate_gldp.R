@@ -71,10 +71,13 @@
 #' 4. **Metadata recommendations**
 #'    Additional metadata quality checks are reported without affecting the final validity.
 #'    These recommendations cover:
-#'    - the `title` is prefixed by "GeoLocator Data Package: ";
+#'    - the `title` is prefixed by "GeoLocator Data Package: ", which the GeoLocator-DP
+#'      Zenodo community expects;
 #'    - presence of contributor roles;
 #'    - `record_type == "dataset"`;
-#'    - expected manufacturer names in `tags$manufacturer`;
+#'    - expected manufacturer names in `tags$manufacturer`: those GeoPressureR can import
+#'      ("Swiss Ornithological Institute", "Migrate Technology Limited", "Lund University",
+#'      "British Antarctic Survey", "PresTag");
 #'    - presence of `relatedIdentifiers`;
 #'    - presence of a selected GeoLocator-DP Zenodo community;
 #'    - a GitHub repository URL in `codeRepository`;

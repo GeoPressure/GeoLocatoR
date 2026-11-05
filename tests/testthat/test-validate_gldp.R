@@ -306,6 +306,31 @@ test_that("validate_gldp_meta checks allowed manufacturers", {
   suppressMessages(expect_false(validate_gldp_meta(pkg)))
 })
 
+test_that("validate_gldp_meta accepts every manufacturer GeoPressureR imports", {
+  local_mocked_bindings(
+    tags = function(x) {
+      data.frame(
+        manufacturer = c(
+          "Swiss Ornithological Institute",
+          "Migrate Technology Limited",
+          "Lund University",
+          "British Antarctic Survey",
+          "PresTag"
+        )
+      )
+    },
+    .package = "GeoLocatoR"
+  )
+  pkg <- create_gldp()
+  pkg[["resources"]] <- list(list(name = "tags"))
+  expect_no_message(validate_gldp_meta(pkg), message = "manufacturer")
+})
+
+test_that("validate_gldp_meta words the title prefix as a community expectation", {
+  pkg <- create_gldp(title = "Wrong title")
+  expect_message(validate_gldp_meta(pkg), "Zenodo")
+})
+
 test_that("validate_gldp_meta checks relatedIdentifiers presence", {
   pkg <- pkg_shared
   pkg[["title"]] <- "GeoLocator Data Package: Example"

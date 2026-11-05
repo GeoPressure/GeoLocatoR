@@ -89,10 +89,13 @@ year. These are guidelines, not limits.
 Additional metadata quality checks are reported without affecting the final validity.
 These recommendations cover:
 \itemize{
-\item the \code{title} is prefixed by "GeoLocator Data Package: ";
+\item the \code{title} is prefixed by "GeoLocator Data Package: ", which the GeoLocator-DP
+Zenodo community expects;
 \item presence of contributor roles;
 \item \code{record_type == "dataset"};
-\item expected manufacturer names in \code{tags$manufacturer};
+\item expected manufacturer names in \code{tags$manufacturer}: those GeoPressureR can import
+("Swiss Ornithological Institute", "Migrate Technology Limited", "Lund University",
+"British Antarctic Survey", "PresTag");
 \item presence of \code{relatedIdentifiers};
 \item presence of a selected GeoLocator-DP Zenodo community;
 \item a GitHub repository URL in \code{codeRepository};
