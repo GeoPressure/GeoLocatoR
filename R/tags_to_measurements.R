@@ -24,7 +24,8 @@
 #' missing values.
 #'
 #' The current conversion supports pressure, light, acceleration/activity,
-#' temperature, and magnetic sensors.
+#' temperature, and magnetic sensors. The `temperature` table of tags created
+#' with GeoPressureR before 3.7.1 is read as `temperature_external`.
 #'
 #' If no tags, or no sensor tables, are provided, the function returns an empty tibble with the
 #' appropriate column names and types.
@@ -50,7 +51,8 @@ tags_to_measurements <- function(tag_list, tags = lifecycle::deprecated()) {
     "light",
     "temperature_external",
     "temperature_internal",
-    "magnetic"
+    "magnetic",
+    "temperature"
   )
   select_cols <- c(
     "pressure",
@@ -82,7 +84,14 @@ tags_to_measurements <- function(tag_list, tags = lifecycle::deprecated()) {
     tag_sensors <- names(tag)[names(tag) %in% sensor_types]
     for (sensor in tag_sensors) {
       df <- tag[[sensor]]
-      sensor_name <- ifelse(sensor == "acceleration", "activity", sensor)
+      # GeoPressureR before 3.7.1 stored the Migrate Technology and PresTag air
+      # temperature as `temperature`, renamed `temperature_external` in 3.7.1
+      sensor_name <- switch(
+        sensor,
+        acceleration = "activity",
+        temperature = "temperature_external",
+        sensor
+      )
       if ("value" %in% colnames(df)) {
         names(df)[names(df) == "value"] <- sensor_name
       }

@@ -33,7 +33,8 @@ is present, reshapes supported sensors into long format, and drops rows with
 missing values.
 
 The current conversion supports pressure, light, acceleration/activity,
-temperature, and magnetic sensors.
+temperature, and magnetic sensors. The \code{temperature} table of tags created
+with GeoPressureR before 3.7.1 is read as \code{temperature_external}.
 
 If no tags, or no sensor tables, are provided, the function returns an empty tibble with the
 appropriate column names and types.
