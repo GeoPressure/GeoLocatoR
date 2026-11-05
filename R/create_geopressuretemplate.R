@@ -534,8 +534,9 @@ create_geopressuretemplate_config <- function(pkg) {
           pull(.data$dt)
       )
 
+      # `!!` is required: a bare `tag_id` would refer to the column itself.
       sensor <- m |>
-        filter(.data$tag_id == tag_id) |>
+        filter(.data$tag_id == !!tag_id) |>
         pull(.data$sensor)
       co$tag_create <- utils::modifyList(
         list(
