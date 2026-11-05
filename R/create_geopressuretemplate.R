@@ -223,10 +223,10 @@ create_geopressuretemplate_desc <- function(pkg) {
 #' @return Nothing (side effect: writes README.md file)
 #' @noRd
 create_geopressuretemplate_readme <- function(pkg) {
-  badge_part <- if (!is.null(pkg$name) && nzchar(pkg$name)) {
-    glue::glue(
-      "[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.{pkg$name}.svg)](https://doi.org/10.5281/zenodo.{pkg$name})"
-    )
+  # pkg$id holds the DOI URL of packages published on Zenodo; pkg$name is not a DOI.
+  doi <- sub("^https?://doi\\.org/", "", pkg$id %||% "")
+  badge_part <- if (startsWith(doi, "10.")) {
+    glue::glue("[![DOI](https://zenodo.org/badge/DOI/{doi}.svg)](https://doi.org/{doi})")
   } else {
     ""
   }
