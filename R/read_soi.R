@@ -227,7 +227,11 @@ read_soi <- function(
         tag_id = .data$GDL_ID,
         manufacturer = "Swiss Ornithological Institute",
         model = if (all(c("GDL_Type", "HardwareVersion") %in% names(t_gdl))) {
-          glue::glue("{GDL_Type}-{HardwareVersion}")
+          # Without a hardware version, the type alone names the model
+          coalesce(
+            as.character(glue::glue("{GDL_Type}-{HardwareVersion}", .na = NULL)),
+            .data$GDL_Type
+          )
         } else {
           NA_character_
         },
