@@ -410,6 +410,7 @@ test_that("read_zenodo_attach_metadata keeps contributor roles as a list", {
   out <- read_zenodo_attach_metadata(pkg, record)
   expect_identical(out$contributors[[1]]$roles, list("datacollector"))
   expect_null(out$contributors[[2]]$roles)
+  expect_null(out$contributors[[1]]$organization)
 })
 
 test_that("read_zenodo_attach_metadata drops absent licence, keyword and grant values", {

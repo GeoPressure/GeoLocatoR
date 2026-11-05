@@ -48,10 +48,12 @@ read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
       # email = NULL,
       # A list, so that a single role is written as a JSON array
       roles = as.list(creator$role$id),
-      organization = as.character(glue::glue_collapse(
-        purrr::map_chr(creator$affiliations, "name"),
-        sep = ", "
-      ))
+      organization = if (length(creator$affiliations) > 0) {
+        as.character(glue::glue_collapse(
+          purrr::map_chr(creator$affiliations, "name"),
+          sep = ", "
+        ))
+      }
     ))
   })
   pkg$relatedIdentifiers <- purrr::map(m$related_identifiers %||% list(), \(x) {
