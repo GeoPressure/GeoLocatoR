@@ -1,7 +1,7 @@
 library(testthat)
 library(GeoLocatoR)
 
-# pkg_shared is loaded from setup.R
+# shared_pkg() is defined in setup.R
 
 clone_pkg_for_merge <- function(
   pkg,
@@ -76,7 +76,7 @@ expected_source_ids <- function(pkgs) {
 }
 
 test_that("merge_gldp merges two packages", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   suppressMessages({
     pkg2 <- read_zenodo("15259763")
   })
@@ -142,7 +142,7 @@ test_that("merge_gldp merges two packages", {
 })
 
 test_that("merge_gldp errors on packages with duplicate tag_ids", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   pkg2 <- pkg
   pkg2$id <- "https://doi.org/10.5281/zenodo.9999999"
 
@@ -150,7 +150,7 @@ test_that("merge_gldp errors on packages with duplicate tag_ids", {
 })
 
 test_that("merge_gldp errors on packages with duplicate datapackage_id", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   pkg2 <- pkg
   pkg2$resources <- lapply(pkg2$resources, function(resource) {
     data <- resource$data
@@ -216,7 +216,7 @@ test_that("merge_gldp records source DOIs as bare DOIs", {
 })
 
 test_that("merge_gldp supports sequential merges", {
-  pkg1 <- pkg_shared
+  pkg1 <- shared_pkg()
   suppressMessages({
     pkg2 <- read_zenodo("15259763")
   })
@@ -249,15 +249,15 @@ test_that("merge_gldp supports sequential merges", {
 })
 
 test_that("merge_gldp supports variadic and list inputs", {
-  pkg1 <- pkg_shared
+  pkg1 <- shared_pkg()
   pkg2 <- clone_pkg_for_merge(
-    pkg = pkg_shared,
+    pkg = shared_pkg(),
     new_id = "https://zenodo.org/records/15259763-copy-a",
     tag_suffix = "_copy_a",
     set_tags_datapackage_id = TRUE
   )
   pkg3 <- clone_pkg_for_merge(
-    pkg = pkg_shared,
+    pkg = shared_pkg(),
     new_id = "https://zenodo.org/records/15259763-copy-b",
     tag_suffix = "_copy_b",
     set_tags_datapackage_id = TRUE
@@ -282,9 +282,9 @@ test_that("merge_gldp supports variadic and list inputs", {
 })
 
 test_that("merge_gldp merges params with distinct ids", {
-  pkg1 <- pkg_shared
+  pkg1 <- shared_pkg()
   pkg2 <- clone_pkg_for_merge(
-    pkg = pkg_shared,
+    pkg = shared_pkg(),
     new_id = "https://zenodo.org/records/15259763-params-a",
     tag_suffix = "_params_a",
     set_tags_datapackage_id = TRUE
@@ -301,9 +301,9 @@ test_that("merge_gldp merges params with distinct ids", {
 })
 
 test_that("merge_gldp keeps duplicate param ids", {
-  pkg1 <- pkg_shared
+  pkg1 <- shared_pkg()
   pkg2 <- clone_pkg_for_merge(
-    pkg = pkg_shared,
+    pkg = shared_pkg(),
     new_id = "https://zenodo.org/records/15259763-params-b",
     tag_suffix = "_params_b",
     set_tags_datapackage_id = TRUE
@@ -319,9 +319,9 @@ test_that("merge_gldp keeps duplicate param ids", {
 })
 
 test_that("merge_gldp errors on missing/empty param ids", {
-  pkg1 <- pkg_shared
+  pkg1 <- shared_pkg()
   pkg2 <- clone_pkg_for_merge(
-    pkg = pkg_shared,
+    pkg = shared_pkg(),
     new_id = "https://zenodo.org/records/15259763-params-c",
     tag_suffix = "_params_c",
     set_tags_datapackage_id = TRUE
@@ -337,9 +337,9 @@ test_that("merge_gldp errors on missing/empty param ids", {
 })
 
 test_that("merge_gldp keeps orphan param ids", {
-  pkg1 <- pkg_shared
+  pkg1 <- shared_pkg()
   pkg2 <- clone_pkg_for_merge(
-    pkg = pkg_shared,
+    pkg = shared_pkg(),
     new_id = "https://zenodo.org/records/15259763-params-d",
     tag_suffix = "_params_d",
     set_tags_datapackage_id = TRUE

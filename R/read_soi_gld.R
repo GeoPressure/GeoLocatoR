@@ -1,4 +1,4 @@
-#' Read Geolocator Data and Orders
+#' Read GeoLocator Data and Orders
 #'
 #' @description
 #' Read and combine Swiss Ornithological Institute GDL exports.

@@ -2,7 +2,7 @@
 % Please edit documentation in R/read_soi_gld.R
 \name{read_soi_gld}
 \alias{read_soi_gld}
-\title{Read Geolocator Data and Orders}
+\title{Read GeoLocator Data and Orders}
 \usage{
 read_soi_gld(
   access_file = NA,

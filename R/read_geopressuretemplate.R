@@ -1,4 +1,4 @@
-#' Add Geolocator DP resources from a GeoPressureTemplate
+#' Add GeoLocator DP resources from a GeoPressureTemplate
 #'
 #' @description
 #' Read a GeoPressureTemplate project and populate a GeoLocator Data Package

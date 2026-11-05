@@ -506,6 +506,20 @@ create_geopressuretemplate_config <- function(pkg) {
           sex = .data$sex
         )
 
+      # A tag has one equipment and one retrieval: keep the earliest and the latest.
+      equipment <- which(k$stap_id == 1)
+      retrieval <- which(k$stap_id == -1)
+      if (length(equipment) > 1 || length(retrieval) > 1) {
+        cli_warn(
+          "Tag {.val {tag_id}} has {length(equipment)} equipment and {length(retrieval)} \\
+          retrieval observations; using the earliest equipment and the latest retrieval."
+        )
+        dated <- !is.na(k$datetime)
+        first_equipment <- utils::head(c(equipment[dated[equipment]], equipment), 1)
+        last_retrieval <- utils::tail(c(retrieval, retrieval[dated[retrieval]]), 1)
+        k <- k[k$stap_id == 0 | seq_len(nrow(k)) %in% c(first_equipment, last_retrieval), ]
+      }
+
       # Add sex if unique and defined (i.e., not U)
       usex <- unique(k$sex)
       usex <- usex[!is.na(usex)]
@@ -513,10 +527,10 @@ create_geopressuretemplate_config <- function(pkg) {
         co$sex <- usex
       }
 
-      # Add crop date from equipment and retrieval
-      co$tag_create <- list(
+      # Add crop date from equipment and retrieval, when their date is known
+      co$tag_create <- purrr::compact(list(
         crop_start = k |>
-          filter(.data$stap_id == 1) |>
+          filter(.data$stap_id == 1, !is.na(.data$datetime)) |>
           mutate(
             dt = format(
               .data$datetime + as.difftime(1, units = "days"),
@@ -526,10 +540,10 @@ create_geopressuretemplate_config <- function(pkg) {
           pull(.data$dt),
         # we start one day after equipment (at 00:00)
         crop_end = k |>
-          filter(.data$stap_id == -1) |>
+          filter(.data$stap_id == -1, !is.na(.data$datetime)) |>
           mutate(dt = format(.data$datetime, "%Y-%m-%d")) |>
           pull(.data$dt)
-      )
+      ))
 
       # `!!` is required: a bare `tag_id` would refer to the column itself.
       sensor <- m |>
@@ -622,6 +636,14 @@ create_geopressuretemplate_config <- function(pkg) {
   }
   t_config <- remove_expressions(t_config)
 
+  # Flow sequences are written as placeholders without spaces, which the YAML emitter
+  # cannot wrap, and substituted after conversion.
+  inline <- character()
+  as_inline <- function(text) {
+    inline <<- c(inline, text)
+    glue::glue("__YAML_INLINE_{length(inline)}__")
+  }
+
   inline_vectors <- function(x) {
     if (is.atomic(x) && length(x) > 1) {
       values <- vapply(
@@ -631,7 +653,7 @@ create_geopressuretemplate_config <- function(pkg) {
         },
         character(1)
       )
-      return(glue::glue("__YAML_INLINE_VECTOR__[{glue::glue_collapse(values, sep = ', ')}]"))
+      return(as_inline(glue::glue("[{glue::glue_collapse(values, sep = ', ')}]")))
     }
     if (is.list(x) && !is.data.frame(x)) {
       return(lapply(x, inline_vectors))
@@ -655,18 +677,16 @@ create_geopressuretemplate_config <- function(pkg) {
           if (!is.numeric(x)) {
             x <- glue::glue('"{x}"')
           }
-          tmp <- glue::glue("[{glue::glue_collapse(x, sep = ', ')}]")
-          glue::glue("{tmp}{add_text}")
+          as_inline(glue::glue("[{glue::glue_collapse(x, sep = ', ')}]{add_text}"))
         })
         names(tmp) <- names(k)
         tmp
       }
     )
   )
-
-  # Manually fix issue with tibble export
-  t_yaml <- gsub("\\]\\'", "]", gsub("\\'\\[", "[", t_yaml))
-  t_yaml <- gsub("__YAML_INLINE_VECTOR__(\\[[^\\n]+\\])", "\\1", t_yaml)
+  for (i in seq_along(inline)) {
+    t_yaml <- gsub(glue::glue("__YAML_INLINE_{i}__"), inline[i], t_yaml, fixed = TRUE)
+  }
 
   # Combine default config.yml with trim_yaml
   combined_yaml <- c(readLines("config.yml"), t_yaml)

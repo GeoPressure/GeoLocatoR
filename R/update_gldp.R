@@ -157,14 +157,15 @@ gldp_update_number_tags <- function(pkg) {
     }
 
     out$measurements <- length(unique(m$tag_id))
-    out$light <- length(unique(m$tag_id[m$sensor == "light"]))
-    out$pressure <- length(unique(m$tag_id[m$sensor == "pressure"]))
+    # A missing sensor is not counted.
+    out$light <- length(unique(m$tag_id[m$sensor %in% "light"]))
+    out$pressure <- length(unique(m$tag_id[m$sensor %in% "pressure"]))
     out$activity <- length(unique(m$tag_id[m$sensor %in% c("activity", "mean_acceleration_z")]))
-    out$temperature_external <- length(unique(m$tag_id[m$sensor == "temperature_external"]))
-    out$temperature_internal <- length(unique(m$tag_id[m$sensor == "temperature_internal"]))
-    out$magnetic <- length(unique(m$tag_id[m$sensor == "magnetic_x"]))
-    out$wet_count <- length(unique(m$tag_id[m$sensor == "wet_count"]))
-    out$conductivity <- length(unique(m$tag_id[m$sensor == "conductivity"]))
+    out$temperature_external <- length(unique(m$tag_id[m$sensor %in% "temperature_external"]))
+    out$temperature_internal <- length(unique(m$tag_id[m$sensor %in% "temperature_internal"]))
+    out$magnetic <- length(unique(m$tag_id[m$sensor %in% "magnetic_x"]))
+    out$wet_count <- length(unique(m$tag_id[m$sensor %in% "wet_count"]))
+    out$conductivity <- length(unique(m$tag_id[m$sensor %in% "conductivity"]))
   }
 
   p <- if ("paths" %in% resources) paths(pkg) else NULL

@@ -304,7 +304,7 @@ test_that("upgrade_gldp migrates v0.6 package to v1.0 schema refs", {
   class(pkg) <- c("geolocatordp", "datapackage", "list")
   attr(pkg, "directory") <- "."
 
-  msgs <- testthat::capture_messages({
+  msgs <- capture_messages({
     upgraded <- upgrade_gldp(pkg, to_version = "v1.0")
   })
   expect_true(any(grepl("Removed 1 non-deployed tag", msgs, fixed = TRUE)))

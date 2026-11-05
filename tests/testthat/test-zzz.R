@@ -50,3 +50,24 @@ test_that("cast_table warns when a cast turns values into NA", {
   expect_warning(cast_table(data["value"], schema), class = "gldp_warning_cast_loss")
   expect_identical(suppressWarnings(cast_table(data, schema))$count, 1:4)
 })
+
+test_that("cast_table turns an unparsable first date or datetime into NA", {
+  schema <- list(
+    fields = list(
+      list(name = "day", type = "date"),
+      list(name = "time", type = "datetime")
+    )
+  )
+  data <- data.frame(
+    day = c("x", "2020-01-02", "12-05-2020"),
+    time = c("x", "2020-01-02T03:04:05Z", "2020-01-02 03:04")
+  )
+
+  expect_length(capture_warnings(cast_table(data, schema)), 2)
+  out <- suppressWarnings(cast_table(data, schema))
+  expect_identical(out$day, as.Date(c(NA, "2020-01-02", NA)))
+  expect_identical(
+    out$time,
+    as.POSIXct(c(NA, "2020-01-02 03:04:05", "2020-01-02 03:04:00"), tz = "UTC")
+  )
+})

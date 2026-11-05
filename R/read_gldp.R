@@ -42,9 +42,9 @@
 #'   before the optional `force_read` step loads resource data into memory. Use
 #'   this to save memory and avoid slowdowns when working mainly with derived
 #'   GeoPressure resources such as `staps`, `paths`, `edges`, or
-#'   `pressurepaths`. The derived `temporal` coverage and the measurement
-#'   counts in `numberTags` are then left out, and `taxonomic` lists the
-#'   species of every tag.
+#'   `pressurepaths`. `temporal` then keeps the value in `datapackage.json`,
+#'   the measurement counts in `numberTags` are left out, and `taxonomic`
+#'   lists the species of every tag.
 #'
 #' @return A `geolocatordp` object.
 #'
@@ -97,13 +97,18 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
     if (!is.null(r[["$schema"]])) {
       r[["$schema"]] <- gsub("Rafnuss", "GeoPressure", r[["$schema"]], fixed = TRUE)
     }
+    # Up to v1.0, the table schema URL is in the resource `$schema`.
+    if (is.null(r$schema) && grepl("-table-schema\\.json$", r[["$schema"]] %||% "")) {
+      r[["schema"]] <- r[["$schema"]]
+    }
     # A GeoLocator-DP table schema given by URL is taken from the bundled
     # schemas, so that it is read offline and can be cast and matched by name.
     if (is.character(r$schema)) {
       m <- regmatches(
         r$schema,
         regexec(
-          "GeoLocator-DP/(?:refs/tags/)?(v[0-9]+\\.[0-9]+)/([a-z]+)-table-schema\\.json$",
+          # A patch ref (`v1.2.1`) shares the table schemas of its minor version.
+          "GeoLocator-DP/(?:refs/tags/)?(v[0-9]+\\.[0-9]+)(?:\\.[0-9]+)?/([a-z]+)-table-schema\\.json$",
           r$schema,
           perl = TRUE
         )
@@ -143,8 +148,8 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
       logical(1)
     ))
     pkg[["resources"]][read_order] <- purrr::map(pkg[["resources"]][read_order], \(r) {
-      # Only tables are loaded: custom and `params` resources have no table schema.
-      if (is.null(r$schema)) {
+      # Only resources with an inline table schema are loaded.
+      if (!is.list(r$schema)) {
         return(r)
       }
       resource_name <- as.character(r$name %||% NA_character_)[1]
@@ -159,21 +164,8 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
         base_dir
       }
 
-      # A CSV edited without updating datapackage.json can hold values that do
-      # not parse as their declared type. readr only warns, without naming the
-      # resource or the column, so the warning is caught and reported with them.
-      has_parsing_warning <- FALSE
       df <- tryCatch(
-        withCallingHandlers(
-          gldp_read_resource(pkg, resource_name),
-          warning = function(w) {
-            msg <- conditionMessage(w)
-            if (grepl("One or more parsing issues", msg, fixed = TRUE)) {
-              has_parsing_warning <<- TRUE
-              invokeRestart("muffleWarning")
-            }
-          }
-        ),
+        gldp_read_resource(pkg, resource_name),
         error = function(e) {
           cli_abort(
             c(
@@ -185,31 +177,6 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
           )
         }
       )
-
-      if (has_parsing_warning) {
-        problems <- tryCatch(
-          readr::problems(df),
-          error = \(e) tibble::tibble()
-        )
-        problem_preview <- if (nrow(problems) > 0) {
-          probs <- dplyr::slice_head(problems, n = 3)
-          purrr::pmap_chr(probs, \(row, col, expected, actual, file, ...) {
-            glue::glue("row {row}, col {col}: expected {expected}, got {actual}")
-          })
-        } else {
-          character(0)
-        }
-
-        cli_warn(c(
-          "!" = "Parsing issues detected while reading resource {.field {resource_name}}.",
-          "i" = "Location: {.file {resource_location}}",
-          "i" = if (length(problem_preview) > 0) {
-            "First issues: {glue::glue_collapse(problem_preview, sep = '; ')}"
-          } else {
-            "Run {.code readr::problems()} on this resource to inspect row-level parsing issues."
-          }
-        ))
-      }
 
       # Store the cast data in the resource and clear path to keep the object in memory.
       r$data <- cast_table(df, r$schema)
@@ -275,13 +242,21 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
     )
   }
 
-  # Conversion
-  pkg <- upgrade_gldp(pkg)
-  # Moving param keys to the GeoPressureR 3.8.0 layout changes no data, so it is
-  # safe on packages of any version.
-  pkg[["params"]] <- gldp_params_migrate(pkg$params)
-
-  pkg <- update_gldp(pkg)
-
-  pkg
+  # Report each parsing issue once.
+  seen <- character(0)
+  withCallingHandlers(
+    {
+      pkg <- upgrade_gldp(pkg)
+      # Moving param keys to the GeoPressureR 3.8.0 layout changes no data, so it is
+      # safe on packages of any version.
+      pkg[["params"]] <- gldp_params_migrate(pkg$params)
+      update_gldp(pkg)
+    },
+    gldp_warning_parsing_issues = function(w) {
+      if (conditionMessage(w) %in% seen) {
+        invokeRestart("muffleWarning")
+      }
+      seen <<- c(seen, conditionMessage(w))
+    }
+  )
 }

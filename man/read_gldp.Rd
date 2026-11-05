@@ -27,9 +27,9 @@ drops the \code{measurements} resource after reading \code{datapackage.json} and
 before the optional \code{force_read} step loads resource data into memory. Use
 this to save memory and avoid slowdowns when working mainly with derived
 GeoPressure resources such as \code{staps}, \code{paths}, \code{edges}, or
-\code{pressurepaths}. The derived \code{temporal} coverage and the measurement
-counts in \code{numberTags} are then left out, and \code{taxonomic} lists the
-species of every tag.}
+\code{pressurepaths}. \code{temporal} then keeps the value in \code{datapackage.json},
+the measurement counts in \code{numberTags} are left out, and \code{taxonomic}
+lists the species of every tag.}
 }
 \value{
 A \code{geolocatordp} object.

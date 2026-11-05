@@ -1,10 +1,10 @@
 library(testthat)
 library(GeoLocatoR)
 
-# pkg_shared is loaded from setup.R
+# shared_pkg() is defined in setup.R
 
 test_that("update_gldp stores derived values directly in pkg", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   # Update derived values
   pkg_updated <- update_gldp(pkg)
@@ -35,7 +35,7 @@ test_that("gldp_update_bibliographic_citation prefers conceptid", {
 })
 
 test_that("gldp_update_order_resources enforces schema resource order", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   skip_if(length(pkg$resources) < 2, "Package has fewer than two resources")
 
   pkg$resources <- rev(pkg$resources)
@@ -48,7 +48,7 @@ test_that("gldp_update_order_resources enforces schema resource order", {
 })
 
 test_that("gldp_update_number_tags counts mean_acceleration_z as activity", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   resource_idx <- which(vapply(pkg$resources, \(r) identical(r$name, "measurements"), logical(1)))
   skip_if(length(resource_idx) == 0, "Package has no measurements resource")
@@ -88,6 +88,26 @@ test_that("gldp_update_number_tags counts mean_acceleration_z as activity", {
 
   out <- gldp_update_number_tags(pkg)
   expect_equal(out$numberTags$activity, expected_activity)
+})
+
+test_that("gldp_update_number_tags does not count a missing sensor", {
+  pkg <- create_gldp()
+  pkg[["resources"]] <- list(
+    list(
+      name = "measurements",
+      data = data.frame(
+        tag_id = c("A", "B", "B"),
+        sensor = c("light", "light", NA),
+        stringsAsFactors = FALSE
+      )
+    )
+  )
+
+  out <- gldp_update_number_tags(pkg)$numberTags
+
+  expect_identical(out$light, 2L)
+  expect_identical(out$pressure, 0L)
+  expect_identical(out$conductivity, 0L)
 })
 
 test_that("gldp_update_bibliographic_citation reads the year of a partial date", {

@@ -91,10 +91,10 @@ pkg <- read_zenodo("17367319", quiet = TRUE)
 tags <- gldp_to_tag(pkg)
 
 # Convert a specific tag
-tag <- gldp_to_tag(pkg, tag_id = "18LX")
+tag <- gldp_to_tag(pkg, tag_id = "22PH")
 
 # Convert multiple specific tags
-tags <- gldp_to_tag(pkg, tag_id = c("18LX", "18IC"))
+tags <- gldp_to_tag(pkg, tag_id = c("22PH", "22PO"))
 }
 
 }

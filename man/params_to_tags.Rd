@@ -12,7 +12,8 @@ generated during the GeoPressure workflow. See \href{https://geopressure.org/Geo
 }
 \value{
 A \code{\link[tibble:tibble]{tibble::tibble()}} data frame with columns \code{tag_id} and \code{ring_number} (always
-missing), plus \code{manufacturer}, \code{scientific_name}, \code{model} and \code{firmware} when available.
+missing), plus \code{manufacturer}, \code{scientific_name}, \code{model} and \code{firmware} when available. All
+six columns are returned when \code{params} is empty.
 }
 \description{
 Convert a list of GeoPressureR parameter objects into a \code{tags} tibble

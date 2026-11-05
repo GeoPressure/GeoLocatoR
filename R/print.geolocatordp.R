@@ -327,6 +327,10 @@ bullets <- function(pkg, field_name) {
   if (!has_value(val)) {
     return(invisible(NULL))
   }
+  # An unnamed list of values (e.g. keywords read from JSON) prints as a vector.
+  if (is.list(val) && is.null(names(val)) && all(purrr::map_lgl(val, is.atomic))) {
+    val <- unlist(val)
+  }
   if (is.data.frame(val)) {
     cli_bullets(c("*" = "{.field {field_name}}:"))
     cat_print(val)
