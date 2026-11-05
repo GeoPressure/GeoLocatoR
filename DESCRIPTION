@@ -19,7 +19,7 @@ Imports:
     desc,
     dplyr,
     frictionless (>= 2.0.0),
-    GeoPressureR (>= 3.6.0),
+    GeoPressureR (>= 3.8.0),
     glue,
     ggplot2,
     httr2 (>= 1.1.1),

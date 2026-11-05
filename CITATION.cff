@@ -156,7 +156,7 @@ references:
     email: mathieu@mgravey.com
     orcid: https://orcid.org/0000-0002-0871-1507
   year: '2026'
-  version: '>= 3.6.0'
+  version: '>= 3.8.0'
 - type: software
   title: glue
   abstract: 'glue: Interpreted String Literals'
