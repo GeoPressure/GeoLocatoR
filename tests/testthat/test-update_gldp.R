@@ -112,3 +112,20 @@ test_that("update_gldp_bibliographic_citation uses the id DOI when conceptid is 
   pkg <- update_gldp_bibliographic_citation(pkg)
   expect_match(pkg$bibliographicCitation, "doi:10.5281/zenodo.15259676", fixed = TRUE)
 })
+
+test_that("update_gldp_temporal keeps the coverage of a package without measurements", {
+  pkg <- create_gldp(temporal = list(start = "2020-01-01", end = "2020-12-31"))
+  expect_equal(update_gldp_temporal(pkg)$temporal, list(start = "2020-01-01", end = "2020-12-31"))
+
+  pkg <- add_gldp_resource(
+    pkg,
+    "measurements",
+    data.frame(
+      tag_id = "AA",
+      sensor = "pressure",
+      datetime = as.POSIXct(c("2021-03-01", "2021-04-01"), tz = "UTC"),
+      value = 1000
+    )
+  )
+  expect_equal(update_gldp_temporal(pkg)$temporal, list(start = "2021-03-01", end = "2021-04-01"))
+})

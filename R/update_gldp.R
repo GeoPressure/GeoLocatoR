@@ -3,7 +3,8 @@
 #' @description
 #' Updates and stores the following derived package properties:
 #'
-#' - `update_gldp_temporal()`: date range from `measurements$datetime`.
+#' - `update_gldp_temporal()`: date range from `measurements$datetime`, left
+#'   unchanged when the package has no `measurements`.
 #' - `update_gldp_taxonomic()`: species vector from `tags`, optionally filtered
 #'   to tags present in `measurements`.
 #' - `update_gldp_number_tags()`: counts by resource and sensor.
@@ -75,8 +76,8 @@ update_gldp_temporal <- function(pkg) {
   check_gldp(pkg)
   resources <- frictionless::resource_names(pkg)
 
+  # Without measurements (e.g. `read_gldp(drop_measurements = TRUE)`), keep the recorded coverage.
   if (!"measurements" %in% resources) {
-    pkg$temporal <- NULL
     return(pkg)
   }
 
