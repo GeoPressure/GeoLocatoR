@@ -18,8 +18,10 @@
 #'   to include them.
 #' @param directory_data Path to the directory containing SOI raw tag files or
 #'   folders.
-#' @param generate_observations A logical value indicating whether to create pre-filled
-#'   `observations` rows for equipment and retrieval events.
+#' @param generate_observations A logical value. Equipment and retrieval
+#'   `observations` are always created from the dates in `gdl`. If `TRUE`, rows
+#'   are also created without a datetime, as placeholders to fill in; if `FALSE`,
+#'   only rows with a known datetime are kept.
 #'
 #' @details
 #' The function performs the following steps:

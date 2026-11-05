@@ -69,3 +69,18 @@ test_that("read_soi() describes the attachment from the harness columns, or leav
   pkg <- suppressMessages(read_soi(gdl))
   expect_identical(tags(pkg)$attachment_type, c("leg-loop|attachment:glued", NA))
 })
+
+test_that("read_soi() keeps undated observations only with generate_observations = TRUE", {
+  gdl <- tibble(
+    GDL_ID = c("AAAA", "BBBB"),
+    RingNumber = c("R1", "R2"),
+    UTC_Attached = as.POSIXct(c("2020-05-01", NA), tz = "UTC"),
+    directory = NA_character_
+  )
+
+  o <- observations(suppressMessages(read_soi(gdl, generate_observations = TRUE)))
+  expect_identical(nrow(o), 4L)
+  o <- observations(suppressMessages(read_soi(gdl, generate_observations = FALSE)))
+  expect_identical(o$tag_id, "AAAA")
+  expect_identical(o$observation_type, "equipment")
+})
