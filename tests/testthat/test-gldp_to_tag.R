@@ -433,7 +433,7 @@ test_that("gldp_to_tag omits empty label columns", {
   tag_id <- unique(tags(pkg)$tag_id)[1]
   tag <- gldp_to_tag(pkg, tag_id)
 
-  m <- measurements(pkg) |> dplyr::filter(.data$tag_id == tag_id)
+  m <- measurements(pkg) |> dplyr::filter(.data$tag_id == .env$tag_id)
   if (any(m$sensor == "pressure") && all(is.na(m$label[m$sensor == "pressure"]))) {
     expect_false("label" %in% names(tag$pressure))
   }
