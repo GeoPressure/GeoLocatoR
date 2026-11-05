@@ -53,6 +53,26 @@ test_that("gldp_to_tag accepts measurements without a label column", {
   expect_false("label" %in% names(tag$pressure))
 })
 
+test_that("gldp_to_tag keeps pressure labels when only acceleration is labelled", {
+  datetime <- as.POSIXct("2020-01-01", tz = "UTC") + 3600 * 0:5
+  pkg <- local_tag_pkg(rbind(
+    data.frame(tag_id = "AA", sensor = "pressure", datetime = datetime, value = 1000, label = NA),
+    # Acceleration starts after pressure, as in tags switched on at different times.
+    data.frame(
+      tag_id = "AA",
+      sensor = "activity",
+      datetime = datetime[2:5],
+      value = 1,
+      label = c("", "flight", "flight", "")
+    )
+  ))
+
+  tag <- gldp_to_tag(pkg, "AA")
+  expect_equal(tag$pressure$label, rep("", 6))
+  expect_equal(tag$stap$stap_id, c(1, 2))
+  expect_true(tag_assert(tag, "label", "logical"))
+})
+
 test_that("gldp_to_tag converts single tag correctly", {
   pkg <- pkg_shared
   # Get the first tag_id
