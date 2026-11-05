@@ -42,3 +42,6 @@ docs/
 
 /.quarto/
 **/*.quarto_ipynb
+
+# Claude Code local files
+.claude/

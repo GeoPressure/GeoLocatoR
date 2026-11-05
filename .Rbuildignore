@@ -10,8 +10,6 @@
 ^pkgdown$
 ^\.github$
 ^\.lintr$
-^vignettes/.quarto
-^vignettes/*_files$
 ^CITATION\.cff$
 ^[.]?air[.]toml$
 ^\.vscode$
@@ -20,3 +18,4 @@
 ^data-raw$
 ^AGENTS.md$
 ^assets$
+^\.claude$
