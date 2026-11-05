@@ -453,29 +453,21 @@ read_soi_directory <- function(gdl, directory_data) {
       files <- list.files(order_dir, recursive = FALSE, full.names = TRUE)
     }
 
-    matching_files <- files[startsWith(basename(files), as.character(gdl_id))]
-    # Check if there are matching files and prioritize .glf files
-    if (length(matching_files) > 0) {
-      # Look for a .glf file first
-      glf_files <- matching_files[grepl("\\.glf$", matching_files)]
-
-      # If there are .glf files, return the first one, otherwise return the first matching file
-      if (length(glf_files) > 0) {
-        return(list(
-          directory = glf_files[1],
-          reason = NA_character_
-        ))
-      } else {
-        return(list(
-          directory = matching_files[1],
-          reason = NA_character_
-        ))
-      }
+    # Outside a tag folder only a .glf file can be read: read_soi() passes any other
+    # file as a directory, which GeoPressureR rejects
+    glf_files <- files[
+      startsWith(basename(files), as.character(gdl_id)) & grepl("\\.glf$", files)
+    ]
+    if (length(glf_files) > 0) {
+      return(list(
+        directory = glf_files[1],
+        reason = NA_character_
+      ))
     }
     list(
       directory = NA_character_,
       reason = glue::glue(
-        "No folder or file starting with GDL_ID {gdl_id} was found in {order_name}."
+        "No folder or .glf file starting with GDL_ID {gdl_id} was found in {order_name}."
       )
     )
   }
