@@ -183,3 +183,51 @@ test_that("simulation uncertainty handles sample size, grid floor and missing si
   expect_true(is.na(occurrence$coordinateUncertaintyInMeters))
   expect_match(occurrence$eventRemarks, "no finite simulation distances")
 })
+
+test_that("gldp_to_dwc keeps datasetID for a package without id", {
+  pkg <- create_gldp(title = "Example package")
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = "AA",
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "soi",
+      model = "GDL3"
+    )
+  )
+  pkg <- add_gldp_resource(
+    pkg,
+    "observations",
+    data.frame(
+      ring_number = "R1",
+      tag_id = "AA",
+      observation_type = "equipment",
+      datetime = as.POSIXct("2020-01-01", tz = "UTC"),
+      latitude = 46,
+      longitude = 7,
+      age_class = "4",
+      sex = "M"
+    )
+  )
+  pkg <- add_gldp_resource(
+    pkg,
+    "staps",
+    data.frame(
+      tag_id = "AA",
+      stap_id = 1,
+      start = as.POSIXct("2020-01-01", tz = "UTC"),
+      end = as.POSIXct("2020-01-05", tz = "UTC")
+    )
+  )
+  pkg <- add_gldp_resource(
+    pkg,
+    "paths",
+    data.frame(tag_id = "AA", type = "most_likely", stap_id = 1, lat = 46, lon = 7, j = 1L)
+  )
+
+  occurrence <- gldp_to_dwc(pkg, NULL)
+  expect_true("datasetID" %in% names(occurrence))
+  expect_true(is.na(occurrence$datasetID))
+})

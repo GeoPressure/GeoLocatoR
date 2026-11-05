@@ -74,7 +74,7 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
 
   # Set properties from metadata
   dataset_name <- pkg$title %||% "GeoLocator Data Package"
-  dataset_id <- pkg$id
+  dataset_id <- pkg$id %||% NA_character_
 
   # Find rightsHolder from contributors (optional)
   rights_holder <- NA_character_
