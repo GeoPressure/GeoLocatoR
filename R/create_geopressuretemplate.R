@@ -586,9 +586,10 @@ create_geopressuretemplate_config <- function(pkg) {
         co$tag_create
       )
 
-      # Add known
+      # Add known, keeping only observations with a location
       co$tag_set_map <- list(
         known = k |>
+          filter(!is.na(.data$known_lat), !is.na(.data$known_lon)) |>
           mutate(
             datetime = format(.data$datetime, "%Y-%m-%d")
           )

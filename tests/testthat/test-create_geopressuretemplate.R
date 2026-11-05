@@ -170,3 +170,14 @@ test_that("generated config does not apply the clock drift a second time", {
   expect_null(config$A$tag_create$time_drift)
   expect_null(config$A$tag_create$time_reference)
 })
+
+test_that("generated config skips known positions without a location", {
+  pkg <- template_config_pkg()
+  o <- observations(pkg)
+  o$latitude[o$tag_id == "B" & o$observation_type == "retrieval"] <- NA
+  pkg <- add_gldp_resource(pkg, "observations", o, replace = TRUE)
+  config <- template_config_write(pkg)
+  expect_equal(config$B$tag_set_map$known$stap_id, 1)
+  expect_equal(config$B$tag_set_map$known$known_lon, 7)
+  expect_identical(config$B$tag_create$crop_end, "2020-01-02")
+})
