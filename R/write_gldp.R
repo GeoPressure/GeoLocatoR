@@ -4,7 +4,7 @@
 #' Write a GeoLocator Data Package to disk with
 #' [frictionless::write_package()]. Standard datapackage files are written from
 #' the package descriptor and resources, while `pkg$params` is serialized
-#' separately to `params.json` when present.
+#' separately to `params.json` when it is not empty.
 #'
 #' @param pkg A GeoLocator Data Package object.
 #' @param directory Directory where `datapackage.json` and resources are written.
@@ -27,7 +27,8 @@ write_gldp <- function(pkg, directory = ".", compress = FALSE) {
     compress = compress
   )
 
-  if (!is.null(pkg$params)) {
+  # read_gldp() sets `params` to an empty list when there is no params.json.
+  if (length(pkg$params) > 0) {
     writeLines(
       jsonlite::serializeJSON(pkg$params),
       file.path(directory, "params.json")
