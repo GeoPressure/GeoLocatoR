@@ -44,7 +44,8 @@ read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
       familyName = creator$person_or_org$family_name,
       path = if (is.null(orcid)) NULL else glue::glue("https://orcid.org/{orcid}"),
       # email = NULL,
-      roles = creator$role$id %||% NULL,
+      # A list, so that a single role is written as a JSON array
+      roles = as.list(creator$role$id),
       organization = as.character(glue::glue_collapse(
         purrr::map_chr(creator$affiliations, "name"),
         sep = ", "
