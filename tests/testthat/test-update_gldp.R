@@ -90,6 +90,26 @@ test_that("gldp_update_number_tags counts mean_acceleration_z as activity", {
   expect_equal(out$numberTags$activity, expected_activity)
 })
 
+test_that("gldp_update_number_tags does not count a missing sensor", {
+  pkg <- create_gldp()
+  pkg[["resources"]] <- list(
+    list(
+      name = "measurements",
+      data = data.frame(
+        tag_id = c("A", "B", "B"),
+        sensor = c("light", "light", NA),
+        stringsAsFactors = FALSE
+      )
+    )
+  )
+
+  out <- gldp_update_number_tags(pkg)$numberTags
+
+  expect_identical(out$light, 2L)
+  expect_identical(out$pressure, 0L)
+  expect_identical(out$conductivity, 0L)
+})
+
 test_that("gldp_update_bibliographic_citation reads the year of a partial date", {
   for (created in c("2024", "2024-06", "2024-06-01T10:00:00Z")) {
     pkg <- create_gldp(title = "Example", created = created)
