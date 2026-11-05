@@ -287,3 +287,35 @@ test_that("gldp_to_dwc leaves observation and uncertainty fields empty without m
     '{"pathType":"most_likely","locationSource":"reconstructed"}'
   )
 })
+
+test_that("gldp_to_dwc maps sex and age class to Darwin Core vocabularies", {
+  pkg <- dwc_offline_pkg(data.frame(
+    ring_number = "R1",
+    tag_id = "AA",
+    observation_type = c("equipment", "retrieval"),
+    datetime = as.POSIXct(c("2020-01-02", "2020-02-01"), tz = "UTC"),
+    latitude = 46,
+    longitude = 7,
+    age_class = c("1", "4"),
+    sex = c("U", "F")
+  ))
+  occurrence <- gldp_to_dwc(pkg, NULL)
+  expect_equal(occurrence$sex, c(NA, "female"))
+  expect_equal(occurrence$lifeStage, c("juvenile", "adult"))
+  expect_equal(
+    occurrence$dynamicProperties[2],
+    glue::glue(
+      '{{"pathType":"most_likely","locationSource":"reconstructed","euringAgeClass":"4",',
+      '"observation":{{"observation_type":"retrieval"}}}}'
+    )
+  )
+
+  # Unknown and undetermined full-grown age classes stay empty.
+  observations <- observations(pkg)
+  observations$age_class <- c("0", "2")
+  observations$sex <- "M"
+  observations(pkg) <- observations
+  occurrence <- gldp_to_dwc(pkg, NULL)
+  expect_equal(occurrence$sex, c("male", "male"))
+  expect_equal(occurrence$lifeStage, c(NA_character_, NA_character_))
+})

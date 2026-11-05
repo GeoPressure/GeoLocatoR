@@ -77,6 +77,14 @@ tracked individual.
 \item \code{sex}, \code{lifeStage}, and \code{eventRemarks} are taken from the tag's observations,
 each matched to the stationary period that contains it or, failing that, to
 the nearest one within 14 days.
+\item \code{sex} uses the Darwin Core vocabulary: EURING \code{"M"} and \code{"F"} become
+\code{"male"} and \code{"female"}; \code{"U"} (unknown) is left empty.
+\item \code{lifeStage} uses the \href{https://rs.gbif.org/vocabulary/gbif/life_stage.xml}{GBIF LifeStage vocabulary}:
+EURING age classes \code{"1"} (pullus) and \code{"3"} (first-year) become
+\code{"juvenile"}, and classes \code{"4"} (after first-year) to \code{"H"} become
+\code{"adult"}. Classes \code{"0"} (unknown) and \code{"2"} (full-grown, year of hatching
+unknown) are left empty. The EURING code itself is kept as
+\code{euringAgeClass} in \code{dynamicProperties}.
 \item \code{minimumElevationInMeters} and \code{maximumElevationInMeters} are estimated
 from \code{pressurepaths$altitude} when available.
 \item Reconstructed-location uncertainty uses the 95th percentile of distances

@@ -60,6 +60,14 @@
 #' - `sex`, `lifeStage`, and `eventRemarks` are taken from the tag's observations,
 #'   each matched to the stationary period that contains it or, failing that, to
 #'   the nearest one within 14 days.
+#' - `sex` uses the Darwin Core vocabulary: EURING `"M"` and `"F"` become
+#'   `"male"` and `"female"`; `"U"` (unknown) is left empty.
+#' - `lifeStage` uses the [GBIF LifeStage vocabulary](https://rs.gbif.org/vocabulary/gbif/life_stage.xml):
+#'   EURING age classes `"1"` (pullus) and `"3"` (first-year) become
+#'   `"juvenile"`, and classes `"4"` (after first-year) to `"H"` become
+#'   `"adult"`. Classes `"0"` (unknown) and `"2"` (full-grown, year of hatching
+#'   unknown) are left empty. The EURING code itself is kept as
+#'   `euringAgeClass` in `dynamicProperties`.
 #' - `minimumElevationInMeters` and `maximumElevationInMeters` are estimated
 #'   from `pressurepaths$altitude` when available.
 #' - Reconstructed-location uncertainty uses the 95th percentile of distances
@@ -276,6 +284,15 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
 
   stap_has_known <- all(c("known_lat", "known_lon") %in% names(occurrence))
 
+  # EURING age class to GBIF LifeStage terms: pullus and first-year birds are juveniles and
+  # later classes adults. Code 2 (full-grown, year of hatching unknown) can be either, so it
+  # stays empty like code 0 (unknown).
+  life_stages <- c(
+    "1" = "juvenile",
+    "3" = "juvenile",
+    stats::setNames(rep("adult", 14), c(4:9, LETTERS[1:8]))
+  )
+
   # Match each tag’s analysis grid; missing scales use the ERA5 0.25-degree grid.
   grid_scales <- stats::setNames(
     purrr::map_dbl(pkg$params, \(param) param$tag_set_map$scale %||% NA_real_),
@@ -374,13 +391,18 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
       dynamicProperties = purrr::pmap_chr(
         list(
           .data$observation_dynamic_properties,
-          .data$location_is_known
+          .data$location_is_known,
+          .data$observation_life_stage
         ),
-        \(observation_dynamic_properties, location_is_known) {
+        \(observation_dynamic_properties, location_is_known, age_class) {
           values <- list(
             pathType = "most_likely",
             locationSource = if (isTRUE(location_is_known)) "known" else "reconstructed"
           )
+          # Keep the raw EURING code, which lifeStage only summarises.
+          if (!is.na(age_class)) {
+            values$euringAgeClass <- age_class
+          }
           if (!is.na(observation_dynamic_properties)) {
             values$observation <- jsonlite::fromJSON(
               observation_dynamic_properties,
@@ -428,8 +450,8 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
       dataGeneralizations = NA_character_,
       dynamicProperties = .data$dynamicProperties,
       occurrenceID = glue::glue("{.data$ring_number}_{.data$tag_id}_{.data$stap_id}"),
-      sex = .data$observation_sex,
-      lifeStage = .data$observation_life_stage,
+      sex = unname(c(M = "male", F = "female")[.data$observation_sex]),
+      lifeStage = unname(life_stages[.data$observation_life_stage]),
       occurrenceStatus = "present",
       organismID = .data$ring_number,
       # Darwin Core organismName refers to the individual label, not the taxon name.
