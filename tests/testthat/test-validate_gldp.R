@@ -462,7 +462,7 @@ test_that("validate_gldp_geopressure_coherence only warns on implausible years, 
   paths <- gldp_resource(pkg, "paths")
   paths$data$j <- 500L
   gldp_resource(pkg, "paths") <- paths
-  msgs <- testthat::capture_messages(
+  msgs <- capture_messages(
     expect_true(validate_gldp_geopressure_coherence(pkg))
   )
   expect_match(msgs, "staps\\$stap_id.*unusually large", all = FALSE)
