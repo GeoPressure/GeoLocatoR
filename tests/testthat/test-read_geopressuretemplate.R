@@ -155,3 +155,21 @@ test_that("normalize_gldp_params preserves order for valid params", {
   out <- normalize_params(params)
   expect_equal(vapply(out, function(param) param$order, numeric(1)), c(1, 2, 3))
 })
+
+test_that("raw-tag import applies the labelled file and known positions", {
+  directory <- tempfile("template-raw-tag-")
+  extdata <- system.file("extdata", package = "GeoPressureR")
+  dir.create(file.path(directory, "data", "raw-tag"), recursive = TRUE)
+  on.exit(unlink(directory, recursive = TRUE))
+  file.copy(file.path(extdata, "config.yml"), directory)
+  file.copy(
+    file.path(extdata, "data", "raw-tag", "18LX"),
+    file.path(directory, "data", "raw-tag"),
+    recursive = TRUE
+  )
+  file.copy(file.path(extdata, "data", "tag-label"), file.path(directory, "data"), recursive = TRUE)
+
+  pkg <- suppressMessages(read_geopressuretemplate(directory, from = "raw-tag"))
+  expect_true("flight" %in% measurements(pkg)$label)
+  expect_s3_class(pkg$params[[1]]$tag_set_map$known, "data.frame")
+})
