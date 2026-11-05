@@ -110,6 +110,45 @@ test_that("read_gldp leaves resources that are not tables on their path", {
   expect_identical(tags(pkg_back)$tag_id, "A")
 })
 
+test_that("read_gldp reads tables whose schema is a path or a patch-ref URL", {
+  # A custom table may give its schema as a path, which is not cast; a
+  # GeoLocator-DP table schema URL may use a patch ref such as `v1.2.1`.
+  directory <- tempfile("read-schema-path-")
+  on.exit(unlink(directory, recursive = TRUE), add = TRUE)
+  dir.create(directory)
+  writeLines(
+    c("tag_id,ring_number,scientific_name,manufacturer,model", "A,R1,Upupa epops,test,test"),
+    file.path(directory, "tags.csv")
+  )
+  writeLines(c("a,b", "1,x"), file.path(directory, "custom.csv"))
+  writeLines(
+    '{"fields": [{"name": "a", "type": "integer"}, {"name": "b", "type": "string"}]}',
+    file.path(directory, "custom-schema.json")
+  )
+  writeLines(
+    '{
+      "$schema": "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/v1.2/geolocator-dp-profile.json",
+      "resources": [
+        {
+          "$schema": "https://datapackage.org/profiles/2.0/dataresource.json",
+          "name": "tags",
+          "type": "table",
+          "path": "tags.csv",
+          "schema": "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/v1.2.1/tags-table-schema.json"
+        },
+        {"name": "custom", "type": "table", "path": "custom.csv", "schema": "custom-schema.json"}
+      ]
+    }',
+    file.path(directory, "datapackage.json")
+  )
+
+  pkg <- read_gldp(directory)
+
+  expect_identical(gldp_resource(pkg, "custom")$path, "custom.csv")
+  expect_identical(gldp_resource(pkg, "tags")$schema, gldp_resource_schema("v1.2", "tags"))
+  expect_identical(tags(pkg)$tag_id, "A")
+})
+
 test_that("read_gldp reads the GeoLocator-DP example package offline", {
   # The example gives each table schema as a URL, and declares `type: "table"`
   # without the Data Package v1 `profile`.

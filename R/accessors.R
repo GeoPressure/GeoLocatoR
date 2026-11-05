@@ -13,7 +13,7 @@
   # A file-backed table is cast like the tables read_gldp() loads, so the result
   # does not depend on `force_read` (frictionless reads enums as factors).
   resource <- gldp_resource(x, resource_name)
-  if (!is.null(resource$path)) {
+  if (!is.null(resource$path) && is.list(resource$schema)) {
     data <- cast_table(data, resource$schema)
   }
   data

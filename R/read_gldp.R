@@ -91,7 +91,8 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
       m <- regmatches(
         r$schema,
         regexec(
-          "GeoLocator-DP/(?:refs/tags/)?(v[0-9]+\\.[0-9]+)/([a-z]+)-table-schema\\.json$",
+          # A patch ref (`v1.2.1`) shares the table schemas of its minor version.
+          "GeoLocator-DP/(?:refs/tags/)?(v[0-9]+\\.[0-9]+)(?:\\.[0-9]+)?/([a-z]+)-table-schema\\.json$",
           r$schema,
           perl = TRUE
         )
@@ -131,8 +132,9 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
       logical(1)
     ))
     pkg[["resources"]][read_order] <- purrr::map(pkg[["resources"]][read_order], \(r) {
-      # Only tables are loaded: custom and `params` resources have no table schema.
-      if (is.null(r$schema)) {
+      # Only tables are loaded: custom and `params` resources have no table schema,
+      # and one given by a path or URL not bundled cannot be cast.
+      if (!is.list(r$schema)) {
         return(r)
       }
       resource_name <- as.character(r$name %||% NA_character_)[1]

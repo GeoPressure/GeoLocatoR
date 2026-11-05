@@ -109,7 +109,8 @@ normalize_upgraded_resources <- function(x) {
 
     # Extra columns retain their source types and units when the target permits
     # extensions. Standard fields and columns removed by migrations use the target schema.
-    if (target_schema$fieldsMatch %in% c("partial", "subset")) {
+    # A schema given by a path or URL not bundled declares no fields to carry over.
+    if (target_schema$fieldsMatch %in% c("partial", "subset") && is.list(resource$schema)) {
       extra_fields <- Filter(
         function(field) {
           !field$name %in% schema_field_names(target_schema) &&
