@@ -435,10 +435,12 @@ validate_gldp_core_coherence <- function(pkg) {
     filter(!is.na(.data$tag_id)) |>
     anti_join(t, by = c("tag_id", "ring_number"))
   if (nrow(invalid_combinations) > 0) {
+    combinations <- unique(glue::glue(
+      "{invalid_combinations$tag_id}/{invalid_combinations$ring_number}"
+    ))
     cli_alert_danger(
-      "The following {.field tag_id} and {.field ring_number} combinations in {.field observations} are not present in {.field tags}:"
+      "{length(combinations)} {.field tag_id}/{.field ring_number} combination{?s} in {.field observations} {?is/are} not present in {.field tags}: {.val {combinations}}."
     )
-    print(invalid_combinations)
     valid <- FALSE
   }
 
