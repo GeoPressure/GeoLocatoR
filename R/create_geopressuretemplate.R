@@ -9,7 +9,7 @@
 #'   component is used as the project name.
 #' @param pkg Optional `geolocatordp` object used to fill project metadata,
 #'   config, and data files.
-#' @param open If `TRUE`, the package is opened in a new RStudio session.
+#' @param open If `TRUE`, the project is opened in a new RStudio session.
 #'
 #' @return The path to the created project directory.
 #'
