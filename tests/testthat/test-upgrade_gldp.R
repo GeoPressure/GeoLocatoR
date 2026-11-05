@@ -307,7 +307,7 @@ test_that("upgrade_gldp migrates v0.6 package to v1.0 schema refs", {
   msgs <- testthat::capture_messages({
     upgraded <- upgrade_gldp(pkg, to_version = "v1.0")
   })
-  expect_true(any(grepl("Removed 1 non-deployed tag row", msgs, fixed = TRUE)))
+  expect_true(any(grepl("Removed 1 non-deployed tag", msgs, fixed = TRUE)))
 
   expect_equal(
     upgraded$`$schema`,
@@ -338,6 +338,55 @@ test_that("upgrade_gldp migrates v0.6 package to v1.0 schema refs", {
   expect_false("include" %in% names(staps_res$data))
   expect_false("s" %in% names(edges_res$data))
   expect_false("t" %in% names(edges_res$data))
+})
+
+test_that("upgrade_gldp to v1.0 drops the rows of non-deployed tags from every table", {
+  make_pkg <- function(tags) {
+    pkg <- create_gldp(version = "v0.6")
+    pkg[["resources"]] <- list(
+      list(name = "tags", data = tags),
+      list(
+        name = "observations",
+        data = data.frame(
+          tag_id = c("tag-1", "tag-2", NA),
+          ring_number = c("R1", "R2", "R3"),
+          observation_type = c("equipment", "equipment", "capture")
+        )
+      ),
+      list(
+        name = "measurements",
+        data = data.frame(tag_id = c("tag-1", "tag-2", "tag-2"), sensor = "light", value = 1)
+      )
+    )
+    pkg
+  }
+  tags <- data.frame(
+    tag_id = c("tag-1", "tag-2"),
+    ring_number = c("R1", NA),
+    scientific_name = "Hirundo rustica"
+  )
+
+  msgs <- capture_messages({
+    upgraded <- upgrade_gldp(make_pkg(tags), to_version = "v1.0")
+  })
+  expect_length(grep("non-deployed", msgs), 1)
+  expect_match(msgs, "Removed 1 non-deployed tag.*3 rows of other tables.*tag-2", all = FALSE)
+  expect_identical(tags(upgraded)$tag_id, "tag-1")
+  # An untagged capture is kept.
+  expect_identical(observations(upgraded)$ring_number, c("R1", "R3"))
+  expect_identical(measurements(upgraded)$tag_id, "tag-1")
+
+  # No deployed tag left, including when ring_number is absent.
+  tags$ring_number <- NA
+  expect_error(
+    suppressMessages(upgrade_gldp(make_pkg(tags), to_version = "v1.0")),
+    "No deployed tag is left"
+  )
+  tags$ring_number <- NULL
+  expect_error(
+    suppressMessages(upgrade_gldp(make_pkg(tags), to_version = "v1.0")),
+    "No deployed tag is left"
+  )
 })
 
 test_that("upgrade_gldp rejects a resource holding both path and data", {

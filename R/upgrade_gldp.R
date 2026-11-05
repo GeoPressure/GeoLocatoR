@@ -351,33 +351,43 @@ upgrade_gldp_v0_6_to_v1_0 <- function(x) {
 
   # Drop non-deployed tags (missing ring_number or scientific_name).
   # https://github.com/GeoPressure/GeoLocator-DP/commit/795ccc4cdd0bf575b39378ca3e63c61247ac2b8e
+  is_missing <- function(v) {
+    is.na(v) | trimws(as.character(v)) == ""
+  }
+  dropped_ids <- character(0)
   x <- mutate_resource(x, "tags", \(d) {
-    if (!"ring_number" %in% names(d)) {
-      d$ring_number <- NA_character_
-    }
-    if (!"scientific_name" %in% names(d)) {
-      d$scientific_name <- NA_character_
-    }
-
-    is_missing <- function(v) {
-      is.na(v) | trimws(as.character(v)) == ""
-    }
-
-    drop <- is_missing(d$ring_number) | is_missing(d$scientific_name)
-    if (any(drop)) {
-      dropped_ids <- if ("tag_id" %in% names(d)) d$tag_id[drop] else NA_character_
-      dropped_ids <- as.character(dropped_ids)
-      dropped_ids[is.na(dropped_ids) | trimws(dropped_ids) == ""] <- "<missing_tag_id>"
-      dropped_ids <- unique(dropped_ids)
-
-      cli_inform(c(
-        "i" = "Removed {sum(drop)} non-deployed tag row{?s} while upgrading to {.val v1.0}.",
-        "i" = "Dropped {.field tag_id}: {.val {glue::glue_collapse(dropped_ids, sep = ', ')}}."
+    keep <- !is_missing(d$ring_number) & !is_missing(d$scientific_name)
+    if (nrow(d) > 0 && !any(keep)) {
+      cli_abort(c(
+        "x" = "No deployed tag is left after upgrading to {.val v1.0}.",
+        "i" = "Every tag lacks a {.field ring_number} or a {.field scientific_name}."
       ))
     }
-
-    d[!drop, , drop = FALSE]
+    # A missing tag_id would match the untagged rows of other tables, so it is left out.
+    dropped_ids <<- unique(as.character(d$tag_id[!keep & !is.na(d$tag_id)]))
+    d[keep, , drop = FALSE]
   })
+
+  # Drop the rows of the dropped tags from every other table, which v1.0 foreign keys
+  # would otherwise reject. Legacy upgrades load all tables beforehand.
+  if (length(dropped_ids) > 0) {
+    tables <- purrr::keep(
+      x$resources,
+      \(r) !identical(r$name, "tags") && is.data.frame(r$data) && "tag_id" %in% names(r$data)
+    )
+    n_rows <- 0
+    for (name in purrr::map_chr(tables, "name")) {
+      x <- mutate_resource(x, name, \(d) {
+        drop <- d$tag_id %in% dropped_ids
+        n_rows <<- n_rows + sum(drop)
+        d[!drop, , drop = FALSE]
+      })
+    }
+    cli_inform(c(
+      "i" = "Removed {length(dropped_ids)} non-deployed tag{?s} while upgrading to {.val v1.0}, \\
+      with {n_rows} {cli::qty(n_rows)}row{?s} of other tables: {.val {dropped_ids}}."
+    ))
+  }
 
   x[["$schema"]] <- gldp_schema_url("v1.0")
   x
