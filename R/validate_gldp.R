@@ -43,7 +43,10 @@
 #'    Observation-sequence checks verify that:
 #'    - one `tag_id` is not associated with multiple `ring_number` values;
 #'    - `equipment` and `retrieval` observations always have a `tag_id`;
-#'    - `equipment` and `retrieval` observations have `device_status == "present"`;
+#'    - `equipment` and `retrieval` observations have `device_status == "present"`
+#'      (a missing `device_status` fails);
+#'    - `device_status` `"none"` and `"missing"` are used only for `capture` observations,
+#'      and `"unknown"` only for `sighting` observations;
 #'    - `capture` observations with `device_status` `"missing"` or `"present"` have a `tag_id`;
 #'    - a second tag is not attached without a prior retrieval or `capture` with
 #'      `device_status == "missing"`;

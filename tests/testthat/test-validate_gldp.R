@@ -586,6 +586,36 @@ test_that("observation histories report invalid device states and duplicate even
   )
 })
 
+test_that("observation device_status must suit the observation_type", {
+  observations <- data.frame(
+    tag_id = c("AA", "AA", NA),
+    ring_number = "R1",
+    datetime = as.POSIXct(c("2024-01-01", "2024-02-01", "2024-03-01"), tz = "UTC"),
+    observation_type = c("equipment", "retrieval", "sighting"),
+    device_status = c("present", "present", "unknown")
+  )
+  expect_true(suppressMessages(validate_gldp_observations(observations)))
+
+  # A missing device_status on equipment or retrieval fails.
+  invalid <- observations
+  invalid$device_status[2] <- NA
+  expect_message(expect_false(validate_gldp_observations(invalid)), "does not have a device status")
+
+  # `unknown` is only for a sighting.
+  invalid <- rbind(observations, observations[3, ])
+  invalid$observation_type[4] <- "capture"
+  invalid$datetime[4] <- invalid$datetime[4] + 86400
+  expect_message(expect_false(validate_gldp_observations(invalid)), "not allowed")
+
+  # `none` and `missing` are only for a capture.
+  for (status in c("none", "missing")) {
+    invalid <- observations
+    invalid$device_status[3] <- status
+    invalid$tag_id[3] <- "AA"
+    expect_message(expect_false(validate_gldp_observations(invalid)), "not allowed")
+  }
+})
+
 test_that("foreign-key validation reports missing child and parent columns", {
   pkg <- make_geopressure_test_pkg()
   resource <- gldp_resource(pkg, "paths")

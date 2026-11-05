@@ -540,17 +540,33 @@ validate_gldp_observations <- function(o) {
   }
 
   # Check 3: equipment and retrieval can only have a device status present.
+  # `%in%` makes a missing device_status fail too, as `!=` would drop it.
   obs_equi_retrieval_without_present <- o |>
     filter(
       .data$observation_type %in%
         c("equipment", "retrieval") &
-        .data$device_status != "present"
+        !.data$device_status %in% "present"
     )
 
   if (nrow(obs_equi_retrieval_without_present) > 0) {
     error_tag <- unique(obs_equi_retrieval_without_present$tag_id)
     cli_alert_danger(
       "{length(error_tag)} equipment or retrieval observation{?s} {?does/do} not have a device status 'present'. Check: {.field {error_tag}}"
+    )
+    valid <- FALSE
+  }
+
+  # Check 3b: `none` and `missing` only describe a capture, `unknown` only a sighting.
+  obs_status_wrong_type <- o |>
+    filter(
+      (.data$device_status %in% c("none", "missing") & .data$observation_type != "capture") |
+        (.data$device_status %in% "unknown" & .data$observation_type != "sighting")
+    )
+
+  if (nrow(obs_status_wrong_type) > 0) {
+    error_ring_number <- unique(obs_status_wrong_type$ring_number)
+    cli_alert_danger(
+      "{nrow(obs_status_wrong_type)} observation{?s} {?has/have} a device status not allowed for {?its/their} observation type ({.val none} and {.val missing} only for {.val capture}, {.val unknown} only for {.val sighting}). Check ring_number: {.field {error_ring_number}}"
     )
     valid <- FALSE
   }

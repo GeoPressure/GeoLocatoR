@@ -58,7 +58,10 @@ Observation-sequence checks verify that:
 \itemize{
 \item one \code{tag_id} is not associated with multiple \code{ring_number} values;
 \item \code{equipment} and \code{retrieval} observations always have a \code{tag_id};
-\item \code{equipment} and \code{retrieval} observations have \code{device_status == "present"};
+\item \code{equipment} and \code{retrieval} observations have \code{device_status == "present"}
+(a missing \code{device_status} fails);
+\item \code{device_status} \code{"none"} and \code{"missing"} are used only for \code{capture} observations,
+and \code{"unknown"} only for \code{sighting} observations;
 \item \code{capture} observations with \code{device_status} \code{"missing"} or \code{"present"} have a \code{tag_id};
 \item a second tag is not attached without a prior retrieval or \code{capture} with
 \code{device_status == "missing"};
