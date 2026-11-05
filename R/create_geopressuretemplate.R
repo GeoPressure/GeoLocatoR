@@ -548,12 +548,12 @@ create_geopressuretemplate_config <- function(pkg) {
           } else {
             NULL
           },
-          temperature_external_file = if ("temperature-external" %in% sensor) {
+          temperature_external_file = if ("temperature_external" %in% sensor) {
             "temperature_external.csv"
           } else {
             NULL
           },
-          temperature_internal_file = if ("temperature-internal" %in% sensor) {
+          temperature_internal_file = if ("temperature_internal" %in% sensor) {
             "temperature_internal.csv"
           } else {
             NULL
