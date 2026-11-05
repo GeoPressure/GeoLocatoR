@@ -63,7 +63,7 @@ status_geopressuretemplate <- function(directory = ".", read_interim = TRUE) {
           interim_marginal = logical(),
           interim_path_most_likely = logical(),
           interim_path_simulation = logical(),
-          interim_path_pressurepath_most_likely = logical(),
+          interim_pressurepath_most_likely = logical(),
           tag_status = character()
         )
       } else {
@@ -81,7 +81,8 @@ status_geopressuretemplate <- function(directory = ".", read_interim = TRUE) {
               tag_status <- if (length(status) == 0) {
                 NA_character_
               } else {
-                paste(status, collapse = ", ")
+                # tag_status() repeats "read" for each sensor.
+                as.character(glue::glue_collapse(unique(status), sep = ", "))
               }
             }
           }
@@ -92,7 +93,7 @@ status_geopressuretemplate <- function(directory = ".", read_interim = TRUE) {
             interim_marginal = "marginal" %in% saved,
             interim_path_most_likely = "path_most_likely" %in% saved,
             interim_path_simulation = "path_simulation" %in% saved,
-            interim_path_pressurepath_most_likely = "pressurepath_most_likely" %in% saved,
+            interim_pressurepath_most_likely = "pressurepath_most_likely" %in% saved,
             tag_status = tag_status
           )
         })
