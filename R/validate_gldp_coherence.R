@@ -132,7 +132,7 @@ validate_gldp_geopressure_coherence <- function(pkg) {
         )
       } else {
         cli_alert_danger(
-          "{sum(invalid)} duration{?s} in {.field {resource_name}} {?is/are} outside the expected range ({expected_range_label[1]} < duration < {expected_range_label[2]}). {extreme_kind} invalid duration: {extreme_label}."
+          "{sum(invalid)} duration{?s} in {.field {resource_name}} {cli::qty(sum(invalid))}{?is/are} outside the expected range ({expected_range_label[1]} < duration < {expected_range_label[2]}). {extreme_kind} invalid duration: {extreme_label}."
         )
         valid <<- FALSE
       }
@@ -217,7 +217,7 @@ validate_gldp_geopressure_coherence <- function(pkg) {
         missing_keys <- anti_join(child_keys, parent_keys, by = child_fields)
         if (nrow(missing_keys) > 0) {
           cli_alert_danger(
-            "{nrow(missing_keys)} foreign key row{?s} in {.field {child_name}} {?is/are} missing in parent {.field {parent_name}}."
+            "{nrow(missing_keys)} foreign key row{?s} in {.field {child_name}} {cli::qty(nrow(missing_keys))}{?is/are} missing in parent {.field {parent_name}}."
           )
           valid <<- FALSE
         }
@@ -252,11 +252,11 @@ validate_gldp_geopressure_coherence <- function(pkg) {
     check_datetime_window(pressurepaths_data, "pressurepaths", "datetime")
     if ("altitude" %in% names(pressurepaths_data)) {
       altitude <- suppressWarnings(as.numeric(pressurepaths_data$altitude))
+      # `label` is an optional column; without it no row is discarded.
+      label <- pressurepaths_data[["label"]] %||% NA_character_
       invalid_altitude <- !is.na(altitude) &
         (altitude < -200 | altitude > 10000) &
-        (!"label" %in% names(pressurepaths_data) |
-          is.na(pressurepaths_data$label) |
-          pressurepaths_data$label != "discard")
+        (is.na(label) | label != "discard")
       if (any(invalid_altitude)) {
         cli_alert_warning(
           "{sum(invalid_altitude)} value{?s} in {.field pressurepaths$altitude} {?is/are} outside the usual \\
@@ -274,7 +274,7 @@ validate_gldp_geopressure_coherence <- function(pkg) {
       n_missing <- sum(is.na(data$j))
       if (n_missing > 0) {
         cli_alert_warning(
-          "{format(n_missing, big.mark = ',')} {cli::qty(n_missing)}row{?s} of {.field {resource_name}} {?has/have} no {.field j}. \\
+          "{format(n_missing, big.mark = ',')} {cli::qty(n_missing)}row{?s} of {.field {resource_name}} {cli::qty(n_missing)}{?has/have} no {.field j}. \\
           Each row should identify its trajectory (1 for {.val most_likely})."
         )
       }
@@ -374,7 +374,7 @@ validate_gldp_core_coherence <- function(pkg) {
   ]
   if (length(res_missing) > 0) {
     cli::cli_alert_warning(
-      "{.pkg pkg} is missing {.val {res_missing}}. We could not check package coherence."
+      "{.arg pkg} is missing {.val {res_missing}}. We could not check package coherence."
     )
     valid <- FALSE
     return(valid)
@@ -397,13 +397,9 @@ validate_gldp_core_coherence <- function(pkg) {
     pull(.data$ring_number)
   if (length(conflicting_ring_numbers) > 0) {
     valid <- FALSE
-    conflicting_ring_numbers |>
-      purrr::walk(
-        ~ cli_alert_danger(
-          "Multiple scientific names used for ring_number {.strong {}}",
-          .
-        )
-      )
+    cli_alert_danger(
+      "Multiple scientific names used for {.field ring_number} {.val {conflicting_ring_numbers}}."
+    )
   }
 
   # Check for measurements with tag_id not present in the tags table.
@@ -531,9 +527,9 @@ validate_gldp_observations <- function(o) {
     )
 
   if (nrow(missing_tag_id) > 0) {
-    error_tag <- unique(missing_tag_id$tag_id)
+    error_ring_number <- unique(missing_tag_id$ring_number)
     cli_alert_danger(
-      "{length(error_tag)} equipment or retrieval observation{?s} {?is/are} missing a tag_id. Check: {.field {error_tag}}"
+      "{nrow(missing_tag_id)} equipment or retrieval observation{?s} {?is/are} missing a tag_id. Check ring_number: {.field {error_ring_number}}"
     )
     valid <- FALSE
   }
@@ -650,9 +646,9 @@ validate_gldp_observations <- function(o) {
     filter(n() > 1)
 
   if (nrow(duplicate_observations) > 0) {
-    error_tag <- unique(duplicate_observations$tag_id)
+    error_ring_number <- unique(duplicate_observations$ring_number)
     cli_alert_danger(
-      "{length(error_tag)} duplicate observation{?s} found. Check: {.field {error_tag}}"
+      "{nrow(duplicate_observations)} duplicate observation{?s} found. Check ring_number: {.field {error_ring_number}}"
     )
     valid <- FALSE
   }
