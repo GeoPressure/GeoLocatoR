@@ -63,8 +63,7 @@ test_that("add_gldp_resource fills declared but absent columns with typed NA", {
 })
 
 test_that("add_gldp_resource marks resources as tabular", {
-  # GeoLocator-DP requires `type: "table"` from v1.1, and frictionless only sets
-  # it from version 2.0.
+  # GeoLocator-DP requires `type: "table"` from v1.1.
   data <- tibble::tibble(tag_id = "a", ring_number = "r1")
   pkg <- suppressWarnings(add_gldp_resource(create_gldp(), "tags", data))
 
@@ -72,9 +71,8 @@ test_that("add_gldp_resource marks resources as tabular", {
 })
 
 test_that("add_gldp_resource sets the data resource profile", {
-  # GeoLocator-DP requires `$schema` from v1.1, and frictionless only sets it
-  # from version 2.0. Implementations read it to tell which version of the
-  # Data Package standard a resource follows.
+  # GeoLocator-DP requires `$schema` from v1.1. Implementations read it to tell
+  # which version of the Data Package standard a resource follows.
   data <- tibble::tibble(tag_id = "a", ring_number = "r1")
   pkg <- suppressWarnings(add_gldp_resource(create_gldp(), "tags", data))
   resource <- pkg$resources[[1]]
@@ -85,6 +83,13 @@ test_that("add_gldp_resource sets the data resource profile", {
   )
   # `$schema` first, as frictionless 2.0 writes it.
   expect_equal(names(resource)[1], "$schema")
+})
+
+test_that("add_gldp_resource does not write the Data Package v1 profile", {
+  data <- tibble::tibble(tag_id = "a", ring_number = "r1")
+  pkg <- suppressWarnings(add_gldp_resource(create_gldp(), "tags", data))
+
+  expect_null(pkg$resources[[1]]$profile)
 })
 
 test_that("add_gldp_resource fills absent columns of a base data.frame by row count", {
@@ -113,5 +118,13 @@ test_that("add_gldp_resource casts factors and ISO 8601 datetimes", {
   expect_identical(
     out$datetime,
     as.POSIXct(c("2020-01-01 12:30:00", "2020-01-02 06:00:00"), tz = "UTC")
+  )
+})
+
+test_that("add_gldp_resource deprecates delim", {
+  data <- tibble::tibble(tag_id = "a", ring_number = "r1")
+  expect_warning(
+    add_gldp_resource(create_gldp(), "tags", data, delim = ";"),
+    class = "lifecycle_warning_deprecated"
   )
 })

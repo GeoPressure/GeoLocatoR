@@ -4,7 +4,8 @@
 #' Convert a list of GeoPressureR `tag` objects into the long-format
 #' `measurements` table used by GeoLocator Data Packages.
 #'
-#' @param tags A list of GeoPressureR `tag` objects.
+#' @param tag_list A list of GeoPressureR `tag` objects.
+#' @param tags `r lifecycle::badge("deprecated")` Use `tag_list` instead.
 #'
 #' @return A [tibble::tibble()] data frame with columns:
 #' \describe{
@@ -23,7 +24,8 @@
 #' missing values.
 #'
 #' The current conversion supports pressure, light, acceleration/activity,
-#' temperature, and magnetic sensors.
+#' temperature, and magnetic sensors. The `temperature` table of tags created
+#' with GeoPressureR before 3.7.1 is read as `temperature_external`.
 #'
 #' If no tags, or no sensor tables, are provided, the function returns an empty tibble with the
 #' appropriate column names and types.
@@ -33,14 +35,24 @@
 #'   objects.
 #'
 #' @export
-tags_to_measurements <- function(tags) {
+tags_to_measurements <- function(tag_list, tags = lifecycle::deprecated()) {
+  # `tags` clashed with the tags resource and the tags() accessor
+  if (lifecycle::is_present(tags)) {
+    lifecycle::deprecate_warn(
+      when = "1.4.0",
+      what = "tags_to_measurements(tags)",
+      with = "tags_to_measurements(tag_list)"
+    )
+    tag_list <- tags
+  }
   sensor_types <- c(
     "pressure",
     "acceleration",
     "light",
     "temperature_external",
     "temperature_internal",
-    "magnetic"
+    "magnetic",
+    "temperature"
   )
   select_cols <- c(
     "pressure",
@@ -60,8 +72,8 @@ tags_to_measurements <- function(tags) {
   )
   all_measurements <- list()
 
-  for (i in seq_along(tags)) {
-    tag <- tags[[i]]
+  for (i in seq_along(tag_list)) {
+    tag <- tag_list[[i]]
     tag_id <- tryCatch(
       {
         tag$param$id
@@ -72,7 +84,14 @@ tags_to_measurements <- function(tags) {
     tag_sensors <- names(tag)[names(tag) %in% sensor_types]
     for (sensor in tag_sensors) {
       df <- tag[[sensor]]
-      sensor_name <- ifelse(sensor == "acceleration", "activity", sensor)
+      # GeoPressureR before 3.7.1 stored the Migrate Technology and PresTag air
+      # temperature as `temperature`, renamed `temperature_external` in 3.7.1
+      sensor_name <- switch(
+        sensor,
+        acceleration = "activity",
+        temperature = "temperature_external",
+        sensor
+      )
       if ("value" %in% colnames(df)) {
         names(df)[names(df) == "value"] <- sensor_name
       }

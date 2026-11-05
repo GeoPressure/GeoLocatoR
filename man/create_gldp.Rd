@@ -7,9 +7,9 @@
 create_gldp(version = NULL, ...)
 }
 \arguments{
-\item{version}{Optional GeoLocator-DP version. Use \code{NULL} for the latest
-version, or set it explicitly when creating a package for an older schema
-such as \code{"v0.3"} or \code{"v1.0"}.}
+\item{version}{Optional released GeoLocator-DP version. Use \code{NULL} for the
+latest version, or set it explicitly when creating a package for an older
+schema such as \code{"v0.3"} or \code{"v1.0"}. The legacy \code{"main"} is not accepted.}
 
 \item{...}{Additional top-level descriptor fields, such as \code{title}, \code{id},
 \code{contributors}, or \code{licenses}, used to initialize package metadata.}

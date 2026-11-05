@@ -66,6 +66,7 @@ params_to_tags <- function(params) {
           .data$manufacturer == "migratetech" ~ "Migrate Technology Limited",
           .data$manufacturer == "lund" ~ "Lund University",
           .data$manufacturer == "bas" ~ "British Antarctic Survey",
+          .data$manufacturer == "prestag" ~ "PresTag",
           .default = .data$manufacturer
         )
       )

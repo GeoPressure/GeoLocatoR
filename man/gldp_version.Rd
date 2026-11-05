@@ -16,6 +16,6 @@ Character string version (e.g. \code{"v1.0"}).
 Extract the GeoLocator-DP version from \code{x$`$schema`}.
 
 The function aborts if \verb{$schema} is missing, cannot be parsed, or refers to
-an unsupported version.
+an unsupported version, including a development (\code{dev}) schema.
 }
 \concept{misc functions}

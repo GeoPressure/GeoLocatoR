@@ -197,7 +197,9 @@ contributors_to_persons <- function(contributors) {
 #' Cast data frame columns according to schema types
 #'
 #' Internal helper function to cast data frame columns to the appropriate types
-#' based on a table schema specification.
+#' based on a table schema specification. Values that cannot be cast to a
+#' number, integer, year, date or datetime become `NA` with a warning of class
+#' `gldp_warning_cast_loss`.
 #'
 #' @param data A data frame to cast
 #' @param schema A table schema object with field definitions
@@ -217,10 +219,11 @@ cast_table <- function(data, schema) {
       if (is.factor(data[[field]])) {
         data[[field]] <- as.character(data[[field]])
       }
+      original <- data[[field]]
       if (type == "string") {
         data[[field]] <- as.character(data[[field]])
       } else if (type == "number") {
-        # Legacy upgrades can carry non-numeric IDs in numeric schema fields; coerce silently to NA.
+        # Lost values are reported below, so the base coercion warning is not needed.
         data[[field]] <- suppressWarnings(as.numeric(data[[field]]))
       } else if (type == "integer") {
         data[[field]] <- suppressWarnings(as.integer(data[[field]]))
@@ -264,6 +267,21 @@ cast_table <- function(data, schema) {
         cli_warn(c(
           "!" = "No casting for {.field {field}} of type {.val {type}}."
         ))
+      }
+
+      # Report non-missing values the cast turned into NA; empty strings count as missing.
+      if (type %in% c("number", "integer", "year", "date", "datetime")) {
+        lost <- is.na(data[[field]]) & !is.na(original)
+        n_lost <- sum(nzchar(trimws(as.character(original[lost]))))
+        if (n_lost > 0) {
+          cli_warn(
+            c(
+              "!" = "{format(n_lost, big.mark = ',')} non-missing {cli::qty(n_lost)}value{?s} of {.field {field}} \\
+              became NA when cast to {.val {type}}."
+            ),
+            class = "gldp_warning_cast_loss"
+          )
+        }
       }
     }
   }

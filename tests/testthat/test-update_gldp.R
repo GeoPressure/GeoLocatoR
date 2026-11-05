@@ -17,7 +17,7 @@ test_that("update_gldp stores derived values directly in pkg", {
   expect_true(grepl("10\\.5281/zenodo\\.", pkg_updated$bibliographicCitation))
 })
 
-test_that("update_gldp_bibliographic_citation prefers conceptid", {
+test_that("gldp_update_bibliographic_citation prefers conceptid", {
   pkg <- create_gldp(
     title = "GeoLocator Data Package: Example",
     id = "https://zenodo.org/records/15259676",
@@ -28,18 +28,18 @@ test_that("update_gldp_bibliographic_citation prefers conceptid", {
   )
   pkg$contributors <- list(list(title = "Doe, Jane"))
 
-  pkg <- update_gldp_bibliographic_citation(pkg)
+  pkg <- gldp_update_bibliographic_citation(pkg)
 
   expect_true(grepl("doi:10\\.5281/zenodo\\.15259676", pkg$bibliographicCitation))
   expect_false(grepl("doi:https://", pkg$bibliographicCitation, fixed = TRUE))
 })
 
-test_that("update_gldp_order_resources enforces schema resource order", {
+test_that("gldp_update_order_resources enforces schema resource order", {
   pkg <- pkg_shared
   skip_if(length(pkg$resources) < 2, "Package has fewer than two resources")
 
   pkg$resources <- rev(pkg$resources)
-  ordered_pkg <- update_gldp_order_resources(pkg)
+  ordered_pkg <- gldp_update_order_resources(pkg)
 
   input_names <- purrr::map_chr(pkg$resources, "name")
   output_names <- purrr::map_chr(ordered_pkg$resources, "name")
@@ -47,7 +47,7 @@ test_that("update_gldp_order_resources enforces schema resource order", {
   expect_false(identical(output_names, input_names))
 })
 
-test_that("update_gldp_number_tags counts mean_acceleration_z as activity", {
+test_that("gldp_update_number_tags counts mean_acceleration_z as activity", {
   pkg <- pkg_shared
 
   resource_idx <- which(vapply(pkg$resources, \(r) identical(r$name, "measurements"), logical(1)))
@@ -86,36 +86,36 @@ test_that("update_gldp_number_tags counts mean_acceleration_z as activity", {
     m_expected$sensor %in% c("activity", "mean_acceleration_z")
   ]))
 
-  out <- update_gldp_number_tags(pkg)
+  out <- gldp_update_number_tags(pkg)
   expect_equal(out$numberTags$activity, expected_activity)
 })
 
-test_that("update_gldp_bibliographic_citation reads the year of a partial date", {
+test_that("gldp_update_bibliographic_citation reads the year of a partial date", {
   for (created in c("2024", "2024-06", "2024-06-01T10:00:00Z")) {
     pkg <- create_gldp(title = "Example", created = created)
     expect_match(
-      update_gldp_bibliographic_citation(pkg)$bibliographicCitation,
+      gldp_update_bibliographic_citation(pkg)$bibliographicCitation,
       "(2024)",
       fixed = TRUE
     )
   }
   pkg <- create_gldp(title = "Example", created = "June 2024")
-  expect_match(update_gldp_bibliographic_citation(pkg)$bibliographicCitation, "Example")
+  expect_match(gldp_update_bibliographic_citation(pkg)$bibliographicCitation, "Example")
 })
 
-test_that("update_gldp_bibliographic_citation uses the id DOI when conceptid is not a DOI", {
+test_that("gldp_update_bibliographic_citation uses the id DOI when conceptid is not a DOI", {
   pkg <- create_gldp(
     title = "Example",
     conceptid = "15259675",
     id = "https://doi.org/10.5281/zenodo.15259676"
   )
-  pkg <- update_gldp_bibliographic_citation(pkg)
+  pkg <- gldp_update_bibliographic_citation(pkg)
   expect_match(pkg$bibliographicCitation, "doi:10.5281/zenodo.15259676", fixed = TRUE)
 })
 
-test_that("update_gldp_temporal keeps the coverage of a package without measurements", {
+test_that("gldp_update_temporal keeps the coverage of a package without measurements", {
   pkg <- create_gldp(temporal = list(start = "2020-01-01", end = "2020-12-31"))
-  expect_equal(update_gldp_temporal(pkg)$temporal, list(start = "2020-01-01", end = "2020-12-31"))
+  expect_equal(gldp_update_temporal(pkg)$temporal, list(start = "2020-01-01", end = "2020-12-31"))
 
   pkg <- add_gldp_resource(
     pkg,
@@ -127,5 +127,17 @@ test_that("update_gldp_temporal keeps the coverage of a package without measurem
       value = 1000
     )
   )
-  expect_equal(update_gldp_temporal(pkg)$temporal, list(start = "2021-03-01", end = "2021-04-01"))
+  expect_equal(gldp_update_temporal(pkg)$temporal, list(start = "2021-03-01", end = "2021-04-01"))
+})
+
+test_that("the granular update_gldp_*() functions are deprecated", {
+  pkg <- create_gldp()
+  expect_warning(update_gldp_order_resources(pkg), class = "lifecycle_warning_deprecated")
+  expect_warning(update_gldp_temporal(pkg), class = "lifecycle_warning_deprecated")
+  expect_warning(update_gldp_taxonomic(pkg), class = "lifecycle_warning_deprecated")
+  expect_warning(update_gldp_number_tags(pkg), class = "lifecycle_warning_deprecated")
+  expect_warning(
+    update_gldp_bibliographic_citation(pkg),
+    class = "lifecycle_warning_deprecated"
+  )
 })

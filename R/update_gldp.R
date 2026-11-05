@@ -1,18 +1,15 @@
 #' Update derived properties of a GeoLocator Data Package
 #'
 #' @description
-#' Updates and stores the following derived package properties:
+#' Recomputes and stores the derived package properties:
 #'
-#' - `update_gldp_temporal()`: date range from `measurements$datetime`, left
-#'   unchanged when the package has no `measurements`.
-#' - `update_gldp_taxonomic()`: species vector from `tags`, restricted to tags
-#'   present in `measurements` when the package has measurements.
-#' - `update_gldp_number_tags()`: counts by resource and sensor.
-#' - `update_gldp_bibliographic_citation()`: formatted citation from package
-#'   metadata.
-#' - `update_gldp_order_resources()`: reorder resources following schema order.
-#'
-#' `update_gldp()` runs all functions above.
+#' - `resources`: reordered following the schema order.
+#' - `temporal`: date range from `measurements$datetime`, left unchanged when
+#'   the package has no `measurements`.
+#' - `taxonomic`: species vector from `tags`, restricted to tags present in
+#'   `measurements` when the package has measurements.
+#' - `numberTags`: counts by resource and sensor.
+#' - `bibliographicCitation`: formatted citation from package metadata.
 #'
 #' @param pkg A GeoLocator Data Package object.
 #' @param ... Overrides passed to [utils::bibentry()] when computing
@@ -24,25 +21,22 @@
 #' @seealso [read_gldp()] and [read_zenodo()] call this function after reading,
 #'   and the resource setters such as [tags()] and [measurements()] update
 #'   selected derived properties automatically.
-#' @order 1
 #' @export
 update_gldp <- function(pkg, ...) {
   pkg <- pkg |>
-    update_gldp_order_resources() |>
-    update_gldp_temporal() |>
-    update_gldp_taxonomic() |>
-    update_gldp_number_tags() |>
-    update_gldp_bibliographic_citation(...)
+    gldp_update_order_resources() |>
+    gldp_update_temporal() |>
+    gldp_update_taxonomic() |>
+    gldp_update_number_tags() |>
+    gldp_update_bibliographic_citation(...)
 
   pkg
 }
 
 #' Reorder resources to schema order
 #'
-#' @rdname update_gldp
-#' @order 2
-#' @export
-update_gldp_order_resources <- function(pkg) {
+#' @noRd
+gldp_update_order_resources <- function(pkg) {
   check_gldp(pkg)
   version <- gldp_version(pkg)
 
@@ -72,10 +66,8 @@ update_gldp_order_resources <- function(pkg) {
 
 #' Recompute package temporal coverage
 #'
-#' @rdname update_gldp
-#' @order 3
-#' @export
-update_gldp_temporal <- function(pkg) {
+#' @noRd
+gldp_update_temporal <- function(pkg) {
   check_gldp(pkg)
   resources <- frictionless::resource_names(pkg)
 
@@ -106,10 +98,8 @@ update_gldp_temporal <- function(pkg) {
 
 #' Recompute package taxonomic coverage
 #'
-#' @rdname update_gldp
-#' @order 4
-#' @export
-update_gldp_taxonomic <- function(pkg) {
+#' @noRd
+gldp_update_taxonomic <- function(pkg) {
   check_gldp(pkg)
   resources <- frictionless::resource_names(pkg)
 
@@ -148,10 +138,8 @@ update_gldp_taxonomic <- function(pkg) {
 
 #' Recompute tag counts by resource and sensor
 #'
-#' @rdname update_gldp
-#' @order 5
-#' @export
-update_gldp_number_tags <- function(pkg) {
+#' @noRd
+gldp_update_number_tags <- function(pkg) {
   check_gldp(pkg)
   resources <- frictionless::resource_names(pkg)
 
@@ -196,10 +184,8 @@ update_gldp_number_tags <- function(pkg) {
 
 #' Recompute bibliographic citation text
 #'
-#' @rdname update_gldp
-#' @order 6
-#' @export
-update_gldp_bibliographic_citation <- function(pkg, ...) {
+#' @noRd
+gldp_update_bibliographic_citation <- function(pkg, ...) {
   check_gldp(pkg)
 
   # First DOI among the concept id (citing all versions) and the version id.

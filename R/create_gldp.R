@@ -4,9 +4,9 @@
 #' Create a new GeoLocator Data Package shell with the GeoLocator-DP profile
 #' schema.
 #'
-#' @param version Optional GeoLocator-DP version. Use `NULL` for the latest
-#'   version, or set it explicitly when creating a package for an older schema
-#'   such as `"v0.3"` or `"v1.0"`.
+#' @param version Optional released GeoLocator-DP version. Use `NULL` for the
+#'   latest version, or set it explicitly when creating a package for an older
+#'   schema such as `"v0.3"` or `"v1.0"`. The legacy `"main"` is not accepted.
 #' @param ... Additional top-level descriptor fields, such as `title`, `id`,
 #'   `contributors`, or `licenses`, used to initialize package metadata.
 #'

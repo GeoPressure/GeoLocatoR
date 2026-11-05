@@ -202,6 +202,19 @@ test_that("merge_gldp requires an id for tags without datapackage_id", {
   )
 })
 
+test_that("merge_gldp records source DOIs as bare DOIs", {
+  merged <- merge_gldp(
+    local_merge_pkg("AA", id = "https://doi.org/10.5281/zenodo.1"),
+    local_merge_pkg("BB", id = "https://example.org/bb")
+  )
+  related <- merged$relatedIdentifiers
+  expect_equal(
+    vapply(related, \(x) x$relatedIdentifier, character(1)),
+    c("10.5281/zenodo.1", "https://example.org/bb")
+  )
+  expect_equal(vapply(related, \(x) x$relatedIdentifierType, character(1)), c("DOI", "URL"))
+})
+
 test_that("merge_gldp supports sequential merges", {
   pkg1 <- pkg_shared
   suppressMessages({
@@ -419,4 +432,31 @@ test_that("merge_gldp_contributors keeps a role that is part of another role", {
   )
   out <- merge_gldp_contributors(ctr)
   expect_identical(unlist(out[[1]]$roles), c("researcher", "researchergroup"))
+})
+
+test_that("merge_gldp drops custom resources with a message", {
+  # Two minimal packages with distinct tags; the first also carries a custom resource.
+  pkgs <- lapply(c("A", "B"), \(id) {
+    pkg <- create_gldp(title = id)
+    pkg$id <- id
+    add_gldp_resource(
+      pkg,
+      "tags",
+      data.frame(
+        tag_id = id,
+        ring_number = id,
+        scientific_name = "Upupa epops",
+        manufacturer = "soi",
+        model = "GDL3"
+      )
+    )
+  })
+  pkgs[[1]]$resources <- append(
+    pkgs[[1]]$resources,
+    list(list(name = "my_notes", profile = "tabular-data-resource", data = data.frame(x = 1)))
+  )
+
+  expect_message(merged <- merge_gldp(pkgs), "my_notes")
+  expect_false("my_notes" %in% vapply(merged$resources, \(r) r$name, character(1)))
+  expect_equal(nrow(tags(merged)), 2)
 })

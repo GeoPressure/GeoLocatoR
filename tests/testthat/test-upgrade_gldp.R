@@ -87,6 +87,62 @@ test_that("upgrade_gldp migrates v0.1 package fields to v0.6", {
   expect_false("ind" %in% names(pressurepaths_data))
 })
 
+test_that("upgrade_gldp coerces legacy non-numeric IDs without a cast warning", {
+  pkg <- create_gldp(version = "v0.6")
+  pkg[["resources"]] <- list(list(
+    name = "paths",
+    data = data.frame(tag_id = "tag-1", stap_id = "stap-1", type = "most_likely", j = 1L)
+  ))
+
+  expect_no_warning(upgraded <- suppressMessages(upgrade_gldp(pkg)))
+  expect_true(is.na(paths(upgraded)$stap_id))
+})
+
+test_that("upgrade_gldp starts a main package at v0.1", {
+  main <- "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/main/geolocator-dp-profile.json"
+  make_pkg <- function(schema, tags, observations) {
+    pkg <- list(
+      "$schema" = schema,
+      resources = list(
+        list(name = "tags", data = tags),
+        list(name = "observations", data = observations)
+      )
+    )
+    class(pkg) <- c("geolocatordp", "datapackage", "list")
+    attr(pkg, "directory") <- "."
+    pkg
+  }
+
+  # A v0.1-shaped main package gets the v0.1 -> v0.2 renames.
+  pkg <- make_pkg(
+    main,
+    data.frame(tag_id = "tag-1", firwmare = "1.2"),
+    data.frame(ring_number = "R1", life_stage = "adult")
+  )
+  upgraded <- suppressMessages(upgrade_gldp(pkg, to_version = "v0.2"))
+  expect_identical(gldp_version(upgraded), "v0.2")
+  expect_true("firmware" %in% names(tags(upgraded)))
+  expect_true("age_class" %in% names(observations(upgraded)))
+
+  # A v0.2-shaped main package is upgraded as if it declared v0.2, except for
+  # the empty `numberTags` the v0.1 step adds, which read_gldp() recomputes.
+  tags <- data.frame(tag_id = "tag-1", firmware = "1.2")
+  observations <- data.frame(ring_number = "R1", age_class = "adult")
+  upgraded <- suppressMessages(upgrade_gldp(
+    make_pkg(main, tags, observations),
+    to_version = "v0.6"
+  ))
+  expect_identical(upgraded$numberTags, list())
+  upgraded$numberTags <- NULL
+  expect_identical(
+    upgraded,
+    suppressMessages(upgrade_gldp(
+      make_pkg(gldp_schema_url("v0.2"), tags, observations),
+      to_version = "v0.6"
+    ))
+  )
+})
+
 test_that("step v0.4 -> v0.5 reconstructs missing edges$type from j", {
   pkg <- list(
     "$schema" = "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/v0.4/geolocator-dp-profile.json",
@@ -251,7 +307,7 @@ test_that("upgrade_gldp migrates v0.6 package to v1.0 schema refs", {
   msgs <- testthat::capture_messages({
     upgraded <- upgrade_gldp(pkg, to_version = "v1.0")
   })
-  expect_true(any(grepl("Removed 1 non-deployed tag row", msgs, fixed = TRUE)))
+  expect_true(any(grepl("Removed 1 non-deployed tag", msgs, fixed = TRUE)))
 
   expect_equal(
     upgraded$`$schema`,
@@ -282,6 +338,55 @@ test_that("upgrade_gldp migrates v0.6 package to v1.0 schema refs", {
   expect_false("include" %in% names(staps_res$data))
   expect_false("s" %in% names(edges_res$data))
   expect_false("t" %in% names(edges_res$data))
+})
+
+test_that("upgrade_gldp to v1.0 drops the rows of non-deployed tags from every table", {
+  make_pkg <- function(tags) {
+    pkg <- create_gldp(version = "v0.6")
+    pkg[["resources"]] <- list(
+      list(name = "tags", data = tags),
+      list(
+        name = "observations",
+        data = data.frame(
+          tag_id = c("tag-1", "tag-2", NA),
+          ring_number = c("R1", "R2", "R3"),
+          observation_type = c("equipment", "equipment", "capture")
+        )
+      ),
+      list(
+        name = "measurements",
+        data = data.frame(tag_id = c("tag-1", "tag-2", "tag-2"), sensor = "light", value = 1)
+      )
+    )
+    pkg
+  }
+  tags <- data.frame(
+    tag_id = c("tag-1", "tag-2"),
+    ring_number = c("R1", NA),
+    scientific_name = "Hirundo rustica"
+  )
+
+  msgs <- capture_messages({
+    upgraded <- upgrade_gldp(make_pkg(tags), to_version = "v1.0")
+  })
+  expect_length(grep("non-deployed", msgs), 1)
+  expect_match(msgs, "Removed 1 non-deployed tag.*3 rows of other tables.*tag-2", all = FALSE)
+  expect_identical(tags(upgraded)$tag_id, "tag-1")
+  # An untagged capture is kept.
+  expect_identical(observations(upgraded)$ring_number, c("R1", "R3"))
+  expect_identical(measurements(upgraded)$tag_id, "tag-1")
+
+  # No deployed tag left, including when ring_number is absent.
+  tags$ring_number <- NA
+  expect_error(
+    suppressMessages(upgrade_gldp(make_pkg(tags), to_version = "v1.0")),
+    "No deployed tag is left"
+  )
+  tags$ring_number <- NULL
+  expect_error(
+    suppressMessages(upgrade_gldp(make_pkg(tags), to_version = "v1.0")),
+    "No deployed tag is left"
+  )
 })
 
 test_that("upgrade_gldp rejects a resource holding both path and data", {
@@ -340,6 +445,27 @@ test_that("upgrade_gldp migrates a v1.0 package to v1.1", {
   expect_equal(tags_res$type, "table")
   expect_type(tags_res$schema, "list")
   expect_false(is.null(tags_res$schema$fields))
+})
+
+test_that("upgrade_gldp to v1.2 treats an observation mass of 0 as missing", {
+  # v1.2 requires mass > 0, because a mass of 0 is a missing value.
+  pkg <- create_gldp(version = "v1.1")
+  pkg <- add_gldp_resource(
+    pkg,
+    "observations",
+    data.frame(tag_id = "A", ring_number = "R1", mass = c(0, 25.5)),
+    cast_type = TRUE
+  )
+  directory <- tempfile("upgrade-mass-")
+  on.exit(unlink(directory, recursive = TRUE), add = TRUE)
+  write_gldp(pkg, directory)
+
+  expect_message(upgraded <- upgrade_gldp(pkg), "missing on 1")
+  expect_identical(observations(upgraded)$mass, c(NA, 25.5))
+
+  # A file-backed table is loaded so that its values can be changed.
+  lazy <- suppressMessages(read_gldp(directory, force_read = FALSE))
+  expect_identical(observations(lazy)$mass, c(NA, 25.5))
 })
 
 test_that("upgrade_gldp updates the descriptor of a file-backed table", {

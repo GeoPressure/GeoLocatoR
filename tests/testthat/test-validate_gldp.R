@@ -225,6 +225,20 @@ test_that("validate_gldp_table reads Table Schema fields, not JSON-Schema proper
   )))
 })
 
+test_that("validate_gldp_table matches a pattern against the whole value", {
+  # Table Schema patterns are XML Schema regular expressions, implicitly anchored.
+  schema <- list(
+    name = "custom",
+    fieldsMatch = "equal",
+    fields = list(list(name = "code", type = "string", constraints = list(pattern = "[A-Z]{2}")))
+  )
+  expect_true(suppressMessages(validate_gldp_table(data.frame(code = c("AB", NA)), schema)))
+  expect_message(
+    expect_false(validate_gldp_table(data.frame(code = "xAB1"), schema)),
+    "do not match"
+  )
+})
+
 test_that("validate_gldp_meta checks missing title", {
   pkg <- pkg_shared
   pkg[["title"]] <- ""
@@ -290,6 +304,31 @@ test_that("validate_gldp_meta checks allowed manufacturers", {
   pkg[["record_type"]] <- "dataset"
   pkg[["taxonomic"]] <- character(0)
   suppressMessages(expect_false(validate_gldp_meta(pkg)))
+})
+
+test_that("validate_gldp_meta accepts every manufacturer GeoPressureR imports", {
+  local_mocked_bindings(
+    tags = function(x) {
+      data.frame(
+        manufacturer = c(
+          "Swiss Ornithological Institute",
+          "Migrate Technology Limited",
+          "Lund University",
+          "British Antarctic Survey",
+          "PresTag"
+        )
+      )
+    },
+    .package = "GeoLocatoR"
+  )
+  pkg <- create_gldp()
+  pkg[["resources"]] <- list(list(name = "tags"))
+  expect_no_message(validate_gldp_meta(pkg), message = "manufacturer")
+})
+
+test_that("validate_gldp_meta words the title prefix as a community expectation", {
+  pkg <- create_gldp(title = "Wrong title")
+  expect_message(validate_gldp_meta(pkg), "Zenodo")
 })
 
 test_that("validate_gldp_meta checks relatedIdentifiers presence", {
@@ -393,6 +432,41 @@ test_that("validate_gldp_geopressure_coherence warns on unusual distances", {
     expect_true(validate_gldp_geopressure_coherence(pkg)),
     "unusual distance"
   )
+})
+
+test_that("validate_gldp_geopressure_coherence only warns on implausible years, stap_id and j", {
+  pkg <- make_geopressure_test_pkg()
+  # Data from 2000 and the 1990s are accepted without a warning.
+  staps <- gldp_resource(pkg, "staps")
+  staps$data$start <- as.POSIXct("2000-01-01", tz = "UTC")
+  staps$data$end <- as.POSIXct("2000-01-02", tz = "UTC")
+  gldp_resource(pkg, "staps") <- staps
+  twilights <- gldp_resource(pkg, "twilights")
+  twilights$data$twilight <- as.POSIXct("1995-06-01", tz = "UTC")
+  gldp_resource(pkg, "twilights") <- twilights
+  expect_no_message(
+    expect_true(validate_gldp_geopressure_coherence(pkg)),
+    message = "unusual"
+  )
+
+  twilights$data$twilight <- as.POSIXct("1985-01-01", tz = "UTC")
+  gldp_resource(pkg, "twilights") <- twilights
+  expect_message(expect_true(validate_gldp_geopressure_coherence(pkg)), "unusual year")
+
+  pkg <- make_geopressure_test_pkg()
+  for (name in c("staps", "paths", "edges")) {
+    resource <- gldp_resource(pkg, name)
+    resource$data[intersect(c("stap_id", "stap_s", "stap_t"), names(resource$data))] <- 300
+    gldp_resource(pkg, name) <- resource
+  }
+  paths <- gldp_resource(pkg, "paths")
+  paths$data$j <- 500L
+  gldp_resource(pkg, "paths") <- paths
+  msgs <- capture_messages(
+    expect_true(validate_gldp_geopressure_coherence(pkg))
+  )
+  expect_match(msgs, "staps\\$stap_id.*unusually large", all = FALSE)
+  expect_match(msgs, "paths\\$j.*unusually large", all = FALSE)
 })
 
 test_that("validate_gldp_geopressure_coherence checks foreign keys", {
@@ -570,6 +644,36 @@ test_that("observation histories report invalid device states and duplicate even
     expect_false(validate_gldp_observations(invalid)),
     "invalid device_status transition"
   )
+})
+
+test_that("observation device_status must suit the observation_type", {
+  observations <- data.frame(
+    tag_id = c("AA", "AA", NA),
+    ring_number = "R1",
+    datetime = as.POSIXct(c("2024-01-01", "2024-02-01", "2024-03-01"), tz = "UTC"),
+    observation_type = c("equipment", "retrieval", "sighting"),
+    device_status = c("present", "present", "unknown")
+  )
+  expect_true(suppressMessages(validate_gldp_observations(observations)))
+
+  # A missing device_status on equipment or retrieval fails.
+  invalid <- observations
+  invalid$device_status[2] <- NA
+  expect_message(expect_false(validate_gldp_observations(invalid)), "does not have a device status")
+
+  # `unknown` is only for a sighting.
+  invalid <- rbind(observations, observations[3, ])
+  invalid$observation_type[4] <- "capture"
+  invalid$datetime[4] <- invalid$datetime[4] + 86400
+  expect_message(expect_false(validate_gldp_observations(invalid)), "not allowed")
+
+  # `none` and `missing` are only for a capture.
+  for (status in c("none", "missing")) {
+    invalid <- observations
+    invalid$device_status[3] <- status
+    invalid$tag_id[3] <- "AA"
+    expect_message(expect_false(validate_gldp_observations(invalid)), "not allowed")
+  }
 })
 
 test_that("foreign-key validation reports missing child and parent columns", {

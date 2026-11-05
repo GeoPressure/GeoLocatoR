@@ -43,7 +43,10 @@
 #'    Observation-sequence checks verify that:
 #'    - one `tag_id` is not associated with multiple `ring_number` values;
 #'    - `equipment` and `retrieval` observations always have a `tag_id`;
-#'    - `equipment` and `retrieval` observations have `device_status == "present"`;
+#'    - `equipment` and `retrieval` observations have `device_status == "present"`
+#'      (a missing `device_status` fails);
+#'    - `device_status` `"none"` and `"missing"` are used only for `capture` observations,
+#'      and `"unknown"` only for `sighting` observations;
 #'    - `capture` observations with `device_status` `"missing"` or `"present"` have a `tag_id`;
 #'    - a second tag is not attached without a prior retrieval or `capture` with
 #'      `device_status == "missing"`;
@@ -56,22 +59,25 @@
 #'
 #'    GeoPressure-specific coherence checks are applied when the corresponding resources are
 #'    present. These include:
-#'    - realistic ranges for `staps$stap_id`, `paths$j` and `edges$n`;
-#'    - realistic year windows for datetime fields in `staps`, `twilights`,
-#'      `pressurepaths`, and `edges`;
+#'    - realistic ranges for `edges$n`;
 #'    - duration checks for `staps` and `edges`;
 #'    - schema-declared foreign key consistency across all resources, core ones included;
 #'    - warnings for unusual `edges` distances, durations, or wind/ground-speed magnitudes,
-#'      and for `pressurepaths$altitude` outside -200 to 10,000 m. These are guidelines,
-#'      not limits.
+#'      for `pressurepaths$altitude` outside -200 to 10,000 m, for `staps$stap_id` of 300
+#'      or more, for `paths$j` of 500 or more, and for datetime fields in `staps`,
+#'      `twilights`, `pressurepaths`, and `edges` dated before 1990 or after the current
+#'      year. These are guidelines, not limits.
 #'
 #' 4. **Metadata recommendations**
 #'    Additional metadata quality checks are reported without affecting the final validity.
 #'    These recommendations cover:
-#'    - the `title` is prefixed by "GeoLocator Data Package: ";
+#'    - the `title` is prefixed by "GeoLocator Data Package: ", which the GeoLocator-DP
+#'      Zenodo community expects;
 #'    - presence of contributor roles;
 #'    - `record_type == "dataset"`;
-#'    - expected manufacturer names in `tags$manufacturer`;
+#'    - expected manufacturer names in `tags$manufacturer`: those GeoPressureR can import
+#'      ("Swiss Ornithological Institute", "Migrate Technology Limited", "Lund University",
+#'      "British Antarctic Survey", "PresTag");
 #'    - presence of `relatedIdentifiers`;
 #'    - presence of a selected GeoLocator-DP Zenodo community;
 #'    - a GitHub repository URL in `codeRepository`;
@@ -166,7 +172,7 @@ validate_gldp_profile <- function(pkg) {
 #' @noRd
 validate_gldp_resources <- function(pkg) {
   pkg <- gldp_materialize_tables(pkg)
-  pkg <- update_gldp_order_resources(pkg)
+  pkg <- gldp_update_order_resources(pkg)
 
   valid <- TRUE
 
@@ -183,8 +189,8 @@ validate_gldp_resources <- function(pkg) {
     resource <- pkg$resources[[i]]
 
     # `type: "table"` is the Data Package v2 spelling, `profile:
-    # "tabular-data-resource"` the v1 one. Accept either so packages written by
-    # frictionless < 2.0 keep validating.
+    # "tabular-data-resource"` the v1 one. Accept either so packages written with
+    # GeoLocatoR < 1.4.0 (frictionless 1.x) keep validating.
     is_tabular_resource <- (identical(resource$type, "table") ||
       identical(resource$profile, "tabular-data-resource")) &&
       is.list(resource$schema) &&
@@ -273,6 +279,11 @@ validate_gldp_table <- function(data, schema, name = schema$name) {
     # reader parses a column; it is not one of the JSON-Schema formats checked for
     # the profile. A field without `type` is `any`, so no type is inferred either.
     prop$format <- NULL
+    # A Table Schema `pattern` is an XML Schema regular expression, which must
+    # match the whole value; the profile's JSON-Schema patterns match anywhere.
+    if (!is.null(prop$pattern)) {
+      prop$pattern <- glue::glue("^(?:{prop$pattern})$")
+    }
 
     valid <- valid & validate_gldp_item(data[[field]], prop, field_name)
   }

@@ -37,6 +37,11 @@ create_geopressuretemplate <- function(path, pkg = NULL, open = interactive()) {
   # operate on the intended directory.
   path <- path.expand(path)
 
+  # Check the package first so an invalid input leaves no half-built project
+  if (!is.null(pkg)) {
+    check_gldp(pkg)
+  }
+
   if (dir.exists(path)) {
     existing <- list.files(path, all.files = TRUE, no.. = TRUE)
 
@@ -99,15 +104,16 @@ create_geopressuretemplate <- function(path, pkg = NULL, open = interactive()) {
       recursive = TRUE
     )
 
-    # Remove example in config
+    # Remove the example tags in config: keep everything before the first top-level
+    # key other than `default:`
     default_yaml <- readLines("config.yml")
+    example <- setdiff(grep("^[^#[:space:]]", default_yaml), grep("^default:", default_yaml))
     writeLines(
-      default_yaml[1:(grep("18LX:", default_yaml)[1] - 1)],
+      default_yaml[seq_len(c(example, length(default_yaml) + 1)[1] - 1)],
       "config.yml"
     )
 
     if (!is.null(pkg)) {
-      check_gldp(pkg)
       pkg <- update_gldp(pkg)
 
       steps <- list(
@@ -283,8 +289,8 @@ create_geopressuretemplate_licenses <- function(pkg) {
     file.remove("LICENSE.md")
   }
 
-  # 3. Force usethis to recognize current directory as project root
-  usethis::proj_set(getwd(), force = TRUE)
+  # 3. Make the current directory the usethis project, only while this function runs
+  usethis::local_project(getwd(), force = TRUE, setwd = FALSE, quiet = TRUE)
 
   # 4. Fallback to license path if name is missing or empty
   license_name <- if (is.list(lic)) {
@@ -386,9 +392,15 @@ create_geopressuretemplate_data <- function(pkg) {
       })
 
       if ("pressure" %in% names(tag)) {
+        # Only package labels are final. Without them, tag_label_write() fills in
+        # automatic labels, so write the file to be labelled in TRAINSET instead.
+        labelled <- any(purrr::map_lgl(tag[c("pressure", "acceleration")], \(x) {
+          "label" %in% names(x)
+        }))
+        suffix <- if (labelled) "-labeled" else ""
         GeoPressureR::tag_label_write(
           tag = tag,
-          file = glue::glue("{path_label}/{tag_id}-labeled.csv"),
+          file = glue::glue("{path_label}/{tag_id}{suffix}.csv"),
           quiet = TRUE
         )
       }

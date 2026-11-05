@@ -16,8 +16,10 @@ read_geopressuretemplate(
 \item{from}{Character vector specifying which sources to import. Supported
 values are \code{"raw-tag"} and/or \code{"interim"}.}
 
-\item{pkg}{Optional GeoLocator Data Package object to update. Defaults to a
-new package created with \code{\link[=create_gldp]{create_gldp()}}.}
+\item{pkg}{Optional GeoLocator Data Package object to fill. Defaults to a
+new package created with \code{\link[=create_gldp]{create_gldp()}}. Its metadata is kept, but any
+existing resources are overwritten. Overwriting asks for confirmation, so a
+\code{pkg} with resources can only be used in an interactive session.}
 }
 \value{
 The updated \code{geolocatordp} object.

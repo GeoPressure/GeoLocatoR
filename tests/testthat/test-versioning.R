@@ -29,3 +29,21 @@ test_that("gldp_version reads a schema URL that uses a tag ref", {
 
   expect_identical(gldp_version(pkg), "v1.0")
 })
+
+test_that("gldp_version rejects development schemas", {
+  pkg <- create_gldp()
+  pkg[["$schema"]] <-
+    "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/dev/geolocator-dp-profile.json"
+
+  expect_error(gldp_version(pkg), "Development schemas are not supported")
+})
+
+test_that("main is readable as a legacy alias but not written", {
+  pkg <- create_gldp()
+  pkg[["$schema"]] <-
+    "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/main/geolocator-dp-profile.json"
+
+  expect_identical(gldp_version(pkg), "main")
+  expect_error(gldp_schema_url("main"), "Unsupported GeoLocator-DP version")
+  expect_error(create_gldp(version = "main"), "Unsupported GeoLocator-DP version")
+})

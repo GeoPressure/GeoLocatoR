@@ -13,6 +13,8 @@
 #' **Resource merging logic:**
 #' - A resource is added even if only one input package contains it.
 #' - For each resource, rows from available inputs are combined with `dplyr::bind_rows()`.
+#' - Custom resources (not GeoLocator-DP tables) are dropped from the merged
+#'   package, with a message naming them.
 #'
 #' **Check for unique tag_id:**
 #' - The merge aborts if any `tag_id` is present in both packages.
@@ -86,6 +88,16 @@ merge_gldp <- function(x, y = NULL, ...) {
   resources_by_pkg <- purrr::map(pkgs, frictionless::resource_names)
   resources <- unique(unlist(resources_by_pkg, use.names = FALSE))
 
+  # Custom resources have no GeoLocator-DP schema to merge them with, so they are dropped.
+  gldp_tables <- gldp_profile_resource_names(gldp_profile_schema(gldp_version(create_gldp())))
+  custom_resources <- setdiff(resources, gldp_tables)
+  if (length(custom_resources) > 0) {
+    cli_inform(c(
+      "!" = "Dropping custom resource{?s} {.val {custom_resources}}, which {.fn merge_gldp} cannot merge."
+    ))
+    resources <- intersect(resources, gldp_tables)
+  }
+
   # Warn when several spec versions are present.
   versions <- unique(purrr::map_chr(pkgs, gldp_version))
   versions <- versions[!is.na(versions)]
@@ -144,17 +156,14 @@ merge_gldp <- function(x, y = NULL, ...) {
   source_ids <- unique(purrr::flatten_chr(source_ids))
   source_ids <- source_ids[!is.na(source_ids) & nzchar(trimws(source_ids))]
   source_related <- purrr::map(source_ids, \(id) {
+    # DataCite expects a bare DOI ("10.5281/...") with the DOI type.
+    doi <- sub("^https?://(dx\\.)?doi\\.org/", "", id, ignore.case = TRUE)
+    is_doi <- grepl("^10\\.", doi)
     list(
       relationType = "IsCompiledBy",
-      relatedIdentifier = id,
+      relatedIdentifier = if (is_doi) doi else id,
       resourceTypeGeneral = "Dataset",
-      relatedIdentifierType = if (
-        grepl("^10\\.", id) || grepl("doi.org/", tolower(id), fixed = TRUE)
-      ) {
-        "DOI"
-      } else {
-        "URL"
-      }
+      relatedIdentifierType = if (is_doi) "DOI" else "URL"
     )
   })
   related_identifiers <- unique(c(

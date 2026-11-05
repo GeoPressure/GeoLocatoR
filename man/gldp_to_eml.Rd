@@ -9,10 +9,12 @@ gldp_to_eml(pkg, directory)
 \arguments{
 \item{pkg}{A GeoLocator Data Package object.}
 
-\item{directory}{Path to local directory to write files to.}
+\item{directory}{Path to local directory to write files to.
+If \code{NULL}, nothing is written and the EML list is only returned, which can
+be useful for adapting it before writing with \code{\link[EML:write_eml]{EML::write_eml()}}.}
 }
 \value{
-\code{eml.xml} file written to disk.
+\code{eml.xml} file written to disk, unless \code{directory} is \code{NULL}.
 Invisibly, an \link[EML:eml]{EML::eml} object.
 }
 \description{
@@ -42,6 +44,8 @@ including those with role \code{"RightsHolder"}.
 \item \code{packageId}: Package identifier. If no ID is
 provided, a UUID is generated. As a result, no new DOI will be created when
 publishing to GBIF if the package ID contains a DOI.
+\item \code{system}: \code{"https://doi.org"} when the package ID is a DOI (bare or as a
+\code{doi.org} URL), \code{"uuid"} otherwise.
 }
 
 Coverage information:

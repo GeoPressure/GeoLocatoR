@@ -31,11 +31,23 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
 
   cli_alert_success("Upgrading GeoLocator-DP from {.val {from_version}} to {.val {to_version}}.")
 
+  # Legacy packages carry non-numeric IDs (e.g. `stap_id = "stap-1"`) in fields
+  # that later schemas type as numbers. Coercing them to NA is the intended
+  # migration, so the cast_table() warning about lost values is muffled here.
+  quiet_cast <- function(expr) {
+    withCallingHandlers(
+      expr,
+      gldp_warning_cast_loss = \(w) invokeRestart("muffleWarning")
+    )
+  }
+
   while (!identical(from_version, to_version)) {
-    x <- switch(
+    x <- quiet_cast(switch(
       from_version,
+      # GeoLocatoR wrote `main` in 2024, from v0.1-shaped packages on. The v0.1 step
+      # only renames fields that are still present, so later shapes pass unchanged.
       "main" = {
-        x[["$schema"]] <- gldp_schema_url("v0.2")
+        x[["$schema"]] <- gldp_schema_url("v0.1")
         x
       },
       "v0.1" = upgrade_gldp_v0_1_to_v0_2(x),
@@ -46,13 +58,13 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
       "v0.6" = upgrade_gldp_v0_6_to_v1_0(x),
       "v1.0" = upgrade_gldp_v1_0_to_v1_1(x),
       "v1.1" = upgrade_gldp_v1_1_to_v1_2(x)
-    )
+    ))
 
     from_version <- gldp_version(x)
   }
 
   # Final normalization enforces target-version schemas/types after stepwise mutations.
-  x <- normalize_upgraded_resources(x)
+  x <- quiet_cast(normalize_upgraded_resources(x))
 
   x
 }
@@ -339,33 +351,43 @@ upgrade_gldp_v0_6_to_v1_0 <- function(x) {
 
   # Drop non-deployed tags (missing ring_number or scientific_name).
   # https://github.com/GeoPressure/GeoLocator-DP/commit/795ccc4cdd0bf575b39378ca3e63c61247ac2b8e
+  is_missing <- function(v) {
+    is.na(v) | trimws(as.character(v)) == ""
+  }
+  dropped_ids <- character(0)
   x <- mutate_resource(x, "tags", \(d) {
-    if (!"ring_number" %in% names(d)) {
-      d$ring_number <- NA_character_
-    }
-    if (!"scientific_name" %in% names(d)) {
-      d$scientific_name <- NA_character_
-    }
-
-    is_missing <- function(v) {
-      is.na(v) | trimws(as.character(v)) == ""
-    }
-
-    drop <- is_missing(d$ring_number) | is_missing(d$scientific_name)
-    if (any(drop)) {
-      dropped_ids <- if ("tag_id" %in% names(d)) d$tag_id[drop] else NA_character_
-      dropped_ids <- as.character(dropped_ids)
-      dropped_ids[is.na(dropped_ids) | trimws(dropped_ids) == ""] <- "<missing_tag_id>"
-      dropped_ids <- unique(dropped_ids)
-
-      cli_inform(c(
-        "i" = "Removed {sum(drop)} non-deployed tag row{?s} while upgrading to {.val v1.0}.",
-        "i" = "Dropped {.field tag_id}: {.val {glue::glue_collapse(dropped_ids, sep = ', ')}}."
+    keep <- !is_missing(d$ring_number) & !is_missing(d$scientific_name)
+    if (nrow(d) > 0 && !any(keep)) {
+      cli_abort(c(
+        "x" = "No deployed tag is left after upgrading to {.val v1.0}.",
+        "i" = "Every tag lacks a {.field ring_number} or a {.field scientific_name}."
       ))
     }
-
-    d[!drop, , drop = FALSE]
+    # A missing tag_id would match the untagged rows of other tables, so it is left out.
+    dropped_ids <<- unique(as.character(d$tag_id[!keep & !is.na(d$tag_id)]))
+    d[keep, , drop = FALSE]
   })
+
+  # Drop the rows of the dropped tags from every other table, which v1.0 foreign keys
+  # would otherwise reject. Legacy upgrades load all tables beforehand.
+  if (length(dropped_ids) > 0) {
+    tables <- purrr::keep(
+      x$resources,
+      \(r) !identical(r$name, "tags") && is.data.frame(r$data) && "tag_id" %in% names(r$data)
+    )
+    n_rows <- 0
+    for (name in purrr::map_chr(tables, "name")) {
+      x <- mutate_resource(x, name, \(d) {
+        drop <- d$tag_id %in% dropped_ids
+        n_rows <<- n_rows + sum(drop)
+        d[!drop, , drop = FALSE]
+      })
+    }
+    cli_inform(c(
+      "i" = "Removed {length(dropped_ids)} non-deployed tag{?s} while upgrading to {.val v1.0}, \\
+      with {n_rows} {cli::qty(n_rows)}row{?s} of other tables: {.val {dropped_ids}}."
+    ))
+  }
 
   x[["$schema"]] <- gldp_schema_url("v1.0")
   x
@@ -386,17 +408,21 @@ upgrade_gldp_v1_1_to_v1_2 <- function(x) {
   # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v1.2
   # `j` became required on trajectory tables, which also gained primary keys.
   # GeoPressureR <= 3.6.3 left `j` empty on pressurepaths flight rows, so fill it.
-  # A file-backed table is loaded: the gaps cannot be known without reading it.
-  resource <- gldp_resource(x, "pressurepaths")
-  if (!is.null(resource)) {
-    data <- gldp_read_resource(x, "pressurepaths")
-    if (!is.null(resource$path)) {
-      data <- cast_table(data, resource$schema)
-      resource[["path"]] <- NULL
+  x <- mutate_resource(x, "pressurepaths", \(d) gldp_fill_pressurepaths_j(d, quiet = FALSE))
+
+  # `observations$mass` must be greater than 0: a mass of 0 is a missing value.
+  x <- mutate_resource(x, "observations", \(d) {
+    zero <- d$mass %in% 0
+    if (any(zero)) {
+      d$mass[zero] <- NA
+      cli_inform(c(
+        "i" = "Set {.field mass} to missing on {sum(zero)} {.field observations} \\
+        {cli::qty(sum(zero))}row{?s} where it was 0."
+      ))
     }
-    resource[["data"]] <- gldp_fill_pressurepaths_j(data, quiet = FALSE)
-    gldp_resource(x, "pressurepaths") <- resource
-  }
+    d
+  })
+
   x[["$schema"]] <- gldp_schema_url("v1.2")
   x
 }
@@ -404,7 +430,12 @@ upgrade_gldp_v1_1_to_v1_2 <- function(x) {
 #' @noRd
 mutate_resource <- function(pkg, resource_name, fn) {
   resource <- gldp_resource(pkg, resource_name)
-  if (is.null(resource) || !is.data.frame(resource$data)) {
+  # A file-backed table is loaded: its values cannot be changed in the file.
+  if (!is.null(resource$path)) {
+    resource[["data"]] <- cast_table(gldp_read_resource(pkg, resource_name), resource$schema)
+    resource[["path"]] <- NULL
+  }
+  if (!is.data.frame(resource$data)) {
     return(pkg)
   }
 

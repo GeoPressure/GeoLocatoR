@@ -18,11 +18,16 @@ harness columns (\code{Harness_data}, \code{HarnessMaterial_data},
 to include them.}
 
 \item{directory_data}{Path to the directory containing SOI raw tag files or
-folders, in one sub-folder per \code{OrderName}. Not used when \code{gdl} already has
-a \code{directory} column.}
+folders, in one sub-folder per \code{OrderName}. Within it, a tag's data is the
+folder, or else the \code{.glf} file, whose name is the \code{GDL_ID} alone or
+followed by a non-alphanumeric separator (e.g. \code{A1} or \code{A1_2020}, but not
+\code{A10_2020}). When several match, the alphabetically last is used, with a
+warning naming the candidates. Not used when \code{gdl} already has
+a \code{directory} column, which gives the data path of each tag directly.}
 
 \item{generate_observations}{A logical value. Equipment and retrieval
-\code{observations} are always created from the dates in \code{gdl}. If \code{TRUE}, rows
+\code{observations}, with \code{device_status = "present"}, are always created from
+the dates in \code{gdl}. If \code{TRUE}, rows
 are also created without a datetime, as placeholders to fill in; if \code{FALSE},
 only rows with a known datetime are kept.}
 }

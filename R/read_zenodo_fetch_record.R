@@ -6,7 +6,6 @@ read_zenodo_fetch_record <- function(
   sandbox = FALSE
 ) {
   record_id <- parse_zenodo_id(id)
-  token <- resolve_zenodo_token(token, sandbox = sandbox)
   base_url <- if (isTRUE(sandbox)) "https://sandbox.zenodo.org" else "https://zenodo.org"
   url <- glue::glue("{base_url}/api/records/{record_id}{ifelse(draft,'/draft','')}")
 

@@ -27,7 +27,8 @@ validate_gldp_meta <- function(pkg) {
   # - taxonomic names present in eBird taxonomy
   has_warnings <- FALSE
 
-  # 1) Title should follow the shared "GeoLocator Data Package: " prefix.
+  # 1) Title should follow the shared "GeoLocator Data Package: " prefix, which the
+  # GeoLocator-DP Zenodo community expects. Kept a recommendation, not a failure.
   title <- pkg$title %||% ""
 
   if (!nzchar(title)) {
@@ -37,7 +38,8 @@ validate_gldp_meta <- function(pkg) {
     has_warnings <- TRUE
   } else if (!startsWith(title, "GeoLocator Data Package: ")) {
     cli::cli_alert_warning(
-      "Missing expected prefix {.val GeoLocator Data Package: } in {.field pkg$title}."
+      "{.field pkg$title} should start with {.val GeoLocator Data Package: }. The GeoLocator-DP Zenodo \\
+      community expects this prefix on every package it curates."
     )
     has_warnings <- TRUE
   }
@@ -70,12 +72,14 @@ validate_gldp_meta <- function(pkg) {
     has_warnings <- TRUE
   }
 
-  # 4) tags$manufacturer should use one of the expected institution names.
+  # 4) tags$manufacturer should use one of the expected institution names: the
+  # manufacturers GeoPressureR can import, spelled as params_to_tags() writes them.
   allowed_manufacturers <- c(
     "Swiss Ornithological Institute",
     "Migrate Technology Limited",
     "Lund University",
-    "British Antarctic Survey"
+    "British Antarctic Survey",
+    "PresTag"
   )
   if ("tags" %in% frictionless::resource_names(pkg)) {
     t <- tags(pkg)

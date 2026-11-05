@@ -86,9 +86,11 @@ test_that("check_type function validates specialized types correctly", {
     expect_false(check_type("P", "duration", "test_field")) # no components
 
     # Geopoint types
-    expect_true(check_type("45.123, -122.456", "geopoint", "test_field"))
+    expect_true(check_type("-122.456, 45.123", "geopoint", "test_field"))
     expect_true(check_type("0, 0", "geopoint", "test_field"))
-    expect_false(check_type("91, 0", "geopoint", "test_field")) # lat out of range
+    expect_true(check_type("100, 45", "geopoint", "test_field")) # "lon, lat"
+    expect_false(check_type("0, 91", "geopoint", "test_field")) # lat out of range
+    expect_false(check_type("181, 0", "geopoint", "test_field")) # lon out of range
     expect_false(check_type("45.123", "geopoint", "test_field")) # missing longitude
 
     # GeoJSON types

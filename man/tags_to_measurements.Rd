@@ -4,10 +4,12 @@
 \alias{tags_to_measurements}
 \title{Transform Tags to a Tidy Data Frame}
 \usage{
-tags_to_measurements(tags)
+tags_to_measurements(tag_list, tags = lifecycle::deprecated())
 }
 \arguments{
-\item{tags}{A list of GeoPressureR \code{tag} objects.}
+\item{tag_list}{A list of GeoPressureR \code{tag} objects.}
+
+\item{tags}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} Use \code{tag_list} instead.}
 }
 \value{
 A \code{\link[tibble:tibble]{tibble::tibble()}} data frame with columns:
@@ -31,7 +33,8 @@ is present, reshapes supported sensors into long format, and drops rows with
 missing values.
 
 The current conversion supports pressure, light, acceleration/activity,
-temperature, and magnetic sensors.
+temperature, and magnetic sensors. The \code{temperature} table of tags created
+with GeoPressureR before 3.7.1 is read as \code{temperature_external}.
 
 If no tags, or no sensor tables, are provided, the function returns an empty tibble with the
 appropriate column names and types.

@@ -9,8 +9,10 @@
 #'
 #' @param pkg A GeoLocator Data Package object.
 #' @param directory Path to local directory to write files to.
+#'   If `NULL`, nothing is written and the EML list is only returned, which can
+#'   be useful for adapting it before writing with [EML::write_eml()].
 #'
-#' @return `eml.xml` file written to disk.
+#' @return `eml.xml` file written to disk, unless `directory` is `NULL`.
 #'   Invisibly, an [EML::eml] object.
 #'
 #' @section Transformation details:
@@ -32,6 +34,8 @@
 #' - `packageId`: Package identifier. If no ID is
 #'   provided, a UUID is generated. As a result, no new DOI will be created when
 #'   publishing to GBIF if the package ID contains a DOI.
+#' - `system`: `"https://doi.org"` when the package ID is a DOI (bare or as a
+#'   `doi.org` URL), `"uuid"` otherwise.
 #'
 #' Coverage information:
 #' - `temporalCoverage`: Date range from package temporal coverage (if available),
@@ -265,11 +269,21 @@ gldp_to_eml <- function(pkg, directory) {
   )
 
   # EML object
+  package_id <- if (is.null(pkg$id)) uuid::UUIDgenerate() else pkg$id
   eml <- list(
-    packageId = if (is.null(pkg$id)) uuid::UUIDgenerate() else pkg$id,
-    system = "uuid",
+    packageId = package_id,
+    # A DOI, bare or as a doi.org URL, is resolved by doi.org rather than being a UUID.
+    system = if (grepl("^(https?://(dx\\.)?doi\\.org/)?10\\.", package_id, ignore.case = TRUE)) {
+      "https://doi.org"
+    } else {
+      "uuid"
+    },
     dataset = dataset
   )
+
+  if (is.null(directory)) {
+    return(invisible(eml))
+  }
 
   # Write file
   if (!dir.exists(directory)) {

@@ -254,6 +254,16 @@ test_that("xlsx metadata is parsed by column name", {
   expect_equal(observations(pkg)$datetime, as.POSIXct("2020-01-01 06:00:00", tz = "UTC"))
 })
 
+test_that("a pkg with resources is not overwritten without confirmation", {
+  directory <- template_interim()
+  on.exit(unlink(directory, recursive = TRUE))
+  pkg <- add_gldp_resource(create_gldp(), "tags", data.frame(tag_id = "BB"))
+  expect_error(
+    read_geopressuretemplate(directory, from = "interim", pkg = pkg),
+    "interactive session"
+  )
+})
+
 test_that("raw-tag read failures are reported with their error message", {
   directory <- tempfile("template-raw-tag-error-")
   dir.create(file.path(directory, "data", "raw-tag", "ZZ"), recursive = TRUE)

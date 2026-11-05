@@ -10,7 +10,7 @@ add_gldp_resource(
   data,
   cast_type = FALSE,
   replace = FALSE,
-  delim = ","
+  delim = lifecycle::deprecated()
 )
 }
 \arguments{
@@ -28,8 +28,9 @@ specified in the schema. Defaults to \code{FALSE}.}
 \item{replace}{If \code{TRUE}, allows an existing resource of the same name to be
 replaced.}
 
-\item{delim}{Not used: \code{\link[frictionless:add_resource]{frictionless::add_resource()}} only uses it when
-\code{data} is a path to a file, and \code{data} is always a data frame here.}
+\item{delim}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} Not used:
+\code{\link[frictionless:add_resource]{frictionless::add_resource()}} only uses it when \code{data} is a path to a
+file, and \code{data} is always a data frame here.}
 }
 \value{
 The updated GeoLocator Data Package object with the new resource added.

@@ -19,8 +19,11 @@ Convert a list of GeoPressureR parameter objects into a minimal
 \code{observations} tibble following the GeoLocator Data Package structure.
 
 One \code{equipment} row and one \code{retrieval} row are generated per parameter
-object. When available, crop dates are used as observation datetimes and
-known stationary locations are used to populate the first and last locations.
+object. When available, crop dates give the observation dates: data start at
+the midnight after the equipment day, so the equipment date is the day before
+\code{crop_start}, and data end at the midnight starting the retrieval day, so the
+retrieval date is \code{crop_end}. Both are read as dates only. Known stationary
+locations are used to populate the first and last locations.
 }
 \seealso{
 \code{\link[=params_to_tags]{params_to_tags()}} and \code{\link[=tags_to_measurements]{tags_to_measurements()}} for related

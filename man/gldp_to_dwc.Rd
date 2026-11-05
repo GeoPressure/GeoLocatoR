@@ -4,7 +4,7 @@
 \alias{gldp_to_dwc}
 \title{Transform a GeoLocator Data Package to Darwin Core}
 \usage{
-gldp_to_dwc(pkg, directory)
+gldp_to_dwc(pkg, directory, scientific_name_ids = NULL)
 }
 \arguments{
 \item{pkg}{A GeoLocator Data Package object.}
@@ -13,6 +13,11 @@ gldp_to_dwc(pkg, directory)
 If \code{NULL}, then a data frame is returned instead, which can be useful
 for extending/adapting the Darwin Core mapping before writing with
 \code{\link[readr:write_csv]{readr::write_csv()}}.}
+
+\item{scientific_name_ids}{Optional data frame with unique \code{scientific_name}
+and \code{scientificNameID} columns. By default, identifiers are left blank and
+no taxonomic lookup is performed. Supply identifiers explicitly when the
+publication service supports them.}
 }
 \value{
 \code{occurrence.csv} file written to disk.
@@ -20,20 +25,24 @@ Invisibly, an occurrence data frame.
 }
 \description{
 Transforms a \href{https://geopressure.org/GeoLocator-DP/}{GeoLocator Data Package (GLDP)}
-to a \href{https://dwc.tdwg.org/}{Darwin Core Archive}.
+to a Darwin Core occurrence table.
 The resulting CSV files can be uploaded to an \href{https://www.gbif.org/ipt}{IPT}
-for publication to GBIF. A \code{meta.xml} file is included as well.
+for publication to GBIF. Archive descriptors are configured separately.
 See \code{\link[=gldp_to_eml]{gldp_to_eml()}} to create an \code{eml.xml} file.
 }
 \section{Transformation details}{
 
 Data are transformed into an \href{https://rs.gbif.org/core/dwc_occurrence}{Occurrence core}.
-This transformation combines data from three resources:
+This transformation requires four resources:
 \itemize{
 \item \href{https://geopressure.org/GeoLocator-DP/core/tags/}{\code{tags}}: metadata about the device and deployment
+\item \href{https://geopressure.org/GeoLocator-DP/core/observations/}{\code{observations}}: sex, age class and comments recorded for the bird
 \item \href{https://geopressure.org/GeoLocator-DP/geopressurer/staps/}{\code{staps}}: stationary periods with temporal information
 \item \href{https://geopressure.org/GeoLocator-DP/geopressurer/paths/}{\code{paths}}: spatial positions estimated for each stationary period
 }
+
+\href{https://geopressure.org/GeoLocator-DP/geopressurer/pressurepaths/}{\code{pressurepaths}}
+is used for elevations when present.
 
 The following terms are set from normalized package metadata
 (sourced from top-level package fields):
@@ -63,15 +72,29 @@ from automated geolocator sensors.
 multiple observations and deployments.
 \item \code{organismName} is set to \code{ring_number} as the available label for the
 tracked individual.
-\item \code{occurrenceID} is a unique identifier combining \code{tag_id} and \code{stap_id}.
+\item \code{occurrenceID} combines \code{ring_number}, \code{tag_id}, and \code{stap_id}.
 \item \code{occurrenceStatus} is set to \code{"present"}.
-\item \code{sex}, \code{lifeStage}, and \code{eventRemarks} are included from matching
-observations when available.
+\item \code{sex}, \code{lifeStage}, and \code{eventRemarks} are taken from the tag's observations,
+each matched to the stationary period that contains it or, failing that, to
+the nearest one within 14 days.
+\item \code{sex} uses the Darwin Core vocabulary: EURING \code{"M"} and \code{"F"} become
+\code{"male"} and \code{"female"}; \code{"U"} (unknown) is left empty.
+\item \code{lifeStage} uses the \href{https://rs.gbif.org/vocabulary/gbif/life_stage.xml}{GBIF LifeStage vocabulary}:
+EURING age classes \code{"1"} (pullus) and \code{"3"} (first-year) become
+\code{"juvenile"}, and classes \code{"4"} (after first-year) to \code{"H"} become
+\code{"adult"}. Classes \code{"0"} (unknown) and \code{"2"} (full-grown, year of hatching
+unknown) are left empty. The EURING code itself is kept as
+\code{euringAgeClass} in \code{dynamicProperties}.
 \item \code{minimumElevationInMeters} and \code{maximumElevationInMeters} are estimated
 from \code{pressurepaths$altitude} when available.
-\item \code{coordinateUncertaintyInMeters} is calculated as the 50th percentile of
-the distance between simulation paths and the \code{most_likely} position for
-each stationary period.
+\item Reconstructed-location uncertainty uses the 95th percentile of distances
+from the \code{most_likely} position with at least 100 finite simulations, or
+the maximum distance with fewer simulations. The grid-cell radius is a
+minimum; without simulations uncertainty is left empty. The 100-simulation
+threshold is a practical convention, not a GBIF requirement.
+For known locations, uncertainty is the radius
+enclosing the analysis grid cell, using \code{params$tag_set_map$scale} or
+an ERA5 default resolution of 0.25 degrees when parameters are absent.
 }
 }
 

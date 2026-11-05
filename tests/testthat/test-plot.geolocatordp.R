@@ -134,3 +134,29 @@ test_that("plot.geolocatordp draws the ring plot measurement periods in black", 
   expect_identical(unique(b$data[[1]]$colour), "black")
   expect_identical(b$data[[1]]$yend, b$data[[1]]$y)
 })
+
+test_that("plot.geolocatordp maps most likely paths with finite marker sizes", {
+  skip_if_not_installed("leaflet")
+  pkg <- add_gldp_resource(
+    create_gldp(),
+    "staps",
+    tibble(
+      tag_id = c("T1", "T2"),
+      stap_id = 1,
+      start = as.POSIXct("2020-01-01", tz = "UTC"),
+      end = as.POSIXct("2020-01-04", tz = "UTC")
+    ),
+    cast_type = TRUE
+  )
+  paths <- tibble(tag_id = c("T1", "T2"), type = "tag", stap_id = 1, lat = 46, lon = 7, j = 1L)
+  pkg <- add_gldp_resource(pkg, "paths", paths, cast_type = TRUE)
+  expect_error(plot(pkg, "map"), "most_likely")
+
+  paths$type <- "most_likely"
+  pkg <- add_gldp_resource(pkg, "paths", paths, cast_type = TRUE, replace = TRUE)
+  calls <- plot(pkg, "map")$x$calls
+  radius <- purrr::keep(calls, \(cl) cl$method == "addCircleMarkers") |>
+    purrr::map(\(cl) cl$args[[3]]) |>
+    unlist()
+  expect_identical(radius, c(7.5, 7.5))
+})
