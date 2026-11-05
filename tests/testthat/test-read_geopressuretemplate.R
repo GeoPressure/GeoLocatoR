@@ -230,3 +230,10 @@ test_that("interim tags take their species from config.yml", {
   pkg <- suppressMessages(read_geopressuretemplate(directory, from = "interim"))
   expect_identical(tags(pkg)$scientific_name, "Upupa epops")
 })
+
+test_that("generated observations take the ring number of their tag", {
+  directory <- template_interim(c("AA:", "  ring_number: R1"))
+  on.exit(unlink(directory, recursive = TRUE))
+  pkg <- suppressMessages(read_geopressuretemplate(directory, from = "interim"))
+  expect_identical(observations(pkg)$ring_number, c("R1", "R1"))
+})
