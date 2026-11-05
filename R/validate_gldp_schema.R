@@ -52,7 +52,7 @@ validate_gldp_object <- function(
               obj[[field]],
               prop$required,
               prop$properties,
-              field,
+              field_name,
               defs,
               ignore_fields
             )
@@ -139,7 +139,7 @@ resolve_local_ref <- function(prop, defs) {
     return(prop)
   }
 
-  key <- sub("^#/$defs/", "", ref)
+  key <- sub("^#/\\$defs/", "", ref)
   if (is.null(defs[[key]])) {
     return(prop)
   }
@@ -259,16 +259,14 @@ resolve_prop <- function(value, prop, defs, field) {
 validate_gldp_item <- function(item, prop, field) {
   valid <- TRUE
 
-  # valid type
+  # validate type
   valid <- valid && check_type(item, prop$type, field)
 
-  # valid format
+  # validate format
   valid <- valid && check_format(item, prop$format, field)
 
   # Check if 'required' property exists and is TRUE
-  required <- FALSE
   if (!is.null(prop$required) && is.logical(prop$required) && prop$required) {
-    required <- TRUE
     if (is.null(item)) {
       cli_alert_danger("{.field {field}} is required but missing.")
       valid <- FALSE
@@ -278,7 +276,7 @@ validate_gldp_item <- function(item, prop, field) {
       # If any NULL or NA items exist, report and set valid to FALSE
       if (any(nn)) {
         cli_alert_danger(
-          "{.field {field}} is required but {sum(nn)} item{?s} {?is/are} {.val NA}"
+          "{.field {field}} is required but {sum(nn)} item{?s} {?is/are} missing."
         )
         valid <- FALSE
       }
@@ -301,7 +299,7 @@ validate_gldp_item <- function(item, prop, field) {
   # Check if 'minLength' property exists and is specified
   if (!is.null(prop$minLength)) {
     lengths <- nchar(as.character(item)) # Convert to character for length check
-    too_short <- lengths < prop$minLength
+    too_short <- !is.na(lengths) & lengths < prop$minLength
 
     if (any(too_short)) {
       cli_alert_danger(
@@ -315,7 +313,7 @@ validate_gldp_item <- function(item, prop, field) {
   # Check if 'maxLength' property exists and is specified
   if (!is.null(prop$maxLength)) {
     lengths <- nchar(as.character(item)) # Convert to character for length check
-    too_long <- lengths > prop$maxLength
+    too_long <- !is.na(lengths) & lengths > prop$maxLength
 
     if (any(too_long)) {
       cli_alert_danger(
@@ -408,18 +406,14 @@ validate_gldp_item <- function(item, prop, field) {
   }
 
   if (!is.null(allowed)) {
-    in_allowed <- item %in% allowed
-    if (!required) {
-      # Allow NA if not required
-      in_allowed <- in_allowed | is.na(item)
-    }
+    # Missing values are reported by the required check above.
+    in_allowed <- item %in% allowed | is.na(item)
 
     if (!all(in_allowed)) {
-      invalid_values <- item[!in_allowed]
+      invalid_values <- unique(item[!in_allowed])
       cli_alert_danger(
-        "{.field {field}} has {sum(!in_allowed)} item{?s} that are not in the allowed values:
-      {.val {glue::glue_collapse(allowed, sep = ', ')}}. Invalid value{?s}:
-      {.val {glue::glue_collapse(unique(invalid_values), sep = ', ')}}"
+        "{.field {field}} has {sum(!in_allowed)} item{?s} that {?is/are} not in the allowed values:
+      {.val {allowed}}. Invalid value{?s}: {.val {invalid_values}}"
       )
       valid <- FALSE
     }
@@ -513,6 +507,9 @@ validate_gldp_fields_match <- function(
       cli_alert_danger("Partial match failed. No schema fields found in data.")
       valid <- FALSE
     }
+  } else {
+    cli_alert_danger("Unknown {.field fieldsMatch} value {.val {fields_match}}.")
+    valid <- FALSE
   }
 
   invisible(valid)
@@ -586,7 +583,7 @@ check_format <- function(value, format, field) {
   valid <- TRUE
   if (format %in% names(format_map)) {
     format_func <- format_map[[format]]
-    # valid the value using the corresponding validation function
+    # validate the value using the corresponding validation function
     format_check_result <- format_func(value)
     if (!all(format_check_result)) {
       cli_alert_danger(

@@ -129,7 +129,7 @@ validate_gldp_profile <- function(pkg) {
   required <- setdiff(required, "resources")
   properties$resources <- NULL
 
-  # Ignore all additional field not present in the schema
+  # Ignore all additional fields not present in the schema
   ignore_fields <- setdiff(names(pkg), names(properties))
 
   valid <- validate_gldp_object(
@@ -233,7 +233,7 @@ validate_gldp_table <- function(data, schema, name = schema$name) {
 
   if (length(absent_required) > 0) {
     cli_alert_danger(
-      "{.field {schema$name}} is missing {length(absent_required)} required
+      "{.field {name}} is missing {length(absent_required)} required
        column{?s}: {.field {absent_required}}."
     )
     valid <- FALSE
@@ -248,7 +248,7 @@ validate_gldp_table <- function(data, schema, name = schema$name) {
       prop$constraints <- NULL # Remove the 'constraints' field after merging
     }
 
-    field_name <- glue::glue("{schema$name}${field}")
+    field_name <- glue::glue("{name}${field}")
     prop <- resolve_prop(data[[field]], prop, defs = NULL, field = field_name)
 
     valid <- valid & validate_gldp_item(data[[field]], prop, field_name)
@@ -269,7 +269,7 @@ validate_gldp_table <- function(data, schema, name = schema$name) {
 
   if (valid) {
     cli_alert_success(
-      "Table {.field {schema$name}} is consistent with the schema."
+      "Table {.field {name}} is consistent with the schema."
     )
   }
 
