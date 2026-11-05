@@ -4,10 +4,10 @@ library(GeoPressureR)
 library(yaml)
 library(usethis)
 
-# pkg_shared is loaded from setup.R
+# shared_pkg() is defined in setup.R
 
 test_that("create_geopressuretemplate creates a project shell", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   tag_id <- unique(tags(pkg)$tag_id)[1]
   param <- param_create(tag_id, default = TRUE)
   param$tag_set_map$extent <- c(-20, 30, -5, 55)
@@ -57,7 +57,7 @@ test_that("generated GeoPressureTemplate runs the full workflow", {
   )
   skip_if(!glp_available, "The GeoPressure pressure-data service is unavailable.")
 
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   tag_id <- measurements(pkg) |>
     dplyr::filter(.data$sensor == "pressure") |>
     dplyr::pull(.data$tag_id) |>

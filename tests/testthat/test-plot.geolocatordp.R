@@ -1,7 +1,7 @@
 library(testthat)
 library(GeoLocatoR)
 
-# pkg_shared is loaded from setup.R
+# shared_pkg() is defined in setup.R
 
 # A small offline package with tags, observations and measurements
 local_plot_pkg <- function() {
@@ -52,7 +52,7 @@ drop_resource <- function(pkg, name) {
 }
 
 test_that("plot.geolocatordp creates coverage plot", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   # Coverage plot
   expect_no_error({
@@ -62,7 +62,7 @@ test_that("plot.geolocatordp creates coverage plot", {
 })
 
 test_that("plot.geolocatordp creates ring plot", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   # Ring plot
   expect_no_error({
@@ -72,7 +72,7 @@ test_that("plot.geolocatordp creates ring plot", {
 })
 
 test_that("plot.geolocatordp creates map plot", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   # Map plot
   expect_no_error({
@@ -82,14 +82,14 @@ test_that("plot.geolocatordp creates map plot", {
 })
 
 test_that("plot.geolocatordp uses default type when not specified", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   # Default plot
   expect_no_error(plot(pkg))
 })
 
 test_that("plot.geolocatordp explains which resources a plot type needs", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   pkg$resources <- purrr::keep(pkg$resources, \(r) r$name != "measurements")
 
   expect_error(plot(pkg, "coverage"), "needs .*measurements")

@@ -2,10 +2,10 @@ library(testthat)
 library(dplyr)
 library(GeoLocatoR)
 
-# pkg_shared is loaded from setup.R
+# shared_pkg() is defined in setup.R
 
 test_that("gldp_to_dwc writes occurrence.csv and returns occurrence data", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   tmp <- withr::local_tempdir()
 
   suppressMessages({
@@ -79,7 +79,7 @@ test_that("gldp_to_dwc writes occurrence.csv and returns occurrence data", {
 test_that("supplied taxonomy identifiers bypass automatic lookups", {
   tmp <- tempfile()
   dir.create(tmp)
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   ids <- data.frame(
     scientific_name = unique(tags(pkg)$scientific_name),
     scientificNameID = "avibase-7A2734EB"
@@ -93,14 +93,14 @@ test_that("supplied taxonomy identifiers bypass automatic lookups", {
 })
 
 test_that("default identifiers are blank and a NULL directory returns the table", {
-  occurrence <- gldp_to_dwc(pkg_shared, NULL)
+  occurrence <- gldp_to_dwc(shared_pkg(), NULL)
   expect_s3_class(occurrence, "data.frame")
   expect_gt(nrow(occurrence), 0)
   expect_true(all(is.na(occurrence$scientificNameID)))
 })
 
 test_that("known-location uncertainty uses the tag grid or ERA5 default", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   path_data <- paths(pkg)
   stap_data <- staps(pkg)
   stap_data$known_lat <- 0
@@ -132,7 +132,7 @@ test_that("known-location uncertainty uses the tag grid or ERA5 default", {
 })
 
 test_that("simulation uncertainty handles sample size, grid floor and missing simulations", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   stap_data <- staps(pkg)
   stap_data$known_lat <- NA_real_
   stap_data$known_lon <- NA_real_

@@ -1,10 +1,10 @@
 library(testthat)
 library(GeoLocatoR)
 
-# pkg_shared is loaded from setup.R
+# shared_pkg() is defined in setup.R
 
 test_that("check_gldp validates a valid geolocatordp", {
-  expect_no_error(check_gldp(pkg_shared))
+  expect_no_error(check_gldp(shared_pkg()))
 })
 
 test_that("check_gldp errors on invalid input", {

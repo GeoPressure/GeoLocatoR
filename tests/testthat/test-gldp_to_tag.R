@@ -2,7 +2,7 @@ library(testthat)
 library(GeoLocatoR)
 library(GeoPressureR)
 
-# pkg_shared is loaded from setup.R
+# shared_pkg() is defined in setup.R
 
 # Offline package with one tag "AA" and the given measurements.
 local_tag_pkg <- function(measurements) {
@@ -87,7 +87,7 @@ test_that("gldp_to_tag turns missing twilight labels into empty strings", {
 })
 
 test_that("gldp_to_tag converts single tag correctly", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   # Get the first tag_id
   tag_ids <- unique(tags(pkg)$tag_id)
   first_tag_id <- tag_ids[1]
@@ -157,7 +157,7 @@ test_that("gldp_to_tag converts single tag correctly", {
 })
 
 test_that("gldp_to_tag converts all tags when tag_id is NULL", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   # Get all tag_ids
   tag_ids <- unique(tags(pkg)$tag_id)
 
@@ -182,7 +182,7 @@ test_that("gldp_to_tag converts all tags when tag_id is NULL", {
 })
 
 test_that("gldp_to_tag converts multiple specific tags", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   # Get all tag_ids
   tag_ids <- unique(tags(pkg)$tag_id)
 
@@ -206,7 +206,7 @@ test_that("gldp_to_tag converts multiple specific tags", {
 })
 
 test_that("gldp_to_tag errors on invalid tag_id", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   # Try to convert non-existent tag
   expect_error(
     gldp_to_tag(pkg, tag_id = "INVALID_TAG_ID"),
@@ -215,7 +215,7 @@ test_that("gldp_to_tag errors on invalid tag_id", {
 })
 
 test_that("gldp_to_tag works with GeoPressureR functions", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   # Get the first tag_id
   tag_ids <- unique(tags(pkg)$tag_id)
   first_tag_id <- tag_ids[1]
@@ -233,7 +233,7 @@ test_that("gldp_to_tag works with GeoPressureR functions", {
 })
 
 test_that("gldp_to_tag reuses saved GeoPressureR parameters", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   tag_id <- unique(tags(pkg)$tag_id)[1]
   param <- param_create(tag_id, default = TRUE)
   param$tag_create$manufacturer <- "migratetech"
@@ -248,7 +248,7 @@ test_that("gldp_to_tag reuses saved GeoPressureR parameters", {
 })
 
 test_that("gldp_to_tag extracts stap and twilight data correctly", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   # Check if package has staps and twilights resources
   has_staps <- "staps" %in% frictionless::resource_names(pkg)
@@ -299,7 +299,7 @@ test_that("gldp_to_tag extracts stap and twilight data correctly", {
 })
 
 test_that("gldp_to_tag keeps mean_acceleration_z in acceleration", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   resource_idx <- which(vapply(pkg$resources, \(r) identical(r$name, "measurements"), logical(1)))
   skip_if(length(resource_idx) == 0, "Package has no measurements resource")
@@ -337,7 +337,7 @@ test_that("gldp_to_tag keeps mean_acceleration_z in acceleration", {
 })
 
 test_that("gldp_to_tag combines magnetic and acceleration axes", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   resource_idx <- which(vapply(pkg$resources, \(r) identical(r$name, "measurements"), logical(1)))
   m <- pkg$resources[[resource_idx[1]]]$data
   tag_id <- unique(tags(pkg)$tag_id)[1]
@@ -372,7 +372,7 @@ test_that("gldp_to_tag combines magnetic and acceleration axes", {
 })
 
 test_that("gldp_to_tag preserves pressure and acceleration labels", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   resource_idx <- which(vapply(pkg$resources, \(r) identical(r$name, "measurements"), logical(1)))
   skip_if(length(resource_idx) == 0, "Package has no measurements resource")
 
@@ -429,7 +429,7 @@ test_that("gldp_to_tag preserves pressure and acceleration labels", {
 })
 
 test_that("gldp_to_tag omits empty label columns", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   tag_id <- unique(tags(pkg)$tag_id)[1]
   tag <- gldp_to_tag(pkg, tag_id)
 

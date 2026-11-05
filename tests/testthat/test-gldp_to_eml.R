@@ -1,12 +1,12 @@
 library(testthat)
 library(GeoLocatoR)
 
-# pkg_shared is loaded from setup.R
+# shared_pkg() is defined in setup.R
 
 test_that("gldp_to_eml writes eml.xml and returns EML-like object", {
   skip_if_not_installed("EML")
 
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   # Allow for HTML entities like &nbsp; in free-text fields
   pkg$description <- glue::glue("{pkg$description} with non-breaking space: &nbsp;")
