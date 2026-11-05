@@ -152,7 +152,12 @@ validate_gldp_geopressure_coherence <- function(pkg) {
 
       for (fk in foreign_keys) {
         child_fields <- as.character(unlist(fk$fields %||% character(0), use.names = FALSE))
-        parent_name <- as.character(fk$reference$resource %||% NA_character_)[1]
+        # A reference without `resource` (v2) or with `resource: ""` (v1) points
+        # at the resource itself.
+        parent_name <- as.character(fk$reference$resource %||% "")[1]
+        if (!nzchar(parent_name)) {
+          parent_name <- child_name
+        }
         parent_fields <- as.character(unlist(
           fk$reference$fields %||% character(0),
           use.names = FALSE
@@ -160,7 +165,6 @@ validate_gldp_geopressure_coherence <- function(pkg) {
 
         if (
           length(child_fields) == 0 ||
-            !nzchar(parent_name) ||
             length(child_fields) != length(parent_fields)
         ) {
           next
