@@ -433,7 +433,8 @@ upgrade_gldp_v1_2_to_v1_3 <- function(x) {
   # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v1.3
   # v1.3 defines magnetic and acceleration x/y/z in the forward-right-down frame
   # written by GeoPressureR >= 3.8.0. SOI data stored by older GeoPressureR are
-  # converted here, once, when params record their mapping.
+  # converted here, once, when params record their mapping. Simulated edges of
+  # tags whose params record a GeoPressureR version with the gs/ws bug are repaired.
   x <- gldp_fix_geopressurer(x)
   x[["$schema"]] <- gldp_schema_url("v1.3")
   x

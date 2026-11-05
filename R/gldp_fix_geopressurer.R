@@ -120,18 +120,24 @@ gldp_edges_gs_mismatch <- function(edges, staps = NULL) {
 #' Recomputes `gs_u` and `gs_v` from `distance`, `bearing` (0 = north,
 #' clockwise) and the flight duration on the rows flagged by
 #' `gldp_edges_gs_mismatch()`, and sets their `ws_u` and `ws_v` to missing:
-#' the wind can only be recomputed from the original wind files.
+#' the wind can only be recomputed from the original wind files. Only tags
+#' whose params record GeoPressureR 3.2.0 to 3.7.0 are repaired, so `edges` is
+#' only read when there is one.
 #'
 #' @param pkg A GeoLocator Data Package object.
-#' @param quiet If `FALSE`, report the number of rows repaired.
 #' @return `pkg` with the `edges` resource repaired.
 #' @noRd
-gldp_fix_edges_gs <- function(pkg, quiet = FALSE) {
-  if (!"edges" %in% frictionless::resource_names(pkg)) {
+gldp_fix_edges_gs <- function(pkg) {
+  buggy <- names(purrr::keep(gldp_geopressurer_version(pkg), \(v) {
+    package_version(v) >= "3.2.0" && package_version(v) < "3.7.1"
+  }))
+  if (!"edges" %in% frictionless::resource_names(pkg) || length(buggy) == 0) {
     return(pkg)
   }
   staps <- if ("staps" %in% frictionless::resource_names(pkg)) gldp_read_resource(pkg, "staps")
-  mismatch <- gldp_edges_gs_mismatch(gldp_read_resource(pkg, "edges"), staps)
+  edges <- gldp_read_resource(pkg, "edges")
+  mismatch <- gldp_edges_gs_mismatch(edges, staps)
+  mismatch[!edges$tag_id %in% buggy] <- NA
   fix <- mismatch %in% TRUE
   if (!any(fix)) {
     return(pkg)
@@ -149,19 +155,17 @@ gldp_fix_edges_gs <- function(pkg, quiet = FALSE) {
     d
   })
 
-  if (!quiet) {
-    n_sim <- sum(!is.na(mismatch))
-    cli_inform(c(
-      "!" = "Recomputed {.field gs_u}/{.field gs_v} and removed {.field ws_u}/{.field ws_v} on \\
-      {sum(fix)} of {n_sim} checked simulated {.field edges} {cli::qty(n_sim)}row{?s}, \\
-      assigned to the wrong flight by GeoPressureR 3.2.0 to 3.7.0.",
-      "i" = "See {.url https://github.com/GeoPressure/GeoPressureR/commit/6f5dda6527eed51ec67e8393043c91579160da64}.",
-      "i" = "Save the corrected package with {.fun write_gldp} and re-upload it."
-    ))
-  }
+  n_sim <- sum(!is.na(mismatch))
+  cli_inform(c(
+    "!" = "Recomputed {.field gs_u}/{.field gs_v} and removed {.field ws_u}/{.field ws_v} on \\
+    {sum(fix)} of {n_sim} checked simulated {.field edges} {cli::qty(n_sim)}row{?s} of \\
+    {.val {unique(edges$tag_id[fix])}}, assigned to the wrong flight by GeoPressureR 3.2.0 to \\
+    3.7.0.",
+    "i" = "See {.url https://github.com/GeoPressure/GeoPressureR/commit/6f5dda6527eed51ec67e8393043c91579160da64}.",
+    "i" = "Save the corrected package with {.fun write_gldp}."
+  ))
   pkg
 }
-
 
 #' Signed permutation applied by GeoPressureR `mag_axes()`
 #'

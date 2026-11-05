@@ -13,7 +13,10 @@
 #' Upgrading a package older than GeoLocator-DP v1.3 converts the SOI magnetic
 #' and acceleration x/y stored by GeoPressureR < 3.8.0 to the forward-right-down
 #' frame of v1.3, when the params of the tag record the mapping that was
-#' applied. Tags whose frame is unknown are left as stored, with a warning.
+#' applied. Tags whose frame is unknown are left as stored, with a warning. It
+#' also recomputes the groundspeed of simulated `edges` that GeoPressureR 3.2.0
+#' to 3.7.0 took from another flight, and removes their wind, for the tags whose
+#' params record one of these versions.
 #'
 #' When present, the `datapackages` provenance catalogue is restored as a tibble,
 #' with one row per source package, as returned by [merge_gldp()].
@@ -29,8 +32,8 @@
 #'   Some tables are loaded even when `FALSE`, because their upgrade changes
 #'   values and cannot operate on file paths alone: every table of a package
 #'   older than GeoLocator-DP v1.0, `pressurepaths` and `observations` of
-#'   a v1.0 or v1.1 package, and `measurements` of a package older than v1.3
-#'   whose SOI magnetic axes are converted.
+#'   a v1.0 or v1.1 package, and `measurements` and `edges` of a package older
+#'   than v1.3 whose SOI axes or groundspeeds are repaired.
 #' @param drop_measurements `r lifecycle::badge("experimental")` If `TRUE`,
 #'   drops the `measurements` resource after reading `datapackage.json` and
 #'   before the optional `force_read` step loads resource data into memory. Use

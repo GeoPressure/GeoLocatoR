@@ -90,6 +90,7 @@ test_that("simulated edges with a wrong groundspeed are detected", {
 
 test_that("gldp_fix_edges_gs() recomputes gs and removes ws of mismatched rows only", {
   pkg <- add_gldp_resource(create_gldp(), "edges", make_edges())
+  pkg$params <- list(list(id = "AA", GeoPressureR_version = package_version("3.6.3")))
   expect_message(pkg <- gldp_fix_edges_gs(pkg), "1 of 2")
   e <- edges(pkg)
   # Eastward flight at 10 km/h.
@@ -99,6 +100,54 @@ test_that("gldp_fix_edges_gs() recomputes gs and removes ws of mismatched rows o
   expect_equal(e$ws_v, c(2, NA))
   # A second pass finds nothing to repair.
   expect_silent(gldp_fix_edges_gs(pkg))
+})
+
+test_that("gldp_fix_edges_gs() repairs only tags recorded with GeoPressureR 3.2.0 to 3.7.0", {
+  pkg <- add_gldp_resource(create_gldp(), "edges", make_edges())
+  # Without params, or with a version outside the bug, the data are left unchanged.
+  for (params in list(
+    list(),
+    list(list(id = "AA")),
+    list(list(id = "AA", GeoPressureR_version = "3.1.0")),
+    list(list(id = "AA", GeoPressureR_version = "3.7.1")),
+    list(list(id = "BB", GeoPressureR_version = "3.6.3"))
+  )) {
+    pkg$params <- params
+    expect_silent(out <- gldp_fix_edges_gs(pkg))
+    expect_identical(edges(out), edges(pkg))
+  }
+
+  # A version read from JSON as text counts; only the tag with the bug is repaired.
+  e <- rbind(make_edges(), transform(make_edges(), tag_id = "BB"))
+  pkg <- add_gldp_resource(create_gldp(), "edges", e)
+  pkg$params <- list(
+    list(id = "AA", GeoPressureR_version = "3.2.0"),
+    list(id = "BB", GeoPressureR_version = "3.7.1")
+  )
+  expect_message(out <- gldp_fix_edges_gs(pkg), "1 of 2")
+  expect_equal(edges(out)$gs_u, c(10, 10, 10, 30))
+  expect_equal(edges(out)$ws_u, c(1, NA, 1, 1))
+})
+
+test_that("simulated edges are repaired once, when a v1.2 package is upgraded", {
+  pkg <- add_gldp_resource(create_gldp(version = "v1.2"), "edges", make_edges())
+  pkg$params <- list(list(id = "AA", GeoPressureR_version = package_version("3.6.3")))
+  dir <- tempfile()
+  on.exit(unlink(dir, recursive = TRUE))
+  write_gldp(pkg, file.path(dir, "v1.2"))
+  for (force_read in c(TRUE, FALSE)) {
+    expect_message(
+      read <- read_gldp(file.path(dir, "v1.2"), force_read = force_read),
+      "Recomputed"
+    )
+    expect_equal(edges(read)$ws_u, c(1, NA))
+  }
+
+  # A package declaring v1.3 is not repaired.
+  pkg[["$schema"]] <- gldp_schema_url("v1.3")
+  write_gldp(pkg, file.path(dir, "v1.3"))
+  expect_no_message(read <- read_gldp(file.path(dir, "v1.3")), message = "Recomputed")
+  expect_equal(edges(read)$ws_u, c(1, 1))
 })
 
 test_that("validate_gldp() warns about mismatched simulated edges and buggy versions", {
