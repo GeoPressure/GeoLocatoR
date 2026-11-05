@@ -58,6 +58,7 @@
 #' @return A GeoLocator Data Package object containing the merged data from all inputs.
 #'
 #' @examples
+#' \dontrun{
 #' pkg1 <- read_zenodo("17367319", quiet = TRUE)
 #' pkg2 <- read_zenodo("17257520", quiet = TRUE)
 #'
@@ -66,6 +67,7 @@
 #'
 #' # List-style input is also supported
 #' merged <- merge_gldp(list(pkg1, pkg2))
+#' }
 #'
 #' @seealso [create_gldp()] to create package shells and [update_gldp()] for the
 #'   derived properties recomputed on the merged package.
