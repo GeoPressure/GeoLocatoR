@@ -48,8 +48,8 @@
 #' - `pressure` → `pressure` (date, value, label)
 #' - `light` → `light` (date, value)
 #' - `activity` + `mean_acceleration_z` → `acceleration` (date, value, mean_acceleration_z, label) where value = activity
-#' - `temperature-external` → `temperature_external` (date, value)
-#' - `temperature-internal` → `temperature_internal` (date, value)
+#' - `temperature_external` → `temperature_external` (date, value)
+#' - `temperature_internal` → `temperature_internal` (date, value)
 #' - `magnetic_x/y/z` → `magnetic` (date, magnetic_x, magnetic_y, magnetic_z)
 #'
 #' **Additional data extracted:**
@@ -154,8 +154,8 @@ gldp_to_tag_single <- function(pkg, tid) {
 
   # Extract sensor data
   # Map GLDP sensor types to GeoPressureR sensor names
-  # GLDP uses: pressure, light, activity, mean_acceleration_z, temperature-external,
-  # temperature-internal, acceleration_x/y/z, magnetic_x/y/z
+  # GLDP uses: pressure, light, activity, mean_acceleration_z, temperature_external,
+  # temperature_internal, acceleration_x/y/z, magnetic_x/y/z
   # GeoPressureR uses: pressure, light, acceleration (with activity and mean_acceleration_z columns),
   # temperature_external, temperature_internal, magnetic
 
@@ -163,8 +163,8 @@ gldp_to_tag_single <- function(pkg, tid) {
   sensor_simple <- c(
     "pressure" = "pressure",
     "light" = "light",
-    "temperature-external" = "temperature_external",
-    "temperature-internal" = "temperature_internal"
+    "temperature_external" = "temperature_external",
+    "temperature_internal" = "temperature_internal"
   )
 
   for (sensor_gldp in names(sensor_simple)) {

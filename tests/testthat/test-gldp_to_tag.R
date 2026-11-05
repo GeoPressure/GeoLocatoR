@@ -4,6 +4,35 @@ library(GeoPressureR)
 
 # pkg_shared is loaded from setup.R
 
+# Offline package with one tag "AA" and the given measurements.
+local_tag_pkg <- function(measurements) {
+  pkg <- create_gldp()
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = "AA",
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "soi",
+      model = "GDL3"
+    )
+  )
+  add_gldp_resource(pkg, "measurements", measurements)
+}
+
+test_that("gldp_to_tag converts temperature sensors", {
+  pkg <- local_tag_pkg(data.frame(
+    tag_id = "AA",
+    sensor = rep(c("temperature_external", "temperature_internal"), each = 2),
+    datetime = as.POSIXct("2020-01-01", tz = "UTC") + 3600 * 0:1,
+    value = c(10, 11, 40, 41)
+  ))
+  tag <- gldp_to_tag(pkg, "AA")
+  expect_equal(tag$temperature_external$value, c(10, 11))
+  expect_equal(tag$temperature_internal$value, c(40, 41))
+})
+
 test_that("gldp_to_tag converts single tag correctly", {
   pkg <- pkg_shared
   # Get the first tag_id
