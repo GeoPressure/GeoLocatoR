@@ -9,15 +9,17 @@
 #' See an example of use [with this tutorial](https://rpubs.com/GeoPressure/Geolocator_create_from_soi).
 #'
 #' @param gdl A data frame of SOI export metadata, typically returned by
-#'   [read_soi_gld()]. It must contain at least `GDL_ID` and the fields needed
-#'   to derive package metadata. `tags$attachment_type` is built from the
+#'   [read_soi_gld()]. It must contain at least `GDL_ID`, `OrderName` unless it
+#'   has a `directory` column, and the fields needed to derive package
+#'   metadata. `tags$attachment_type` is built from the
 #'   harness columns (`Harness_data`, `HarnessMaterial_data`,
 #'   `HarnessAttachement_data`, `HarnessThickness`, `LegHarnessDiameter`,
 #'   `BreastHarnessDiameterHead` and `BreastHarnessDiameterTail`), which
 #'   `read_soi_gld(filter_col = TRUE)` does not keep: use `filter_col = FALSE`
 #'   to include them.
 #' @param directory_data Path to the directory containing SOI raw tag files or
-#'   folders.
+#'   folders, in one sub-folder per `OrderName`. Not used when `gdl` already has
+#'   a `directory` column.
 #' @param generate_observations A logical value. Equipment and retrieval
 #'   `observations` are always created from the dates in `gdl`. If `TRUE`, rows
 #'   are also created without a datetime, as placeholders to fill in; if `FALSE`,
@@ -400,7 +402,8 @@ read_soi <- function(
 #' to a GDL (Geolocator Data List) object.
 #'
 #' @param gdl A GDL data frame object
-#' @param directory_data A data frame containing directory information
+#' @param directory_data Path to the directory containing one folder per
+#'   `OrderName`
 #' @return Updated GDL object with directory information
 #' @noRd
 read_soi_directory <- function(gdl, directory_data) {
