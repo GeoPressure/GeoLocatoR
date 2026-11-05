@@ -1,3 +1,20 @@
+# GeoLocatoR v1.5.0
+
+## Main
+
+- [Write GeoLocator-DP v1.3 and upgrade older packages to it](https://github.com/GeoPressure/GeoLocatoR/commit/3e116b4) ([2](https://github.com/GeoPressure/GeoLocatoR/commit/04f7f4f)) ([GeoLocator-DP v1.3](https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v1.3)). GeoLocatoR 1.4 and earlier cannot read v1.3 packages.
+- [Require GeoPressureR 3.8.0](https://github.com/GeoPressure/GeoLocatoR/commit/56ab06c) and [read its param layout](https://github.com/GeoPressure/GeoLocatoR/commit/36e8ea1); older `soi_settings`, `migratec_model` and `drift` params are moved to `tag_create$settings` when reading.
+- [Convert the SOI magnetic and acceleration x/y of older packages to the forward-right-down frame when upgrading to v1.3](https://github.com/GeoPressure/GeoLocatoR/commit/cf4f875) ([2](https://github.com/GeoPressure/GeoLocatoR/commit/3e73bb0)) ([3](https://github.com/GeoPressure/GeoLocatoR/commit/ed556a9)), for tags whose params record the axis mapping applied; other tags are left as stored, with a warning.
+- [Repair the groundspeed and wind of simulated edges for tags recorded with GeoPressureR 3.2.0 to 3.7.0](https://github.com/GeoPressure/GeoLocatoR/commit/1b5ecb3), when upgrading to v1.3 and [when reading a GeoPressureTemplate](https://github.com/GeoPressure/GeoLocatoR/commit/5f5c174).
+- [Write `params.json` as plain JSON and declare it as the `params` resource](https://github.com/GeoPressure/GeoLocatoR/commit/dd5d887) ([2](https://github.com/GeoPressure/GeoLocatoR/commit/4b795a9)); the previous format is still read.
+
+## Minor
+
+- `read_geopressuretemplate()` [imports every `path_`, `edge_` and `pressurepath_` interim variable of a GeoLocator-DP type, reads `config.yml` with `config::get()` and keeps ring numbers as text](https://github.com/GeoPressure/GeoLocatoR/commit/638bcfd).
+- `gldp_to_tag()` [returns saved params as a GeoPressureR `param` object](https://github.com/GeoPressure/GeoLocatoR/commit/fdca2fe).
+
+**Full Changelog**: <https://github.com/GeoPressure/GeoLocatoR/compare/v1.4.1...v1.5.0>
+
 # GeoLocatoR v1.4.1
 
 ## Main

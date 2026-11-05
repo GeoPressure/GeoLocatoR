@@ -201,6 +201,85 @@ test_that("interim import keeps simulated pressurepaths", {
   expect_equal(pressurepaths(pkg)$j, c(1, 2))
 })
 
+test_that("interim tags of older GeoPressureR are repaired from the evidence in their params", {
+  directory <- tempfile("template-repair-")
+  dir.create(file.path(directory, "data", "interim"), recursive = TRUE)
+  on.exit(unlink(directory, recursive = TRUE))
+  # GeoPressureR 3.6.3 stored hw <= 2.3 axes as (-raw y, -raw x, raw z).
+  param <- list(
+    id = "AA",
+    GeoPressureR_version = package_version("3.6.3"),
+    tag_create = list(manufacturer = "soi"),
+    mag_axis = c("left", "backward", "down")
+  )
+  tag <- list(
+    param = param,
+    pressure = data.frame(date = as.POSIXct("2020-01-01", tz = "UTC"), value = 1000),
+    magnetic = data.frame(
+      date = as.POSIXct("2020-01-01", tz = "UTC"),
+      magnetic_x = -2,
+      magnetic_y = -1,
+      magnetic_z = 3,
+      acceleration_x = -20,
+      acceleration_y = -10,
+      acceleration_z = 30
+    )
+  )
+  # The second flight carries the groundspeed of another one.
+  start <- as.POSIXct(c("2020-01-01 00:00", "2020-01-05 00:00"), tz = "UTC")
+  edge_simulation <- data.frame(
+    stap_s = 1,
+    stap_t = 2,
+    s = 1,
+    t = 2,
+    lat_s = 0,
+    lon_s = 0,
+    lat_t = 0,
+    lon_t = 1,
+    start = start,
+    end = start + 10 * 3600,
+    duration = 10,
+    n = 1,
+    distance = 100,
+    bearing = 90,
+    gs = complex(real = c(10, 30)),
+    ws = complex(real = 1, imaginary = 2),
+    j = 1:2
+  )
+  save(param, tag, edge_simulation, file = file.path(directory, "data", "interim", "AA.RData"))
+  # A tag without version or axis record is left as stored.
+  param <- list(id = "BB", tag_create = list(manufacturer = "soi"))
+  tag$param <- param
+  save(param, tag, file = file.path(directory, "data", "interim", "BB.RData"))
+
+  expect_warning(
+    expect_message(
+      pkg <- read_geopressuretemplate(directory, from = "interim"),
+      "Recomputed"
+    ),
+    "unknown"
+  )
+  m <- measurements(pkg)
+  mag <- m[m$sensor != "pressure", ]
+  value <- \(id) {
+    setNames(mag$value[mag$tag_id == id], mag$sensor[mag$tag_id == id])[c(
+      "magnetic_x",
+      "magnetic_y",
+      "magnetic_z",
+      "acceleration_x",
+      "acceleration_y",
+      "acceleration_z"
+    )]
+  }
+  expect_equal(unname(value("AA")), c(2, 1, 3, 20, 10, 30))
+  expect_equal(unname(value("BB")), c(-2, -1, 3, -20, -10, 30))
+  expect_equal(pkg$params[[1]]$tag_create$mag_axis, c("right", "forward", "down"))
+  expect_null(pkg$params[[1]]$mag_axis)
+  expect_null(pkg$params[[2]]$tag_create$mag_axis)
+  expect_equal(edges(pkg)$gs_u, c(10, 10))
+  expect_equal(edges(pkg)$ws_u, c(1, NA))
+})
+
 # Minimal interim project for tag AA, with an optional config.yml.
 template_interim <- function(config = NULL) {
   directory <- tempfile("template-interim-")
@@ -222,6 +301,61 @@ test_that("numeric ring numbers in config.yml are read as text", {
   on.exit(unlink(directory, recursive = TRUE))
   pkg <- suppressMessages(read_geopressuretemplate(directory, from = "interim"))
   expect_identical(tags(pkg)$ring_number, "12345")
+
+  # YAML reads an unquoted leading zero as an octal number.
+  directory <- template_interim(c("AA:", "  ring_number: 0012345"))
+  on.exit(unlink(directory, recursive = TRUE), add = TRUE)
+  pkg <- suppressMessages(read_geopressuretemplate(directory, from = "interim"))
+  expect_identical(tags(pkg)$ring_number, "0012345")
+})
+
+test_that("config.yml fields of a tag inherit from the default entry", {
+  directory <- template_interim(c(
+    "default:",
+    "  tag_comments: shared comment",
+    "  bird_create:",
+    "    scientific_name: Upupa epops",
+    "AA:",
+    "  tag_comments: own comment"
+  ))
+  on.exit(unlink(directory, recursive = TRUE))
+  pkg <- suppressMessages(read_geopressuretemplate(directory, from = "interim"))
+  expect_identical(tags(pkg)$scientific_name, "Upupa epops")
+  expect_identical(tags(pkg)$tag_comments, "own comment")
+})
+
+test_that("interim trajectories are found by prefix, with their type from the suffix", {
+  directory <- template_interim()
+  on.exit(unlink(directory, recursive = TRUE))
+  path <- file.path(directory, "data", "interim", "AA.RData")
+  load(path)
+  pressurepath <- data.frame(
+    date = as.POSIXct("2020-01-01", tz = "UTC"),
+    stap_id = 1,
+    lat = 0,
+    lon = 0,
+    j = 1
+  )
+  pressurepath_geopressureviz <- pressurepath
+  pressurepath_tag <- pressurepath
+  path_unknown <- data.frame(stap_id = 1, lat = 0, lon = 0, j = 1)
+  marginal <- list()
+  save(
+    param,
+    tag,
+    pressurepath_geopressureviz,
+    pressurepath_tag,
+    path_unknown,
+    marginal,
+    file = path
+  )
+
+  expect_warning(
+    pkg <- suppressMessages(read_geopressuretemplate(directory, from = "interim")),
+    "path_unknown"
+  )
+  expect_setequal(pressurepaths(pkg)$type, c("geopressureviz", "tag"))
+  expect_null(gldp_resource(pkg, "paths"))
 })
 
 test_that("interim tags take their species from config.yml", {

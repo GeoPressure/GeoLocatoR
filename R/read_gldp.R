@@ -6,9 +6,20 @@
 #' 1. reads the package descriptor with [frictionless::read_package()];
 #' 2. checks that it uses the GeoLocator-DP profile schema;
 #' 3. optionally loads resource tables into memory;
-#' 4. reads `params.json` when present;
+#' 4. reads the GeoPressureR parameters into `pkg$params`, from the file of the
+#'    `params` resource or else `params.json` when present, in plain JSON (see
+#'    [write_gldp()] for what JSON keeps) or in the [jsonlite::serializeJSON()]
+#'    format written by GeoLocatoR < 1.5.0;
 #' 5. upgrades older package versions when needed;
 #' 6. recomputes derived package properties with [update_gldp()].
+#'
+#' Upgrading a package older than GeoLocator-DP v1.3 converts the SOI magnetic
+#' and acceleration x/y stored by GeoPressureR < 3.8.0 to the forward-right-down
+#' frame of v1.3, when the params of the tag record the mapping that was
+#' applied. Tags whose frame is unknown are left as stored, with a warning. It
+#' also recomputes the groundspeed of simulated `edges` that GeoPressureR 3.2.0
+#' to 3.7.0 took from another flight, and removes their wind, for the tags whose
+#' params record one of these versions.
 #'
 #' When present, the `datapackages` provenance catalogue is restored as a tibble,
 #' with one row per source package, as returned by [merge_gldp()].
@@ -23,8 +34,9 @@
 #'   a table schema keep their `path`.
 #'   Some tables are loaded even when `FALSE`, because their upgrade changes
 #'   values and cannot operate on file paths alone: every table of a package
-#'   older than GeoLocator-DP v1.0, and `pressurepaths` and `observations` of
-#'   a v1.0 or v1.1 package.
+#'   older than GeoLocator-DP v1.0, `pressurepaths` and `observations` of
+#'   a v1.0 or v1.1 package, and `measurements` and `edges` of a package older
+#'   than v1.3 whose SOI axes or groundspeeds are repaired.
 #' @param drop_measurements `r lifecycle::badge("experimental")` If `TRUE`,
 #'   drops the `measurements` resource after reading `datapackage.json` and
 #'   before the optional `force_read` step loads resource data into memory. Use
@@ -173,8 +185,15 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
     })
   }
 
+  # GeoLocatoR < 1.5.0 wrote params.json without declaring the `params` resource.
+  # Params are kept in `pkg$params`, and write_gldp() declares the resource again.
+  params_path <- gldp_resource(pkg, "params")$path %||% "params.json"
+  if (!grepl("^https?://", params_path)) {
+    params_path <- file.path(base_dir, params_path)
+  }
+  pkg$resources <- purrr::discard(pkg$resources, \(r) identical(r$name, "params"))
+
   pkg$params <- list()
-  params_path <- file.path(base_dir, "params.json")
   # A remote package may have no params.json: one that cannot be opened is absent.
   params_json <- if (grepl("^https?://", params_path)) {
     tryCatch(readLines(params_path, warn = FALSE), error = \(e) NULL, warning = \(w) NULL)
@@ -182,8 +201,40 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
     readLines(params_path, warn = FALSE)
   }
   if (!is.null(params_json)) {
+    params_json <- paste(params_json, collapse = "\n")
     pkg$params <- tryCatch(
-      jsonlite::unserializeJSON(paste(params_json, collapse = "\n")),
+      {
+        json <- jsonlite::parse_json(params_json)
+        if (identical(json$type, "list") && "value" %in% names(json)) {
+          # GeoLocatoR < 1.5.0 wrote params with jsonlite::serializeJSON(), with R types.
+          jsonlite::unserializeJSON(params_json)
+        } else {
+          # Plain JSON, as written by write_gldp(). Each param is parsed on its own
+          # so that its arrays of records become data frames, but not the list of params.
+          purrr::map(json, \(p) {
+            p <- jsonlite::fromJSON(
+              jsonlite::toJSON(
+                p,
+                auto_unbox = TRUE,
+                digits = NA,
+                null = "null",
+                always_decimal = TRUE
+              ),
+              simplifyDataFrame = TRUE,
+              simplifyMatrix = FALSE
+            )
+            # write_gldp() writes Inf as "Inf", which jsonlite only reads back as a
+            # number within a numeric array. GeoPressureR defaults such as
+            # `fitted_location_duration` are Inf.
+            rapply(
+              p,
+              \(x) if (length(x) == 1 && x %in% c("Inf", "-Inf", "NaN")) as.numeric(x) else x,
+              classes = "character",
+              how = "replace"
+            )
+          })
+        }
+      },
       error = function(e) {
         cli_warn("Could not parse {.file params.json}: {e$message}")
         list()
@@ -194,7 +245,13 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
   # Report each parsing issue once.
   seen <- character(0)
   withCallingHandlers(
-    pkg |> upgrade_gldp() |> update_gldp(),
+    {
+      pkg <- upgrade_gldp(pkg)
+      # Moving param keys to the GeoPressureR 3.8.0 layout changes no data, so it is
+      # safe on packages of any version.
+      pkg[["params"]] <- gldp_params_migrate(pkg$params)
+      update_gldp(pkg)
+    },
     gldp_warning_parsing_issues = function(w) {
       if (conditionMessage(w) %in% seen) {
         invokeRestart("muffleWarning")
