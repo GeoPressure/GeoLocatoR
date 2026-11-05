@@ -143,7 +143,7 @@ gldp_fix_edges_gs <- function(pkg) {
     return(pkg)
   }
 
-  pkg <- mutate_resource(pkg, "edges", \(d) {
+  pkg <- gldp_mutate_resource(pkg, "edges", \(d) {
     duration <- as.numeric(difftime(d$end[fix], d$start[fix], units = "hours"))
     gs_abs <- d$distance[fix] / duration
     # Same convention as GeoPressureR: u eastward, v northward; no displacement has gs 0.
@@ -270,7 +270,7 @@ gldp_fix_soi_axes <- function(pkg) {
     purrr::map(\(a) gldp_mag_axis_matrix(new_frame) %*% t(gldp_mag_axis_matrix(a)))
 
   if (length(conversion) > 0) {
-    pkg <- mutate_resource(pkg, "measurements", \(d) {
+    pkg <- gldp_mutate_resource(pkg, "measurements", \(d) {
       sensor <- as.character(d$sensor)
       tag_id <- as.character(d$tag_id)
       for (id in names(conversion)) {

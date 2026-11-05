@@ -194,7 +194,7 @@ gldp_materialize_tables <- function(pkg) {
       next
     }
     # Preserve the declared schema: validation must still detect missing columns.
-    resource[["data"]] <- cast_table(gldp_read_resource(pkg, resource$name), resource$schema)
+    resource[["data"]] <- gldp_cast_table(gldp_read_resource(pkg, resource$name), resource$schema)
     resource[["path"]] <- NULL
     pkg$resources[[i]] <- resource
   }
@@ -221,7 +221,7 @@ schema_field_names <- function(schema) {
 #' @param schema A table schema object with field definitions
 #' @return The data frame with properly cast column types
 #' @noRd
-cast_table <- function(data, schema) {
+gldp_cast_table <- function(data, schema) {
   schema_fields <- schema_field_names(schema)
   # A field without `type` is `any`, the Table Schema default.
   schema_types <- vapply(schema$fields, \(x) x$type %||% "any", character(1))

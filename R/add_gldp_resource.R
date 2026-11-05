@@ -136,7 +136,7 @@ add_gldp_resource <- function(
   data <- data |> select(all_of(schema_field_names(schema)))
 
   if (cast_type) {
-    data <- cast_table(data, schema)
+    data <- gldp_cast_table(data, schema)
   }
 
   pkg <- frictionless::add_resource(
