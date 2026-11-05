@@ -99,3 +99,15 @@ test_that("a remote package reads the header of a relative path from its URL", {
   expect_identical(requested, "https://example.org/package/tags.csv")
   expect_identical(header, "tag_id")
 })
+
+test_that("file-backed and loaded reads report one named parsing warning", {
+  # The example measurements use `acceleration`, which is not a v1.2 sensor.
+  directory <- test_path("fixtures", "geolocator-dp-example")
+  for (force_read in c(TRUE, FALSE)) {
+    warnings <- capture_warnings(read_gldp(directory, force_read = force_read))
+    expect_length(warnings, 1)
+    expect_match(warnings, "resource measurements", fixed = TRUE)
+  }
+  pkg <- suppressWarnings(read_gldp(directory, force_read = FALSE))
+  expect_warning(measurements(pkg), class = "gldp_warning_parsing_issues")
+})

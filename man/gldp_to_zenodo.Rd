@@ -2,7 +2,7 @@
 % Please edit documentation in R/deprecations.R
 \name{gldp_to_zenodo}
 \alias{gldp_to_zenodo}
-\title{Deprecated: \code{gldp_to_zenodo()}}
+\title{Defunct: \code{gldp_to_zenodo()}}
 \usage{
 gldp_to_zenodo(...)
 }
@@ -13,7 +13,7 @@ gldp_to_zenodo(...)
 This function is defunct and always errors.
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}}
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#defunct}{\figure{lifecycle-defunct.svg}{options: alt='[Defunct]'}}}{\strong{[Defunct]}}
 
 \code{gldp_to_zenodo()} was removed with no replacement.
 }

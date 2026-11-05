@@ -4,10 +4,10 @@ library(GeoPressureR)
 library(yaml)
 library(usethis)
 
-# pkg_shared is loaded from setup.R
+# shared_pkg() is defined in setup.R
 
 test_that("create_geopressuretemplate creates a project shell", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   tag_id <- unique(tags(pkg)$tag_id)[1]
   param <- param_create(tag_id, default = TRUE)
   param$tag_set_map$extent <- c(-20, 30, -5, 55)
@@ -57,7 +57,7 @@ test_that("generated GeoPressureTemplate runs the full workflow", {
   )
   skip_if(!glp_available, "The GeoPressure pressure-data service is unavailable.")
 
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   tag_id <- measurements(pkg) |>
     dplyr::filter(.data$sensor == "pressure") |>
     dplyr::pull(.data$tag_id) |>
@@ -186,6 +186,48 @@ test_that("generated config skips known positions without a location", {
 test_that("generated known positions only hold the columns tag_set_map() reads", {
   config <- template_config_write(template_config_pkg())
   expect_named(config$A$tag_set_map$known, c("stap_id", "known_lat", "known_lon"))
+})
+
+test_that("generated config parses with unassigned and long known positions", {
+  pkg <- template_config_pkg()
+  o <- observations(pkg)
+  sightings <- o[rep(which(o$tag_id == "A")[1], 30), ]
+  sightings$observation_type <- "sighting"
+  sightings$datetime <- as.POSIXct("2020-01-01 12:00", tz = "UTC") + seq_len(30)
+  sightings$latitude <- 46.123456 + seq_len(30) / 1000
+  pkg <- add_gldp_resource(pkg, "observations", rbind(o, sightings), replace = TRUE)
+  config <- template_config_write(pkg)
+  expect_equal(unlist(config$A$tag_set_map$known$stap_id), c(1, rep(0, 30), -1))
+  expect_length(unlist(config$A$tag_set_map$known$known_lat), 32)
+})
+
+test_that("generated config keeps the param crop dates without equipment or retrieval date", {
+  pkg <- template_config_pkg()
+  o <- observations(pkg)
+  o$datetime[o$tag_id == "A" & o$observation_type == "equipment"] <- NA
+  o$observation_type[o$tag_id == "A" & o$observation_type == "retrieval"] <- "capture"
+  pkg <- add_gldp_resource(pkg, "observations", o, replace = TRUE)
+  param <- param_create("A", default = TRUE)
+  param$tag_create$crop_start <- "2020-01-05"
+  param$tag_create$crop_end <- "2020-02-01"
+  pkg[["params"]] <- list(param)
+  config <- template_config_write(pkg)
+  expect_identical(config$A$tag_create$crop_start, "2020-01-05")
+  expect_identical(config$A$tag_create$crop_end, "2020-02-01")
+})
+
+test_that("generated config uses the earliest equipment and the latest retrieval", {
+  pkg <- template_config_pkg()
+  o <- observations(pkg)
+  a <- o[o$tag_id == "A" & o$observation_type %in% c("equipment", "retrieval"), ]
+  a$datetime <- a$datetime + ifelse(a$observation_type == "equipment", 86400 * 3, -86400 * 3)
+  pkg <- add_gldp_resource(pkg, "observations", rbind(o, a), replace = TRUE)
+  expect_warning(config <- template_config_write(pkg), "earliest equipment")
+  first <- min(o$datetime[o$tag_id == "A" & o$observation_type == "equipment"])
+  last <- max(o$datetime[o$tag_id == "A" & o$observation_type == "retrieval"])
+  expect_identical(config$A$tag_create$crop_start, format(first + 86400, "%Y-%m-%d"))
+  expect_identical(config$A$tag_create$crop_end, format(last, "%Y-%m-%d"))
+  expect_identical(sum(unlist(config$A$tag_set_map$known$stap_id) %in% c(1, -1)), 2L)
 })
 
 test_that("README is written from a plain-text description", {

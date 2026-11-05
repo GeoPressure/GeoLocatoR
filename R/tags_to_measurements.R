@@ -14,7 +14,7 @@
 #'   like "activity", "mean_acceleration_z", "light", "temperature_external", etc.}
 #'   \item{datetime}{A POSIXct datetime object representing the timestamp of the measurements.}
 #'   \item{value}{A numeric vector containing the sensor measurement values.}
-#'   \item{label}{A character vector for additional labeling, which is NA if not present in the
+#'   \item{label}{A character vector for additional labelling, which is NA if not present in the
 #'   original data.}
 #' }
 #'

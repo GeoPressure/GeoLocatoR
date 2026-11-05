@@ -230,15 +230,28 @@ cast_table <- function(data, schema) {
       } else if (type == "boolean") {
         data[[field]] <- as.logical(data[[field]])
       } else if (type == "date") {
-        data[[field]] <- as.Date(data[[field]])
-      } else if (type == "datetime") {
-        # The default formats read ISO 8601 "2020-01-01T12:30:00Z" as a date only,
-        # so its "T" separator is replaced by the space they expect.
         value <- data[[field]]
-        if (is.character(value)) {
-          value <- sub("T", " ", value, fixed = TRUE)
+        # Strings are read as ISO 8601 only; others become NA, reported below.
+        data[[field]] <- if (is.character(value)) {
+          value[!grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}", value)] <- NA
+          as.Date(value, format = "%Y-%m-%d")
+        } else {
+          as.Date(value)
         }
-        data[[field]] <- as.POSIXct(value, tz = "UTC")
+      } else if (type == "datetime") {
+        value <- data[[field]]
+        # Strings are read as ISO 8601 only; others become NA, reported below.
+        data[[field]] <- if (is.character(value)) {
+          value[!grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}", value)] <- NA
+          value <- sub("T", " ", value, fixed = TRUE)
+          purrr::map(
+            c("%Y-%m-%d %H:%M:%OS", "%Y-%m-%d %H:%M", "%Y-%m-%d"),
+            \(format) as.POSIXct(strptime(value, format, tz = "UTC"))
+          ) |>
+            purrr::reduce(coalesce)
+        } else {
+          as.POSIXct(value, tz = "UTC")
+        }
       } else if (type == "time") {
         # For time fields, convert to character if not already
         if (!is.character(data[[field]])) {

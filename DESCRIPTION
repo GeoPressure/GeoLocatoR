@@ -1,6 +1,6 @@
 Package: GeoLocatoR
 Title: R package for GeoLocator Data Package
-Version: 1.4.0
+Version: 1.4.1
 Authors@R: 
     c(
       person("Raphaël", "Nussbaumer", , "rafnuss@gmail.com", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-8185-1020")),
@@ -40,13 +40,10 @@ Suggests:
     DBI,
     knitr,
     leaflet,
-    quarto,
     readxl,
     rstudioapi,
-    rmarkdown,
     spelling,
     testthat (>= 3.0.0),
-    tidyverse,
     EML,
     uuid
 Remotes: 

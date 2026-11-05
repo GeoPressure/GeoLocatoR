@@ -283,10 +283,12 @@ test_that("read_zenodo_download_files checks the MD5 checksum", {
   zenodo_record <- zenodo_test_record(contents)
   zenodo_record$files$entries[[2]]$checksum <- "md5:00000000000000000000000000000000"
 
+  before <- list.files(tempdir(), "^geolocator-zenodo-")
   expect_error(
     read_zenodo_download_files(zenodo_record, token = "dummy"),
     "tags.csv: its MD5 checksum does not match"
   )
+  expect_identical(list.files(tempdir(), "^geolocator-zenodo-"), before)
 })
 
 test_that("read_zenodo_download_files explains a record without files", {
@@ -408,6 +410,7 @@ test_that("read_zenodo_attach_metadata keeps contributor roles as a list", {
   out <- read_zenodo_attach_metadata(pkg, record)
   expect_identical(out$contributors[[1]]$roles, list("datacollector"))
   expect_null(out$contributors[[2]]$roles)
+  expect_null(out$contributors[[1]]$organization)
 })
 
 test_that("read_zenodo_attach_metadata drops absent licence, keyword and grant values", {
@@ -423,7 +426,7 @@ test_that("read_zenodo_attach_metadata drops absent licence, keyword and grant v
 
   out <- read_zenodo_attach_metadata(pkg, record)
   expect_identical(out$licenses, list(list(title = "Custom licence")))
-  expect_identical(out$grants, "SNSF")
+  expect_identical(out$grants, list("SNSF"))
   expect_false("keywords" %in% names(out))
 
   out <- read_zenodo_attach_metadata(pkg, list(id = "1", metadata = list(), links = list()))

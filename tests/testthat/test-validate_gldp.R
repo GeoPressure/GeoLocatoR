@@ -1,7 +1,7 @@
 library(testthat)
 library(GeoLocatoR)
 
-# pkg_shared is loaded from setup.R
+# shared_pkg() is defined in setup.R
 
 make_geopressure_test_pkg <- function() {
   pkg <- create_gldp()
@@ -141,8 +141,9 @@ make_geopressure_test_pkg <- function() {
 }
 
 test_that("validate_gldp validates a strict geolocatordp", {
+  pkg <- shared_pkg()
   expect_no_error(suppressMessages({
-    valid <- validate_gldp(pkg_shared)
+    valid <- validate_gldp(pkg)
   }))
   expect_true(valid)
 })
@@ -240,7 +241,7 @@ test_that("validate_gldp_table matches a pattern against the whole value", {
 })
 
 test_that("validate_gldp_meta checks missing title", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   pkg[["title"]] <- ""
   pkg[["contributors"]] <- list(list(roles = "author"))
   pkg[["relatedIdentifiers"]] <- list(list(relatedIdentifier = "https://doi.org/10.1/abc"))
@@ -252,7 +253,7 @@ test_that("validate_gldp_meta checks missing title", {
 })
 
 test_that("validate_gldp_meta checks title prefix", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   pkg[["title"]] <- "Wrong title"
   pkg[["contributors"]] <- list(list(roles = "author"))
   pkg[["relatedIdentifiers"]] <- list(list(relatedIdentifier = "https://doi.org/10.1/abc"))
@@ -264,7 +265,7 @@ test_that("validate_gldp_meta checks title prefix", {
 })
 
 test_that("validate_gldp_meta checks contributor role completeness", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   pkg[["title"]] <- "GeoLocator Data Package: Example"
   pkg[["contributors"]] <- list(list(roles = character(0)))
   pkg[["relatedIdentifiers"]] <- list(list(relatedIdentifier = "https://doi.org/10.1/abc"))
@@ -276,7 +277,7 @@ test_that("validate_gldp_meta checks contributor role completeness", {
 })
 
 test_that("validate_gldp_meta checks record_type is dataset", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   pkg[["title"]] <- "GeoLocator Data Package: Example"
   pkg[["contributors"]] <- list(list(roles = "author"))
   pkg[["relatedIdentifiers"]] <- list(list(relatedIdentifier = "https://doi.org/10.1/abc"))
@@ -295,7 +296,7 @@ test_that("validate_gldp_meta checks allowed manufacturers", {
     .package = "GeoLocatoR"
   )
 
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   pkg[["title"]] <- "GeoLocator Data Package: Example"
   pkg[["contributors"]] <- list(list(roles = "author"))
   pkg[["relatedIdentifiers"]] <- list(list(relatedIdentifier = "https://doi.org/10.1/abc"))
@@ -332,7 +333,7 @@ test_that("validate_gldp_meta words the title prefix as a community expectation"
 })
 
 test_that("validate_gldp_meta checks relatedIdentifiers presence", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   pkg[["title"]] <- "GeoLocator Data Package: Example"
   pkg[["contributors"]] <- list(list(roles = "author"))
   pkg[["relatedIdentifiers"]] <- list()
@@ -344,7 +345,7 @@ test_that("validate_gldp_meta checks relatedIdentifiers presence", {
 })
 
 test_that("validate_gldp_meta checks selected community", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   pkg[["title"]] <- "GeoLocator Data Package: Example"
   pkg[["contributors"]] <- list(list(roles = "author"))
   pkg[["relatedIdentifiers"]] <- list(list(relatedIdentifier = "https://doi.org/10.1/abc"))
@@ -356,7 +357,7 @@ test_that("validate_gldp_meta checks selected community", {
 })
 
 test_that("validate_gldp_meta checks codeRepository URL", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   pkg[["title"]] <- "GeoLocator Data Package: Example"
   pkg[["contributors"]] <- list(list(roles = "author"))
   pkg[["relatedIdentifiers"]] <- list(list(relatedIdentifier = "https://doi.org/10.1/abc"))
@@ -379,7 +380,7 @@ test_that("validate_gldp_meta checks taxonomic names against eBird taxonomy", {
     .package = "httr2"
   )
 
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   pkg[["title"]] <- "GeoLocator Data Package: Example"
   pkg[["contributors"]] <- list(list(roles = "author"))
   pkg[["relatedIdentifiers"]] <- list(list(relatedIdentifier = "https://doi.org/10.1/abc"))
@@ -735,4 +736,8 @@ test_that("coherence checks report a missing observations resource without error
     )
   )
   expect_false(suppressMessages(validate_gldp_coherence(pkg)))
+})
+
+test_that("validate_gldp_profile reports a passing profile", {
+  expect_message(validate_gldp_profile(create_gldp()), "Profile checks passed")
 })

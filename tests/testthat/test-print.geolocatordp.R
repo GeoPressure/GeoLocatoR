@@ -1,15 +1,15 @@
 library(testthat)
 library(GeoLocatoR)
 
-# pkg_shared is loaded from setup.R
+# shared_pkg() is defined in setup.R
 
 test_that("print.geolocatordp displays package information", {
-  out <- cli::cli_fmt(print(pkg_shared))
+  out <- cli::cli_fmt(print(shared_pkg()))
   expect_true(any(grepl("Resources", out, fixed = TRUE)))
 })
 
 test_that("print.geolocatordp renders HTML description as plain text", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   pkg[["description"]] <- "<p>This is <strong>HTML</strong> &amp; text.</p>"
 
   out <- cli::cli_fmt(print(pkg))
@@ -17,7 +17,7 @@ test_that("print.geolocatordp renders HTML description as plain text", {
 })
 
 test_that("print.geolocatordp prints a plain-text description", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   # Plain text must not be handed to xml2, which would read it as a file path.
   pkg[["description"]] <- "The Master compiles curated, open-access packages. It contains tags."
 
@@ -26,7 +26,7 @@ test_that("print.geolocatordp prints a plain-text description", {
 })
 
 test_that("print.geolocatordp prints braces in free text literally", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   pkg[["description"]] <- "Range {not glue} and <b>bold</b>"
   pkg[["contributors"]] <- list(list(title = "Doe, {Jane}", roles = list("researcher")))
 
@@ -77,4 +77,11 @@ test_that("print.geolocatordp labels the package identifier by its field name", 
   pkg[["id"]] <- "https://doi.org/10.5281/zenodo.1"
   out <- cli::cli_fmt(print(pkg))
   expect_true(any(grepl("id: <https://doi.org/10.5281/zenodo.1>", out, fixed = TRUE)))
+})
+
+test_that("print.geolocatordp lists keywords stored as a list", {
+  pkg <- create_gldp()
+  pkg[["keywords"]] <- list("hoopoe", "migration")
+  out <- cli::cli_fmt(print(pkg))
+  expect_true(any(grepl("keywords:.*hoopoe.*migration", out)))
 })

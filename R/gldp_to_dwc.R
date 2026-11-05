@@ -331,13 +331,13 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
       georeferenceSources = dplyr::case_when(
         .data$location_is_known ~ paste(
           "GeoPressureR::tag_set_map()",
-          "https://geopressure.com/GeoPressureR/reference/tag_set_map.html",
+          "https://geopressure.org/GeoPressureR/reference/tag_set_map.html",
           sep = " | "
         ),
         TRUE ~ paste(
           "GeoPressureR::graph_most_likely()",
-          "https://geopressure.com/GeoPressureR/reference/graph_most_likely.html",
-          "https://geopressure.com/GeoPressureManual/trajectory.html",
+          "https://geopressure.org/GeoPressureR/reference/graph_most_likely.html",
+          "https://geopressure.org/GeoPressureManual/trajectory.html",
           sep = " | "
         )
       ),

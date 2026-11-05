@@ -2,7 +2,7 @@ library(testthat)
 library(GeoLocatoR)
 library(GeoPressureR)
 
-# pkg_shared is loaded from setup.R
+# shared_pkg() is defined in setup.R
 
 # Offline package with one tag "AA" and the given measurements.
 local_tag_pkg <- function(measurements) {
@@ -87,7 +87,7 @@ test_that("gldp_to_tag turns missing twilight labels into empty strings", {
 })
 
 test_that("gldp_to_tag converts single tag correctly", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   # Get the first tag_id
   tag_ids <- unique(tags(pkg)$tag_id)
   first_tag_id <- tag_ids[1]
@@ -103,86 +103,54 @@ test_that("gldp_to_tag converts single tag correctly", {
   expect_equal(tag$param$id, first_tag_id)
   expect_equal(tag$param$tag_create$manufacturer, "datapackage")
 
-  # Check that at least one sensor data exists
-  sensor_names <- c(
-    "pressure",
-    "light",
-    "acceleration",
-    "temperature_external",
-    "temperature_internal"
-  )
-  has_sensor <- any(sensor_names %in% names(tag))
-  expect_true(has_sensor)
+  # The shared record has pressure, light, acceleration, staps and twilights for every tag
+  expect_true(is.data.frame(tag$pressure))
+  expect_true(all(c("date", "value") %in% names(tag$pressure)))
+  expect_s3_class(tag$pressure$date, "POSIXct")
+  expect_equal(attr(tag$pressure$date, "tzone"), "UTC")
 
-  # If pressure data exists, check structure
-  if ("pressure" %in% names(tag)) {
-    expect_true(is.data.frame(tag$pressure))
-    expect_true(all(c("date", "value") %in% names(tag$pressure)))
-    expect_s3_class(tag$pressure$date, "POSIXct")
-    expect_equal(attr(tag$pressure$date, "tzone"), "UTC")
-  }
+  expect_true(is.data.frame(tag$light))
+  expect_true(all(c("date", "value") %in% names(tag$light)))
+  expect_s3_class(tag$light$date, "POSIXct")
 
-  # If light data exists, check structure
-  if ("light" %in% names(tag)) {
-    expect_true(is.data.frame(tag$light))
-    expect_true(all(c("date", "value") %in% names(tag$light)))
-    expect_s3_class(tag$light$date, "POSIXct")
-  }
+  expect_true(is.data.frame(tag$acceleration))
+  expect_true(all(c("date", "value") %in% names(tag$acceleration)))
+  expect_s3_class(tag$acceleration$date, "POSIXct")
 
-  # If acceleration data exists, check structure
-  if ("acceleration" %in% names(tag)) {
-    expect_true(is.data.frame(tag$acceleration))
-    expect_true(all(c("date", "value") %in% names(tag$acceleration)))
-    expect_s3_class(tag$acceleration$date, "POSIXct")
-  }
+  expect_true(is.data.frame(tag$stap))
+  expect_true(all(c("stap_id", "start", "end") %in% names(tag$stap)))
+  expect_s3_class(tag$stap$start, "POSIXct")
+  expect_s3_class(tag$stap$end, "POSIXct")
+  expect_equal(attr(tag$stap$start, "tzone"), "UTC")
+  expect_equal(attr(tag$stap$end, "tzone"), "UTC")
 
-  # If stap data exists, check structure
-  if ("stap" %in% names(tag)) {
-    expect_true(is.data.frame(tag$stap))
-    expect_true(all(c("stap_id", "start", "end") %in% names(tag$stap)))
-    expect_s3_class(tag$stap$start, "POSIXct")
-    expect_s3_class(tag$stap$end, "POSIXct")
-    expect_equal(attr(tag$stap$start, "tzone"), "UTC")
-    expect_equal(attr(tag$stap$end, "tzone"), "UTC")
-  }
-
-  # If twilight data exists, check structure
-  if ("twilight" %in% names(tag)) {
-    expect_true(is.data.frame(tag$twilight))
-    expect_true(all(c("twilight", "rise") %in% names(tag$twilight)))
-    expect_s3_class(tag$twilight$twilight, "POSIXct")
-    expect_equal(attr(tag$twilight$twilight, "tzone"), "UTC")
-    expect_type(tag$twilight$rise, "logical")
-  }
+  expect_true(is.data.frame(tag$twilight))
+  expect_true(all(c("twilight", "rise") %in% names(tag$twilight)))
+  expect_s3_class(tag$twilight$twilight, "POSIXct")
+  expect_equal(attr(tag$twilight$twilight, "tzone"), "UTC")
+  expect_type(tag$twilight$rise, "logical")
 })
 
 test_that("gldp_to_tag converts all tags when tag_id is NULL", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   # Get all tag_ids
   tag_ids <- unique(tags(pkg)$tag_id)
 
   # Convert all tags
   result <- gldp_to_tag(pkg, tag_id = NULL)
 
-  # If only one tag, should return single tag object
-  if (length(tag_ids) == 1) {
-    expect_s3_class(result, "tag")
-  } else {
-    # If multiple tags, should return list
-    expect_type(result, "list")
-    expect_equal(length(result), length(tag_ids))
-    expect_equal(names(result), tag_ids)
-
-    # Check each tag in list
-    for (i in seq_along(result)) {
-      expect_s3_class(result[[i]], "tag")
-      expect_equal(result[[i]]$param$id, tag_ids[i])
-    }
+  # The shared record has two tags, so a named list is returned
+  expect_type(result, "list")
+  expect_equal(length(result), length(tag_ids))
+  expect_equal(names(result), tag_ids)
+  for (i in seq_along(result)) {
+    expect_s3_class(result[[i]], "tag")
+    expect_equal(result[[i]]$param$id, tag_ids[i])
   }
 })
 
 test_that("gldp_to_tag converts multiple specific tags", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   # Get all tag_ids
   tag_ids <- unique(tags(pkg)$tag_id)
 
@@ -206,7 +174,7 @@ test_that("gldp_to_tag converts multiple specific tags", {
 })
 
 test_that("gldp_to_tag errors on invalid tag_id", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   # Try to convert non-existent tag
   expect_error(
     gldp_to_tag(pkg, tag_id = "INVALID_TAG_ID"),
@@ -215,7 +183,7 @@ test_that("gldp_to_tag errors on invalid tag_id", {
 })
 
 test_that("gldp_to_tag works with GeoPressureR functions", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   # Get the first tag_id
   tag_ids <- unique(tags(pkg)$tag_id)
   first_tag_id <- tag_ids[1]
@@ -233,7 +201,7 @@ test_that("gldp_to_tag works with GeoPressureR functions", {
 })
 
 test_that("gldp_to_tag reuses saved GeoPressureR parameters", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   tag_id <- unique(tags(pkg)$tag_id)[1]
   param <- param_create(tag_id, default = TRUE)
   param$tag_create$manufacturer <- "migratetech"
@@ -248,58 +216,30 @@ test_that("gldp_to_tag reuses saved GeoPressureR parameters", {
 })
 
 test_that("gldp_to_tag extracts stap and twilight data correctly", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
-  # Check if package has staps and twilights resources
-  has_staps <- "staps" %in% frictionless::resource_names(pkg)
-  has_twilights <- "twilights" %in% frictionless::resource_names(pkg)
-
-  # Get the first tag_id
-  tag_ids <- unique(tags(pkg)$tag_id)
-  first_tag_id <- tag_ids[1]
-
-  # Convert to tag
+  first_tag_id <- unique(tags(pkg)$tag_id)[1]
   tag <- gldp_to_tag(pkg, tag_id = first_tag_id)
 
-  # If package has staps, check they're in tag object
-  if (has_staps) {
-    stap_for_tag <- staps(pkg) |> dplyr::filter(.data$tag_id == first_tag_id)
-    if (nrow(stap_for_tag) > 0) {
-      expect_true("stap" %in% names(tag))
-      expect_equal(nrow(tag$stap), nrow(stap_for_tag))
+  # Staps of the tag, without tag_id
+  stap_for_tag <- staps(pkg) |> dplyr::filter(.data$tag_id == first_tag_id)
+  expect_gt(nrow(stap_for_tag), 0)
+  expect_equal(nrow(tag$stap), nrow(stap_for_tag))
+  expect_false("tag_id" %in% names(tag$stap))
+  expect_true(all(c("stap_id", "start", "end") %in% names(tag$stap)))
+  expect_equal(sort(tag$stap$stap_id), sort(stap_for_tag$stap_id))
 
-      # Check that tag_id column was removed
-      expect_false("tag_id" %in% names(tag$stap))
-
-      # Check required columns exist
-      expect_true(all(c("stap_id", "start", "end") %in% names(tag$stap)))
-
-      # Verify stap_id matches
-      expect_equal(sort(tag$stap$stap_id), sort(stap_for_tag$stap_id))
-    }
-  }
-
-  # If package has twilights, check they're in tag object
-  if (has_twilights) {
-    twl_for_tag <- twilights(pkg) |> dplyr::filter(.data$tag_id == first_tag_id)
-    if (nrow(twl_for_tag) > 0) {
-      expect_true("twilight" %in% names(tag))
-      expect_equal(nrow(tag$twilight), nrow(twl_for_tag))
-
-      # Check that tag_id column was removed
-      expect_false("tag_id" %in% names(tag$twilight))
-
-      # Check required columns exist
-      expect_true(all(c("twilight", "rise") %in% names(tag$twilight)))
-
-      # Verify rise values match
-      expect_equal(sort(tag$twilight$rise), sort(twl_for_tag$rise))
-    }
-  }
+  # Twilights of the tag, without tag_id
+  twl_for_tag <- twilights(pkg) |> dplyr::filter(.data$tag_id == first_tag_id)
+  expect_gt(nrow(twl_for_tag), 0)
+  expect_equal(nrow(tag$twilight), nrow(twl_for_tag))
+  expect_false("tag_id" %in% names(tag$twilight))
+  expect_true(all(c("twilight", "rise") %in% names(tag$twilight)))
+  expect_equal(sort(tag$twilight$rise), sort(twl_for_tag$rise))
 })
 
 test_that("gldp_to_tag keeps mean_acceleration_z in acceleration", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   resource_idx <- which(vapply(pkg$resources, \(r) identical(r$name, "measurements"), logical(1)))
   skip_if(length(resource_idx) == 0, "Package has no measurements resource")
@@ -337,7 +277,7 @@ test_that("gldp_to_tag keeps mean_acceleration_z in acceleration", {
 })
 
 test_that("gldp_to_tag combines magnetic and acceleration axes", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   resource_idx <- which(vapply(pkg$resources, \(r) identical(r$name, "measurements"), logical(1)))
   m <- pkg$resources[[resource_idx[1]]]$data
   tag_id <- unique(tags(pkg)$tag_id)[1]
@@ -372,7 +312,7 @@ test_that("gldp_to_tag combines magnetic and acceleration axes", {
 })
 
 test_that("gldp_to_tag preserves pressure and acceleration labels", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   resource_idx <- which(vapply(pkg$resources, \(r) identical(r$name, "measurements"), logical(1)))
   skip_if(length(resource_idx) == 0, "Package has no measurements resource")
 
@@ -429,18 +369,14 @@ test_that("gldp_to_tag preserves pressure and acceleration labels", {
 })
 
 test_that("gldp_to_tag omits empty label columns", {
-  pkg <- pkg_shared
-  tag_id <- unique(tags(pkg)$tag_id)[1]
-  tag <- gldp_to_tag(pkg, tag_id)
-
-  m <- measurements(pkg) |> dplyr::filter(.data$tag_id == .env$tag_id)
-  if (any(m$sensor == "pressure") && all(is.na(m$label[m$sensor == "pressure"]))) {
-    expect_false("label" %in% names(tag$pressure))
-  }
-  if (
-    any(m$sensor %in% c("activity", "mean_acceleration_z")) &&
-      all(is.na(m$label[m$sensor %in% c("activity", "mean_acceleration_z")]))
-  ) {
-    expect_false("label" %in% names(tag$acceleration))
-  }
+  pkg <- local_tag_pkg(data.frame(
+    tag_id = "AA",
+    sensor = rep(c("pressure", "activity"), each = 2),
+    datetime = as.POSIXct("2020-01-01", tz = "UTC") + 3600 * 0:1,
+    value = c(1000, 1001, 3, 4),
+    label = NA_character_
+  ))
+  tag <- gldp_to_tag(pkg, "AA")
+  expect_false("label" %in% names(tag$pressure))
+  expect_false("label" %in% names(tag$acceleration))
 })

@@ -35,7 +35,7 @@ update_gldp_reference_location(pkg)
 \code{bibliographicCitation}.}
 }
 \value{
-\code{pkg}, with the derived property updated.
+\code{pkg}, with the derived property updated, or unchanged for the last three.
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}}

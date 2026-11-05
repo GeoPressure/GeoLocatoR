@@ -2,7 +2,7 @@
 % Please edit documentation in R/read_geopressuretemplate.R
 \name{read_geopressuretemplate}
 \alias{read_geopressuretemplate}
-\title{Add Geolocator DP resources from a GeoPressureTemplate}
+\title{Add GeoLocator DP resources from a GeoPressureTemplate}
 \usage{
 read_geopressuretemplate(
   directory = ".",

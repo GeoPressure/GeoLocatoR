@@ -1,10 +1,10 @@
 library(testthat)
 library(GeoLocatoR)
 
-# pkg_shared is loaded from setup.R
+# shared_pkg() is defined in setup.R
 
 test_that("gldp_version returns package version", {
-  v <- gldp_version(pkg_shared)
+  v <- gldp_version(shared_pkg())
 
   expect_type(v, "character")
   expect_length(v, 1)

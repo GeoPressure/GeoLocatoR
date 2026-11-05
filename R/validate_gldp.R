@@ -157,6 +157,10 @@ validate_gldp_profile <- function(pkg) {
     ignore_fields = ignore_fields
   )
 
+  if (valid) {
+    cli_alert_success("Profile checks passed.")
+  }
+
   invisible(valid)
 }
 

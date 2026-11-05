@@ -142,7 +142,44 @@ gldp_align_schema_to_header <- function(pkg, resource_name) {
 #' @noRd
 gldp_read_resource <- function(pkg, resource_name, ...) {
   pkg <- gldp_align_schema_to_header(pkg, resource_name)
-  frictionless::read_resource(pkg, resource_name, ...)
+
+  # Replace readr's parsing warning with one naming the resource and the column.
+  has_parsing_warning <- FALSE
+  data <- withCallingHandlers(
+    frictionless::read_resource(pkg, resource_name, ...),
+    warning = function(w) {
+      if (grepl("One or more parsing issues", conditionMessage(w), fixed = TRUE)) {
+        has_parsing_warning <<- TRUE
+        invokeRestart("muffleWarning")
+      }
+    }
+  )
+
+  if (has_parsing_warning) {
+    path <- as.character(gldp_resource(pkg, resource_name)$path)[1]
+    directory <- attr(pkg, "directory")
+    if (!grepl("^https?://", path) && is_non_empty_string(directory)) {
+      path <- file.path(directory, path)
+    }
+    problems <- dplyr::slice_head(readr::problems(data), n = 3)
+    problem_preview <- purrr::pmap_chr(problems, \(row, col, expected, actual, ...) {
+      glue::glue("row {row}, col {col}: expected {expected}, got {actual}")
+    })
+    cli_warn(
+      c(
+        "!" = "Parsing issues detected while reading resource {.field {resource_name}}.",
+        "i" = "Location: {.file {path}}",
+        "i" = if (length(problem_preview) > 0) {
+          "First issues: {glue::glue_collapse(problem_preview, sep = '; ')}"
+        } else {
+          "Run {.code readr::problems()} on this resource to inspect row-level parsing issues."
+        }
+      ),
+      class = "gldp_warning_parsing_issues"
+    )
+  }
+
+  data
 }
 
 #' Load file-backed tables for operations that inspect or modify resource data

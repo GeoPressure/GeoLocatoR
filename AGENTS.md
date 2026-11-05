@@ -8,7 +8,7 @@
 - Only add checks at clear external boundaries (I/O, user input) when necessary.
 - Do not add defensive guards/fallback logic unless explicitly asked or required for external I/O.
 - Ask or inform on potential fallback logic, but don't add them by default
-- Warn me in case of breaking back compatibility. I generally only care about released/version back-compabtility not during develeopement.
+- Warn me in case of breaking back compatibility. I generally only care about released/version backward compatibility, not during development.
 - Do not run the test suite while iterating on a change. It is slow and its
   feedback is rarely the feedback needed mid-edit.
 - Do run it when handing work over: before opening or updating a pull
@@ -16,10 +16,11 @@
   than only shape. Report what it said rather than asserting the change works.
 - Run `devtools::document()` when roxygen sources change and before opening or updating a
   pull request or a release, and commit the regenerated `man/` and `NAMESPACE` with the
-  change. Do not run it while iterating on unrelated edits.
+  change. Do not run it while iterating on unrelated edits. Run it in a UTF-8 locale:
+  `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 Rscript -e 'devtools::document()'`.
 - Do not use `:::` or `::` in tests.
 
-Comments
+## Comments
 - Add minimal comments per logical code section (roughly every 1–10 lines).
 - Comments should describe the purpose of the section, not obvious R behavior.
 - Explicitly comment deliberate design choices when they are non-obvious and explain the reason.
@@ -31,6 +32,7 @@ Comments
 - Introduce helpers only when they clearly remove real duplication.
 - Prefer `glue::glue()` / `glue::glue_collapse()` over `paste()` / `paste0()`.
 - Prefer `purrr` for mapping and list transformations.
+- Inside dplyr verbs, refer to a variable that shares a column name with `.env$x` or `!!x`.
 - Do not introduce new dependencies unless explicitly approved.
 
 ## File organisation
@@ -58,15 +60,26 @@ Comments
 - Roxygen only for exported/user-facing functions; internal helpers should be `@noRd`.
 - For exported functions include at minimum: title, `@description`, all `@param`, and `@return`.
 - Keep docs behavior-oriented and concise.
-- Wrap network/auth-dependent examples in `\\dontrun{}`.
+- Wrap network/auth-dependent examples in `\dontrun{}`.
 - Edit `README.Rmd`, not `README.md`.
 - Do not manually edit generated files (`NAMESPACE`, `man/*.Rd`).
+- In docs, roxygen, messages, NEWS and changelogs, state the change or fact only; ask before adding explanations or background.
+
+## Data changes
+- Change stored data on read or upgrade only when the package or its params show which case applies (e.g. a recorded GeoPressureR version); otherwise leave the data and warn.
+- Put version-specific conversions in an `upgrade_gldp()` step, so a package that declares the newer GeoLocator-DP version is not changed again.
+
+## Tests
+- Tests must run offline: get the shared Zenodo package with `shared_pkg()` and skip other network tests with `skip_if_offline()`.
 
 ## Development, PR, and release workflow
-- Develop on `dev`: make focused commits, run the mandatory checks, and push to
-  `origin/dev`.
+- Develop on `dev`: make focused commits, run the mandatory checks (format, lint
+  and tests, see Checks and format), and push to `origin/dev`.
 - Open pull requests from `dev` to `main`. Merge `main` into `dev` and resolve
   conflicts before merging the pull request.
+- Merge pull requests with a merge commit, never squash or rebase: release notes link to the original commits.
+- Name release branches `release-X.Y.Z`; never give a branch the name of a tag.
+- When `dev` holds minor changes and a patch is needed, branch `release-X.Y.Z` from `main`, cherry-pick the patch-level commits, and merge `main` back into `dev` after the release.
 - Use a draft pull request while release metadata or release checks are
   incomplete. Mark it ready only when the final version, NEWS entry, and
   required GitHub checks are complete.
@@ -117,8 +130,8 @@ Comments
 - Add the canonical release block to `NEWS.md` before opening the pull request,
   then paste that exact block into the pull-request body.
 - Resolve all `R CMD check` warnings and release-relevant notes, and confirm
-  the pull request's GitHub Actions matrix is green.
-- Run the suite against both the CRAN and the development version of
+  the pull request's GitHub Actions checks are green.
+- Run the suite locally against both the CRAN and the development version of
   frictionless. The two disagree on what a resource descriptor must carry,
   so a release that is green on only one of them is untested.
 - After merging to `main`, create tag `vX.Y.Z` and paste the unchanged
@@ -126,12 +139,14 @@ Comments
 - Refresh `inst/schemas/` with `sync_gldp_schemas()` against a released
   GeoLocator-DP tag, never by copying from a branch or a working tree. A sync
   that changes nothing is the proof the bundle matches the release.
+- When a release needs a new GeoLocator-DP or GeoPressureR version, release in this order: GeoLocator-DP tag, GeoPressureR, GeoLocatoR. Raise the minimum version in `DESCRIPTION` and `CITATION.cff`.
 - Edit `CITATION.cff` by hand for the version line. `cffr::cff_write()`
   regenerates the whole file and drops its dependency references.
 
 ## Checks and format
-- Format code with `air format . --check`
-- Check lint with: `jarl check .`
+- Check formatting with `air format . --check` (run `air format .` to format).
+- Check lint with `jarl check .`.
+- Run tests with `devtools::test()`.
 
 ## Uncertainty
 - If required information is missing or ambiguous, ask for clarification instead of guessing.
