@@ -342,6 +342,17 @@ test_that("upgrade_gldp migrates a v1.0 package to v1.1", {
   expect_false(is.null(tags_res$schema$fields))
 })
 
+test_that("upgrade_gldp keeps a params resource, which has no table schema", {
+  pkg <- create_gldp(version = "v1.1")
+  pkg <- add_gldp_resource(pkg, "tags", data.frame(tag_id = "A", ring_number = "R1"))
+  pkg[["resources"]] <- c(pkg[["resources"]], list(list(name = "params", path = "params.json")))
+
+  upgraded <- suppressMessages(upgrade_gldp(pkg))
+
+  expect_identical(gldp_version(upgraded), "v1.2")
+  expect_identical(gldp_resource(upgraded, "params")$path, "params.json")
+})
+
 test_that("file-backed legacy upgrades transform values and match loaded upgrades", {
   directory <- tempfile("upgrade-lazy-")
   on.exit(unlink(directory, recursive = TRUE))

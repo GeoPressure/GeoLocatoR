@@ -70,7 +70,8 @@ normalize_upgraded_resources <- function(x) {
   # We only touch resources already present in the package and keep custom resources unchanged.
   target_version <- gldp_version(x)
   profile <- gldp_profile_schema(target_version)
-  supported_resources <- gldp_profile_resource_names(profile)
+  # Only the tables have a table schema; the `params` resource has none.
+  supported_resources <- gldp_profile_resource_branches(profile)[[1]]$properties$name$enum
 
   resources <- x$resources %||% list()
   for (resource in resources) {
