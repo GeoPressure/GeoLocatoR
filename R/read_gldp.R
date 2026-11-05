@@ -218,9 +218,15 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
 
   pkg$params <- list()
   params_path <- file.path(base_dir, "params.json")
-  if (file.exists(params_path)) {
+  # A remote package may have no params.json: one that cannot be opened is absent.
+  params_json <- if (grepl("^https?://", params_path)) {
+    tryCatch(readLines(params_path, warn = FALSE), error = \(e) NULL, warning = \(w) NULL)
+  } else if (file.exists(params_path)) {
+    readLines(params_path, warn = FALSE)
+  }
+  if (!is.null(params_json)) {
     pkg$params <- tryCatch(
-      jsonlite::unserializeJSON(paste(readLines(params_path, warn = FALSE), collapse = "\n")),
+      jsonlite::unserializeJSON(paste(params_json, collapse = "\n")),
       error = function(e) {
         cli_warn("Could not parse {.file params.json}: {e$message}")
         list()
