@@ -23,8 +23,9 @@
 #' adjusted according to the schema.
 #' @param cast_type A logical value indicating whether the data frame should be cast to the types
 #' specified in the schema. Defaults to `FALSE`.
-#' @param delim Not used: [frictionless::add_resource()] only uses it when
-#'   `data` is a path to a file, and `data` is always a data frame here.
+#' @param delim `r lifecycle::badge("deprecated")` Not used:
+#'   [frictionless::add_resource()] only uses it when `data` is a path to a
+#'   file, and `data` is always a data frame here.
 #' @inheritParams frictionless::add_resource
 #'
 #' @return The updated GeoLocator Data Package object with the new resource added.
@@ -39,9 +40,12 @@ add_gldp_resource <- function(
   data,
   cast_type = FALSE,
   replace = FALSE,
-  delim = ","
+  delim = lifecycle::deprecated()
 ) {
   check_gldp(pkg)
+  if (lifecycle::is_present(delim)) {
+    lifecycle::deprecate_warn("1.4.0", "add_gldp_resource(delim)")
+  }
   version <- gldp_version(pkg)
 
   # The profile lists the tables, whose schemas are not in `pkg` until added.
@@ -140,8 +144,7 @@ add_gldp_resource <- function(
     resource_name = resource_name,
     data = data,
     schema = schema,
-    replace = replace,
-    delim = delim
+    replace = replace
   )
 
   gldp_resource(pkg, resource_name) <- gldp_mark_table_resource(gldp_resource(pkg, resource_name))

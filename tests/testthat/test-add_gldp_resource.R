@@ -120,3 +120,11 @@ test_that("add_gldp_resource casts factors and ISO 8601 datetimes", {
     as.POSIXct(c("2020-01-01 12:30:00", "2020-01-02 06:00:00"), tz = "UTC")
   )
 })
+
+test_that("add_gldp_resource deprecates delim", {
+  data <- tibble::tibble(tag_id = "a", ring_number = "r1")
+  expect_warning(
+    add_gldp_resource(create_gldp(), "tags", data, delim = ";"),
+    class = "lifecycle_warning_deprecated"
+  )
+})
