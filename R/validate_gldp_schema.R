@@ -702,13 +702,14 @@ get_type_map <- function() {
       matches <- grepl(pattern, valid_vals)
 
       if (length(valid_vals) > 0 && any(matches)) {
-        # Extract coordinates and validate ranges using base R
+        # Extract coordinates and validate ranges using base R. The Table Schema
+        # default geopoint is "lon, lat", longitude first.
         regex_matches <- regexec(pattern, valid_vals[matches])
         coords <- regmatches(valid_vals[matches], regex_matches)
-        lat <- as.numeric(sapply(coords, function(x) {
+        lon <- as.numeric(sapply(coords, function(x) {
           if (length(x) > 1) x[2] else NA
         }))
-        lon <- as.numeric(sapply(coords, function(x) {
+        lat <- as.numeric(sapply(coords, function(x) {
           if (length(x) > 2) x[3] else NA
         }))
         valid_coords <- all(
