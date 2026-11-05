@@ -22,7 +22,7 @@ Imports:
     GeoPressureR (>= 3.5.4),
     glue,
     ggplot2,
-    httr2,
+    httr2 (>= 1.1.1),
     jsonlite,
     keyring,
     lifecycle,
