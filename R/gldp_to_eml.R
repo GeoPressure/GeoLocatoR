@@ -93,6 +93,7 @@ gldp_to_eml <- function(pkg, directory) {
   creators <- list()
   contacts <- list()
   associated_parties <- list()
+  parties <- list()
 
   for (contributor in (pkg$contributors %||% list())) {
     # Normalise possibly missing fields
@@ -122,6 +123,7 @@ gldp_to_eml <- function(pkg, directory) {
         NULL
       }
     )
+    parties <- c(parties, list(party))
 
     roles <- contributor$roles
     if (is.null(roles)) {
@@ -151,7 +153,11 @@ gldp_to_eml <- function(pkg, directory) {
     }
   }
 
-  # EML requires a contact. If none is explicitly provided, fallback to first creator.
+  # EML requires a creator and a contact: without a creator role, every contributor is a
+  # creator, and without a contact role, the first creator is the contact.
+  if (length(creators) == 0) {
+    creators <- parties
+  }
   if (length(contacts) == 0 && length(creators) > 0) {
     contacts <- creators[1]
   }
