@@ -110,6 +110,7 @@ read_geopressuretemplate <- function(
       )
       var_names_pressurepath <- c(
         "pressurepath_most_likely",
+        "pressurepath_simulation",
         "pressurepath_geopressureviz",
         "pressurepath_tag"
       )

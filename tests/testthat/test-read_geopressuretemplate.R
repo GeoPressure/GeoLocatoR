@@ -173,3 +173,30 @@ test_that("raw-tag import applies the labelled file and known positions", {
   expect_true("flight" %in% measurements(pkg)$label)
   expect_s3_class(pkg$params[[1]]$tag_set_map$known, "data.frame")
 })
+
+test_that("interim import keeps simulated pressurepaths", {
+  directory <- tempfile("template-pressurepath-")
+  dir.create(file.path(directory, "data", "interim"), recursive = TRUE)
+  on.exit(unlink(directory, recursive = TRUE))
+  param <- list(id = "AA", tag_create = list(manufacturer = "soi"))
+  tag <- list(
+    param = param,
+    pressure = data.frame(date = as.POSIXct("2020-01-01", tz = "UTC"), value = 1000)
+  )
+  pressurepath_simulation <- data.frame(
+    date = as.POSIXct("2020-01-01", tz = "UTC") + c(0, 3600),
+    stap_id = 1,
+    lat = 0,
+    lon = 0,
+    j = c(1, 2)
+  )
+  save(
+    param,
+    tag,
+    pressurepath_simulation,
+    file = file.path(directory, "data", "interim", "AA.RData")
+  )
+  pkg <- suppressMessages(read_geopressuretemplate(directory, from = "interim"))
+  expect_identical(unique(pressurepaths(pkg)$type), "simulation")
+  expect_equal(pressurepaths(pkg)$j, c(1, 2))
+})
