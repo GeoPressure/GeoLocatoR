@@ -34,3 +34,9 @@ test_that("config_to_tibble reads inherited and tag-specific configuration", {
   expect_equal(cfg$tag_set_map.include_stap_id, rep("1, 2", 2))
   expect_equal(cfg$id[cfg$use & cfg$geopressuretemplate.likelihood != "map_light"], "tag1")
 })
+
+test_that("config_to_tibble keeps id for a single tag", {
+  file <- tempfile(fileext = ".yml")
+  writeLines(c("default:", "  use: true", "tag1:", "  inherits: default"), file)
+  expect_identical(config_to_tibble(file)$id, "tag1")
+})

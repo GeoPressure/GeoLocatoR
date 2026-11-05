@@ -10,8 +10,8 @@
 #' @param file Character string specifying the path to the `config.yml` file.
 #'   Defaults to `"config.yml"` in the current directory, or the value of the
 #'   `R_CONFIG_FILE` environment variable if set.
-#' @param filter_return Logical. If `TRUE` (default), only columns that vary across tags
-#'   are returned. If `FALSE`, all configuration columns are included even if they have
+#' @param filter_return Logical. If `TRUE` (default), only `id` and the columns that vary
+#'   across tags are returned. If `FALSE`, all configuration columns are included even if they have
 #'   the same value for all tags.
 #'
 #' @return A [tibble::tibble()] with one row per tag ID and columns for each configuration
@@ -198,9 +198,9 @@ config_to_tibble <- function(
   })
 
   if (filter_return) {
-    # Keep only columns that do not contain the same value in every row.
+    # Keep `id` and the columns that do not contain the same value in every row.
     cfg <- cfg |>
-      select(where(~ n_distinct(.) > 1))
+      select("id", where(~ n_distinct(.) > 1))
   }
   cfg
 }
