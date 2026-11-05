@@ -36,6 +36,13 @@ package resources, and store raw parameter objects in \code{pkg$params}.
 then derive \code{measurements}, \code{tags}, \code{observations}, and \code{params}.
 }
 
+Interim files may have been written by an older GeoPressureR. As when
+\code{\link[=read_gldp]{read_gldp()}} upgrades a package to GeoLocator-DP v1.3, SOI magnetic and
+acceleration axes are converted to the forward-right-down frame when the
+params of the tag record the mapping applied, and the groundspeed of
+simulated edges is recomputed for tags whose params record GeoPressureR
+3.2.0 to 3.7.0. Other data are left as stored.
+
 The \code{ring_number}, \code{tag_comments} and \code{bird_create$scientific_name} entries
 of each tag in \code{config.yml} fill the generated \code{tags}.
 
