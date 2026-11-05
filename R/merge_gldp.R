@@ -139,17 +139,14 @@ merge_gldp <- function(x, y = NULL, ...) {
   source_ids <- unique(purrr::flatten_chr(source_ids))
   source_ids <- source_ids[!is.na(source_ids) & nzchar(trimws(source_ids))]
   source_related <- purrr::map(source_ids, \(id) {
+    # DataCite expects a bare DOI ("10.5281/...") with the DOI type.
+    doi <- sub("^https?://(dx\\.)?doi\\.org/", "", id, ignore.case = TRUE)
+    is_doi <- grepl("^10\\.", doi)
     list(
       relationType = "IsCompiledBy",
-      relatedIdentifier = id,
+      relatedIdentifier = if (is_doi) doi else id,
       resourceTypeGeneral = "Dataset",
-      relatedIdentifierType = if (
-        grepl("^10\\.", id) || grepl("doi.org/", tolower(id), fixed = TRUE)
-      ) {
-        "DOI"
-      } else {
-        "URL"
-      }
+      relatedIdentifierType = if (is_doi) "DOI" else "URL"
     )
   })
   related_identifiers <- unique(c(

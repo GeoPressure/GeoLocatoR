@@ -202,6 +202,19 @@ test_that("merge_gldp requires an id for tags without datapackage_id", {
   )
 })
 
+test_that("merge_gldp records source DOIs as bare DOIs", {
+  merged <- merge_gldp(
+    local_merge_pkg("AA", id = "https://doi.org/10.5281/zenodo.1"),
+    local_merge_pkg("BB", id = "https://example.org/bb")
+  )
+  related <- merged$relatedIdentifiers
+  expect_equal(
+    vapply(related, \(x) x$relatedIdentifier, character(1)),
+    c("10.5281/zenodo.1", "https://example.org/bb")
+  )
+  expect_equal(vapply(related, \(x) x$relatedIdentifierType, character(1)), c("DOI", "URL"))
+})
+
 test_that("merge_gldp supports sequential merges", {
   pkg1 <- pkg_shared
   suppressMessages({
