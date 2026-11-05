@@ -71,10 +71,12 @@ test_that("read_gldp identifies an unreadable resource", {
     auto_unbox = TRUE
   )
 
-  expect_error(
+  err <- expect_error(
     read_gldp(path),
     "Could not read resource tags"
   )
+  # The parent error says what went wrong; the schema is not blamed for it.
+  expect_no_match(conditionMessage(err), "does not match the declared schema")
 })
 
 test_that("read_gldp leaves resources that are not tables on their path", {
