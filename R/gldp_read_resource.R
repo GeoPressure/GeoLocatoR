@@ -23,14 +23,14 @@ gldp_resource_header <- function(pkg, resource) {
     return(NULL)
   }
 
-  if (!grepl("^https?://", path)) {
-    directory <- attr(pkg, "directory")
-    if (is_non_empty_string(directory)) {
-      path <- file.path(directory, path)
-    }
-    if (!file.exists(path)) {
-      return(NULL)
-    }
+  # A relative path resolves against the package directory, which is a URL for a
+  # remote package: only a local file can be checked for existence.
+  directory <- attr(pkg, "directory")
+  if (!grepl("^https?://", path) && is_non_empty_string(directory)) {
+    path <- file.path(directory, path)
+  }
+  if (!grepl("^https?://", path) && !file.exists(path)) {
+    return(NULL)
   }
 
   # Only the header is needed, so the rest of the file is never parsed.
