@@ -65,7 +65,7 @@ test_that("generated GeoPressureTemplate runs the full workflow", {
   skip_if(is.na(tag_id), "The shared package has no pressure data")
   pkg$resources <- purrr::map(pkg$resources, \(resource) {
     if ("tag_id" %in% names(resource$data)) {
-      resource$data <- dplyr::filter(resource$data, .data$tag_id == tag_id)
+      resource$data <- dplyr::filter(resource$data, .data$tag_id == .env$tag_id)
     }
     resource
   })
