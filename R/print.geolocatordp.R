@@ -78,11 +78,15 @@ print.geolocatordp <- function(x, ...) {
   access_status <- tolower(as.character(x$access_status %||% "")[1])
   embargo <- as.character(x$embargo %||% "")[1]
   has_embargo <- nzchar(embargo) && !identical(embargo, "1970-01-01")
+  # Access and communities are only known for a package read from Zenodo
+  from_zenodo <- nzchar(access_status)
   if (identical(access_status, "restricted")) {
     cli::cli_bullets(c("x" = "{.field access}: restricted"))
   } else if (has_embargo) {
     cli::cli_bullets(c("!" = "{.field access}: with embargo until {embargo}"))
-  } else {
+  } else if (identical(access_status, "metadata-only")) {
+    cli::cli_bullets(c("!" = "{.field access}: metadata only, without files"))
+  } else if (from_zenodo) {
     cli::cli_bullets(c("v" = "{.field access}: Open access"))
   }
 
@@ -142,7 +146,7 @@ print.geolocatordp <- function(x, ...) {
   )
   if (any(communities %in% allowed_communities)) {
     cli::cli_bullets(c("v" = "{.field community}: Geolocator DP community"))
-  } else {
+  } else if (from_zenodo) {
     cli::cli_bullets(c("!" = "{.field community}: no Geolocator DP community"))
   }
 
