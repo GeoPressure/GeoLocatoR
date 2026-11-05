@@ -328,7 +328,7 @@ validate_gldp_core_coherence <- function(pkg) {
     return(valid)
   }
 
-  t <- tags(pkg)
+  tags_data <- tags(pkg)
   o <- observations(pkg)
   m <- measurements(pkg)
 
@@ -337,7 +337,7 @@ validate_gldp_core_coherence <- function(pkg) {
 
   # Check for conflicting species assignments:
   # A single ring_number should be linked to only one scientific_name.
-  conflicting_ring_numbers <- t |>
+  conflicting_ring_numbers <- tags_data |>
     filter(!is.na(.data$ring_number)) |>
     group_by(.data$ring_number) |>
     filter(n_distinct(.data$scientific_name) > 1) |>
@@ -352,10 +352,10 @@ validate_gldp_core_coherence <- function(pkg) {
 
   # Check for measurements with tag_id not present in the tags table.
   # All tag_id entries in measurements must be declared in tags.
-  midmissing <- unique(m$tag_id[!(m$tag_id %in% t$tag_id)])
-  if (length(midmissing) > 0) {
+  undeclared_tag_ids <- unique(m$tag_id[!(m$tag_id %in% tags_data$tag_id)])
+  if (length(undeclared_tag_ids) > 0) {
     cli_alert_danger(
-      "{.field tags} is missing {.field tag_id}={.val {midmissing}} which are present in {.field measurements}."
+      "{.field tags} is missing {.field tag_id}={.val {undeclared_tag_ids}} which are present in {.field measurements}."
     )
     cli_alert_info(
       "All {.field tag_id} values present in the resource {.field measurements} need to also be present in the resource {.field tags}."
@@ -365,10 +365,12 @@ validate_gldp_core_coherence <- function(pkg) {
 
   # Check for ring_number present in tags but missing from observations.
   # All birds with a ring_number in tags should have at least one corresponding observation.
-  tringmissing <- unique(t$ring_number[!(t$ring_number %in% o$ring_number)])
-  if (length(tringmissing) > 0) {
+  unobserved_ring_numbers <- unique(tags_data$ring_number[
+    !(tags_data$ring_number %in% o$ring_number)
+  ])
+  if (length(unobserved_ring_numbers) > 0) {
     cli_alert_danger(
-      "{.field observations} is missing {.field ring_number} {.val {tringmissing}} which are present in {.field tags}."
+      "{.field observations} is missing {.field ring_number} {.val {unobserved_ring_numbers}} which are present in {.field tags}."
     )
     valid <- FALSE
   }
@@ -377,7 +379,7 @@ validate_gldp_core_coherence <- function(pkg) {
   # If a combination exists in observations, it must also exist in tags.
   invalid_combinations <- o |>
     filter(!is.na(.data$tag_id)) |>
-    anti_join(t, by = c("tag_id", "ring_number"))
+    anti_join(tags_data, by = c("tag_id", "ring_number"))
   if (nrow(invalid_combinations) > 0) {
     combinations <- unique(glue::glue(
       "{invalid_combinations$tag_id}/{invalid_combinations$ring_number}"
@@ -390,33 +392,33 @@ validate_gldp_core_coherence <- function(pkg) {
 
   # Check for tag_id present in tags but missing from observations.
   # Each tag_id should have at least one observation record.
-  tidmissing <- setdiff(t$tag_id, unique(o$tag_id))
-  if (length(tidmissing) > 0) {
+  unobserved_tag_ids <- setdiff(tags_data$tag_id, unique(o$tag_id))
+  if (length(unobserved_tag_ids) > 0) {
     cli::cli_alert_warning(
-      "No observations found for {.val {tidmissing}} declared in {.field tags}."
+      "No observations found for {.val {unobserved_tag_ids}} declared in {.field tags}."
     )
     # A warning only: the package stays valid.
   }
 
   # Check for missing equipment or retrieval while measurements are present.
   # A tag with measurements needs both an equipment and a retrieval observation.
-  tidmissingequip <- setdiff(
+  tag_ids_without_equipment <- setdiff(
     unique(m$tag_id),
     unique(o$tag_id[o$observation_type == "equipment"])
   )
-  if (length(tidmissingequip) > 0) {
+  if (length(tag_ids_without_equipment) > 0) {
     cli_alert_danger(
-      "No equipment found for {.val {tidmissingequip}} in {.field observations} while data are present in {.field measurements}."
+      "No equipment found for {.val {tag_ids_without_equipment}} in {.field observations} while data are present in {.field measurements}."
     )
     valid <- FALSE
   }
-  tidmissingret <- setdiff(
+  tag_ids_without_retrieval <- setdiff(
     unique(m$tag_id),
     unique(o$tag_id[o$observation_type == "retrieval"])
   )
-  if (length(tidmissingret) > 0) {
+  if (length(tag_ids_without_retrieval) > 0) {
     cli_alert_danger(
-      "No retrieval found for {.val {tidmissingret}} in {.field observations} while data are present in {.field measurements}."
+      "No retrieval found for {.val {tag_ids_without_retrieval}} in {.field observations} while data are present in {.field measurements}."
     )
     valid <- FALSE
   }
