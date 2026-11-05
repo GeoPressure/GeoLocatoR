@@ -174,3 +174,26 @@ test_that("accessors return the same column types for file-backed and loaded tab
   expect_identical(lapply(lazy, class), lapply(loaded, class))
   expect_identical(lazy$sensor, "pressure")
 })
+
+test_that("measurements<- updates the taxonomic coverage", {
+  # `taxonomic` only lists the species of tags with measurements.
+  pkg <- create_gldp()
+  tags(pkg) <- data.frame(
+    tag_id = c("A", "B"),
+    ring_number = c("R1", "R2"),
+    scientific_name = c("Upupa epops", "Apus apus")
+  )
+  measurement <- data.frame(
+    tag_id = "A",
+    sensor = "pressure",
+    datetime = as.POSIXct("2020-01-01", tz = "UTC"),
+    value = 1000
+  )
+
+  measurements(pkg) <- measurement
+  expect_identical(pkg$taxonomic, "Upupa epops")
+
+  measurement$tag_id <- "B"
+  measurements(pkg) <- measurement
+  expect_identical(pkg$taxonomic, "Apus apus")
+})

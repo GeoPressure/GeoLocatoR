@@ -122,9 +122,11 @@ measurements <- function(x) {
     x = x,
     value = value,
     resource_name = "measurements",
+    # `taxonomic` only lists the species of tags with measurements.
     post = \(pkg) {
       pkg |>
         update_gldp_temporal() |>
+        update_gldp_taxonomic() |>
         update_gldp_number_tags()
     }
   )
