@@ -33,6 +33,26 @@ test_that("gldp_to_tag converts temperature sensors", {
   expect_equal(tag$temperature_internal$value, c(40, 41))
 })
 
+test_that("gldp_to_tag accepts measurements without a label column", {
+  directory <- tempfile("gldp-to-tag-")
+  on.exit(unlink(directory, recursive = TRUE))
+  pkg <- local_tag_pkg(data.frame(
+    tag_id = "AA",
+    sensor = rep(c("pressure", "activity"), each = 2),
+    datetime = as.POSIXct("2020-01-01", tz = "UTC") + 3600 * 0:1,
+    value = c(1000, 1001, 3, 4)
+  ))
+  write_gldp(pkg, directory)
+  file <- file.path(directory, "measurements.csv")
+  data <- read.csv(file)
+  write.csv(data[names(data) != "label"], file, row.names = FALSE)
+
+  tag <- gldp_to_tag(read_gldp(directory, force_read = FALSE), "AA")
+  expect_equal(tag$pressure$value, c(1000, 1001))
+  expect_equal(tag$acceleration$value, c(3, 4))
+  expect_false("label" %in% names(tag$pressure))
+})
+
 test_that("gldp_to_tag converts single tag correctly", {
   pkg <- pkg_shared
   # Get the first tag_id
