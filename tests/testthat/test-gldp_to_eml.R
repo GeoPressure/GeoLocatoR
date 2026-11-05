@@ -42,3 +42,40 @@ test_that("gldp_to_eml handles lowercase roles and title-only contributors", {
   expect_true(length(eml$dataset$contact) >= 1)
   expect_true(length(eml$dataset$creator) >= 1)
 })
+
+test_that("gldp_to_eml writes the bounding box of a Point and a Polygon", {
+  skip_if_not_installed("EML")
+
+  tmp <- tempfile("gldp-to-eml-")
+  on.exit(unlink(tmp, recursive = TRUE))
+  pkg <- create_gldp(title = "Example package")
+  pkg$contributors <- list(list(title = "Doe, Jane", roles = "researcher"))
+
+  # upgrade_gldp() builds a Point from the former referenceLocation.
+  pkg$spatial <- list(type = "Point", coordinates = c(8, 46))
+  box <- suppressMessages(gldp_to_eml(pkg, tmp))$dataset$coverage$geographicCoverage
+  expect_equal(
+    unlist(box$boundingCoordinates),
+    c(
+      westBoundingCoordinate = 8,
+      eastBoundingCoordinate = 8,
+      northBoundingCoordinate = 46,
+      southBoundingCoordinate = 46
+    )
+  )
+
+  pkg$spatial <- list(
+    type = "Polygon",
+    coordinates = list(list(list(7, 45), list(9, 45), list(9, 47), list(7, 47), list(7, 45)))
+  )
+  box <- suppressMessages(gldp_to_eml(pkg, tmp))$dataset$coverage$geographicCoverage
+  expect_equal(
+    unlist(box$boundingCoordinates),
+    c(
+      westBoundingCoordinate = 7,
+      eastBoundingCoordinate = 9,
+      northBoundingCoordinate = 47,
+      southBoundingCoordinate = 45
+    )
+  )
+})
