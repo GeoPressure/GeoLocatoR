@@ -154,21 +154,8 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
         base_dir
       }
 
-      # A CSV edited without updating datapackage.json can hold values that do
-      # not parse as their declared type. readr only warns, without naming the
-      # resource or the column, so the warning is caught and reported with them.
-      has_parsing_warning <- FALSE
       df <- tryCatch(
-        withCallingHandlers(
-          gldp_read_resource(pkg, resource_name),
-          warning = function(w) {
-            msg <- conditionMessage(w)
-            if (grepl("One or more parsing issues", msg, fixed = TRUE)) {
-              has_parsing_warning <<- TRUE
-              invokeRestart("muffleWarning")
-            }
-          }
-        ),
+        gldp_read_resource(pkg, resource_name),
         error = function(e) {
           cli_abort(
             c(
@@ -180,31 +167,6 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
           )
         }
       )
-
-      if (has_parsing_warning) {
-        problems <- tryCatch(
-          readr::problems(df),
-          error = \(e) tibble::tibble()
-        )
-        problem_preview <- if (nrow(problems) > 0) {
-          probs <- dplyr::slice_head(problems, n = 3)
-          purrr::pmap_chr(probs, \(row, col, expected, actual, file, ...) {
-            glue::glue("row {row}, col {col}: expected {expected}, got {actual}")
-          })
-        } else {
-          character(0)
-        }
-
-        cli_warn(c(
-          "!" = "Parsing issues detected while reading resource {.field {resource_name}}.",
-          "i" = "Location: {.file {resource_location}}",
-          "i" = if (length(problem_preview) > 0) {
-            "First issues: {glue::glue_collapse(problem_preview, sep = '; ')}"
-          } else {
-            "Run {.code readr::problems()} on this resource to inspect row-level parsing issues."
-          }
-        ))
-      }
 
       # Store the cast data in the resource and clear path to keep the object in memory.
       r$data <- cast_table(df, r$schema)
@@ -231,10 +193,16 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
     )
   }
 
-  # Conversion
-  pkg <- upgrade_gldp(pkg)
-
-  pkg <- update_gldp(pkg)
-
-  pkg
+  # A file-backed table is read again by each derived property: report each
+  # parsing issue once.
+  seen <- character(0)
+  withCallingHandlers(
+    pkg |> upgrade_gldp() |> update_gldp(),
+    gldp_warning_parsing_issues = function(w) {
+      if (conditionMessage(w) %in% seen) {
+        invokeRestart("muffleWarning")
+      }
+      seen <<- c(seen, conditionMessage(w))
+    }
+  )
 }
