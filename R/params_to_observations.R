@@ -61,7 +61,9 @@ params_to_observations <- function(params) {
       }
 
       if ("known" %in% names(param$tag_set_map)) {
-        known <- param$tag_set_map$known
+        # A list read from config.yml recycles scalar positions, as tag_set_map() does.
+        # eval() builds GeoPressureR's default, stored as an unevaluated data.frame() call.
+        known <- as.data.frame(eval(param$tag_set_map$known))
 
         id <- known$stap_id == 1
         if (any(id)) {
