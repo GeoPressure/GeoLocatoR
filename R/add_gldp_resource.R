@@ -108,14 +108,18 @@ add_gldp_resource <- function(
     if (!field$name %in% names(data)) {
       # Types not listed fall back to a logical NA, which writes as an empty
       # CSV column and is typed by `frictionless::read_resource()` on the way in.
-      data[[field$name]] <- switch(
-        as.character(field$type)[1],
-        string = NA_character_,
-        number = NA_real_,
-        integer = NA_integer_,
-        date = as.Date(NA),
-        duration = NA_character_,
-        NA
+      # Repeated to the row count: a base data.frame does not recycle to 0 rows.
+      data[[field$name]] <- rep(
+        switch(
+          as.character(field$type)[1],
+          string = NA_character_,
+          number = NA_real_,
+          integer = NA_integer_,
+          date = as.Date(NA),
+          duration = NA_character_,
+          NA
+        ),
+        nrow(data)
       )
     }
   }

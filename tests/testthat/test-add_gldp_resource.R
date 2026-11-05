@@ -86,3 +86,12 @@ test_that("add_gldp_resource sets the data resource profile", {
   # `$schema` first, as frictionless 2.0 writes it.
   expect_equal(names(resource)[1], "$schema")
 })
+
+test_that("add_gldp_resource fills absent columns of a base data.frame by row count", {
+  # A base data.frame does not recycle a single NA to 0 rows, so the fill used to
+  # fail before frictionless could report that the table is empty.
+  expect_error(
+    add_gldp_resource(create_gldp(), "tags", data.frame(tag_id = character(0))),
+    class = "frictionless_error_data_invalid"
+  )
+})
