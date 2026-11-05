@@ -87,6 +87,17 @@ test_that("upgrade_gldp migrates v0.1 package fields to v0.6", {
   expect_false("ind" %in% names(pressurepaths_data))
 })
 
+test_that("upgrade_gldp coerces legacy non-numeric IDs without a cast warning", {
+  pkg <- create_gldp(version = "v0.6")
+  pkg[["resources"]] <- list(list(
+    name = "paths",
+    data = data.frame(tag_id = "tag-1", stap_id = "stap-1", type = "most_likely", j = 1L)
+  ))
+
+  expect_no_warning(upgraded <- suppressMessages(upgrade_gldp(pkg)))
+  expect_true(is.na(paths(upgraded)$stap_id))
+})
+
 test_that("step v0.4 -> v0.5 reconstructs missing edges$type from j", {
   pkg <- list(
     "$schema" = "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/v0.4/geolocator-dp-profile.json",

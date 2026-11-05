@@ -31,8 +31,18 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
 
   cli_alert_success("Upgrading GeoLocator-DP from {.val {from_version}} to {.val {to_version}}.")
 
+  # Legacy packages carry non-numeric IDs (e.g. `stap_id = "stap-1"`) in fields
+  # that later schemas type as numbers. Coercing them to NA is the intended
+  # migration, so the cast_table() warning about lost values is muffled here.
+  quiet_cast <- function(expr) {
+    withCallingHandlers(
+      expr,
+      gldp_warning_cast_loss = \(w) invokeRestart("muffleWarning")
+    )
+  }
+
   while (!identical(from_version, to_version)) {
-    x <- switch(
+    x <- quiet_cast(switch(
       from_version,
       "main" = {
         x[["$schema"]] <- gldp_schema_url("v0.2")
@@ -46,13 +56,13 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
       "v0.6" = upgrade_gldp_v0_6_to_v1_0(x),
       "v1.0" = upgrade_gldp_v1_0_to_v1_1(x),
       "v1.1" = upgrade_gldp_v1_1_to_v1_2(x)
-    )
+    ))
 
     from_version <- gldp_version(x)
   }
 
   # Final normalization enforces target-version schemas/types after stepwise mutations.
-  x <- normalize_upgraded_resources(x)
+  x <- quiet_cast(normalize_upgraded_resources(x))
 
   x
 }
