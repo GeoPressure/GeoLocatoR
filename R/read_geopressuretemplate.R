@@ -452,6 +452,14 @@ read_geopressuretemplate <- function(
       t <- tf
     }
 
+    # Generated observations have no ring_number; take it from the final tags table.
+    if (is.data.frame(o) && nrow(o) > 0 && "ring_number" %in% names(t)) {
+      o <- o |>
+        left_join(select(t, "tag_id", tag_ring_number = "ring_number"), by = "tag_id") |>
+        mutate(ring_number = coalesce(.data$ring_number, .data$tag_ring_number)) |>
+        select(-"tag_ring_number")
+    }
+
     if (file.exists("./data/observations.xlsx")) {
       if (!requireNamespace("readxl", quietly = TRUE)) {
         cli_abort(
