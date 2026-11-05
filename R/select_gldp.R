@@ -56,10 +56,7 @@ select_gldp <- function(pkg, tag_id) {
     data <- pkg$resources[[i]]$data
     # File-backed tables need the same filtering and schema types as loaded tables.
     if (is.null(data)) {
-      data <- gldp_cast_table(
-        gldp_read_resource(pkg, pkg$resources[[i]]$name),
-        pkg$resources[[i]]$schema
-      )
+      data <- gldp_load_table(pkg, pkg$resources[[i]]$name)$data
     }
     if (!is.data.frame(data) || !("tag_id" %in% names(data))) {
       next

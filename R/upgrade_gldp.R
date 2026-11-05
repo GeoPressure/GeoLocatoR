@@ -78,7 +78,7 @@ gldp_normalize_upgraded_resources <- function(x) {
   target_version <- gldp_version(x)
   profile <- gldp_profile_schema(target_version)
   # Only the tables have a table schema; the `params` resource has none.
-  supported_resources <- gldp_profile_resource_branches(profile)[[1]]$properties$name$enum
+  supported_resources <- gldp_profile_table_names(profile)
 
   resources <- x$resources %||% list()
   for (resource in resources) {
@@ -446,8 +446,7 @@ gldp_mutate_resource <- function(pkg, resource_name, fn) {
   resource <- gldp_resource(pkg, resource_name)
   # A file-backed table is loaded: its values cannot be changed in the file.
   if (!is.null(resource$path)) {
-    resource[["data"]] <- gldp_cast_table(gldp_read_resource(pkg, resource_name), resource$schema)
-    resource[["path"]] <- NULL
+    resource <- gldp_load_table(pkg, resource_name)
   }
   if (!is.data.frame(resource$data)) {
     return(pkg)

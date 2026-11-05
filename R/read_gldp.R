@@ -164,8 +164,9 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
         base_dir
       }
 
-      df <- tryCatch(
-        gldp_read_resource(pkg, resource_name),
+      # Store the cast data in the resource and clear path to keep the object in memory.
+      tryCatch(
+        gldp_load_table(pkg, resource_name),
         error = function(e) {
           cli_abort(
             c(
@@ -177,11 +178,6 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
           )
         }
       )
-
-      # Store the cast data in the resource and clear path to keep the object in memory.
-      r$data <- gldp_cast_table(df, r$schema)
-      r$path <- NULL
-      r
     })
   }
 

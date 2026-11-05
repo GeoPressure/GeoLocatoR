@@ -173,3 +173,14 @@ gldp_profile_resource_names <- function(profile) {
     ) |>
     purrr::flatten_chr()
 }
+
+#' Table names a GeoLocator-DP profile declares
+#'
+#' @param profile A GeoLocator-DP profile.
+#' @return Character vector of the fixed table names, excluding `params` and
+#'   custom resources.
+#' @noRd
+gldp_profile_table_names <- function(profile) {
+  # The first branch is the one for the fixed tables.
+  gldp_profile_resource_branches(profile)[[1]]$properties$name$enum
+}

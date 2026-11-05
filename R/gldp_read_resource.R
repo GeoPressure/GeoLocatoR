@@ -194,11 +194,24 @@ gldp_materialize_tables <- function(pkg) {
       next
     }
     # Preserve the declared schema: validation must still detect missing columns.
-    resource[["data"]] <- gldp_cast_table(gldp_read_resource(pkg, resource$name), resource$schema)
-    resource[["path"]] <- NULL
-    pkg$resources[[i]] <- resource
+    pkg$resources[[i]] <- gldp_load_table(pkg, resource$name)
   }
   pkg
+}
+
+#' Load a resource table into memory
+#'
+#' @param pkg A GeoLocator Data Package object.
+#' @param resource_name Name of the resource to load.
+#' @return The resource, with its data read and cast to its schema, and its
+#'   `path` removed.
+#' @noRd
+gldp_load_table <- function(pkg, resource_name) {
+  resource <- gldp_resource(pkg, resource_name)
+  resource[["data"]] <- gldp_cast_table(gldp_read_resource(pkg, resource_name), resource$schema)
+  # A resource carries its data or a path to it, never both.
+  resource[["path"]] <- NULL
+  resource
 }
 
 #' Field names declared by a table schema
