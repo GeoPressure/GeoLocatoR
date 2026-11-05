@@ -18,8 +18,9 @@ removed. The \code{measurements} resource is read last, and resources without
 a table schema keep their \code{path}.
 Some tables are loaded even when \code{FALSE}, because their upgrade changes
 values and cannot operate on file paths alone: every table of a package
-older than GeoLocator-DP v1.0, and \code{pressurepaths} and \code{observations} of
-a v1.0 or v1.1 package.}
+older than GeoLocator-DP v1.0, \code{pressurepaths} and \code{observations} of
+a v1.0 or v1.1 package, and \code{measurements} and \code{edges} of a package older
+than v1.3 whose SOI axes or groundspeeds are repaired.}
 
 \item{drop_measurements}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}} If \code{TRUE},
 drops the \code{measurements} resource after reading \code{datapackage.json} and
@@ -40,10 +41,21 @@ The function:
 \item reads the package descriptor with \code{\link[frictionless:read_package]{frictionless::read_package()}};
 \item checks that it uses the GeoLocator-DP profile schema;
 \item optionally loads resource tables into memory;
-\item reads \code{params.json} when present;
+\item reads the GeoPressureR parameters into \code{pkg$params}, from the file of the
+\code{params} resource or else \code{params.json} when present, in plain JSON (see
+\code{\link[=write_gldp]{write_gldp()}} for what JSON keeps) or in the \code{\link[jsonlite:serializeJSON]{jsonlite::serializeJSON()}}
+format written by GeoLocatoR < 1.5.0;
 \item upgrades older package versions when needed;
 \item recomputes derived package properties with \code{\link[=update_gldp]{update_gldp()}}.
 }
+
+Upgrading a package older than GeoLocator-DP v1.3 converts the SOI magnetic
+and acceleration x/y stored by GeoPressureR < 3.8.0 to the forward-right-down
+frame of v1.3, when the params of the tag record the mapping that was
+applied. Tags whose frame is unknown are left as stored, with a warning. It
+also recomputes the groundspeed of simulated \code{edges} that GeoPressureR 3.2.0
+to 3.7.0 took from another flight, and removes their wind, for the tags whose
+params record one of these versions.
 
 When present, the \code{datapackages} provenance catalogue is restored as a tibble,
 with one row per source package, as returned by \code{\link[=merge_gldp]{merge_gldp()}}.

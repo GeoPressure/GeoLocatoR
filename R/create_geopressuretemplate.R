@@ -462,6 +462,22 @@ create_geopressuretemplate_config <- function(pkg) {
         if ("geopressuretemplate" %in% names(param)) {
           param_config$geopressuretemplate <- param$geopressuretemplate
         }
+        # Params read from plain JSON hold functions (e.g. `twl_llp`) as their
+        # source text. A function definition is turned back into a function, which
+        # yaml writes as `!expr`; evaluating it only creates the function.
+        as_function <- function(x) {
+          if (is.list(x) && !is.data.frame(x)) {
+            return(lapply(x, as_function))
+          }
+          if (is.character(x) && length(x) == 1) {
+            expr <- tryCatch(str2lang(x), error = \(e) NULL)
+            if (is.call(expr) && identical(expr[[1]], as.name("function"))) {
+              return(eval(expr, baseenv()))
+            }
+          }
+          x
+        }
+        param_config <- as_function(param_config)
       } else {
         param_config <- list()
       }

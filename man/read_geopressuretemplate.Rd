@@ -31,13 +31,28 @@ with the resources that can be derived from it.
 The import can combine two sources:
 \enumerate{
 \item \code{"interim"}: read \code{.RData} outputs from \verb{data/interim/}, convert them to
-package resources, and store raw parameter objects in \code{pkg$params}.
+package resources, and store raw parameter objects in \code{pkg$params}. Each
+file must hold \code{tag} and \code{param}. Trajectories are the variables named
+\verb{path_<type>}, \verb{edge_<type>} and \verb{pressurepath_<type>}, where \verb{<type>}
+is a trajectory type of GeoLocator-DP (\code{tag}, \code{most_likely},
+\code{simulation} or \code{geopressureviz}); other types are skipped with a
+warning.
 \item \code{"raw-tag"}: create tag objects from \verb{data/raw-tag/} and \code{config.yml},
 then derive \code{measurements}, \code{tags}, \code{observations}, and \code{params}.
 }
 
+Interim files may have been written by an older GeoPressureR. As when
+\code{\link[=read_gldp]{read_gldp()}} upgrades a package to GeoLocator-DP v1.3, SOI magnetic and
+acceleration axes are converted to the forward-right-down frame when the
+params of the tag record the mapping applied, and the groundspeed of
+simulated edges is recomputed for tags whose params record GeoPressureR
+3.2.0 to 3.7.0. Other data are left as stored.
+
 The \code{ring_number}, \code{tag_comments} and \code{bird_create$scientific_name} entries
-of each tag in \code{config.yml} fill the generated \code{tags}.
+of each tag in \code{config.yml} fill the generated \code{tags}. They are read with
+\code{\link[config:get]{config::get()}}, so a tag inherits them from the \code{default} entry, and
+numbers are kept as written (an unquoted ring number \code{0012345} stays
+\code{"0012345"}).
 
 Manual data files take precedence over generated metadata:
 \itemize{

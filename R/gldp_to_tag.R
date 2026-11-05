@@ -59,7 +59,10 @@
 #' - `staps` table → `tag$stap` (stap_id, start, end, known_lat, known_lon)
 #' - `twilights` table → `tag$twilight` (twilight, rise, label)
 #'
-#' When the package has no saved parameters for the tag, `tag$param$tag_create$manufacturer`
+#' Saved parameters are returned as a GeoPressureR `param` object, in the layout they were
+#' saved with (read packages are moved to the GeoPressureR >= 3.8.0 layout, with logger
+#' metadata in `tag_create$settings`). When the package has no saved parameters for the tag,
+#' or they do not record its manufacturer, `tag$param$tag_create$manufacturer`
 #' is set to `"datapackage"` to record where the data came from. It is not a manufacturer that
 #' [`GeoPressureR::tag_create()`] accepts, so the tag cannot be re-created from these parameters.
 #'
@@ -343,8 +346,11 @@ gldp_to_tag_single <- function(pkg, tid) {
     }
   }
 
+  # Params read from plain JSON have lost the class GeoPressureR prints them with,
+  # and those kept by read_soi() only record the axis mapping.
   if (!is.null(param_saved)) {
-    tag[["param"]] <- param_saved
+    param_saved$tag_create$manufacturer <- param_saved$tag_create$manufacturer %||% "datapackage"
+    tag[["param"]] <- structure(param_saved, class = "param")
   }
 
   # Validate that we have at least some data

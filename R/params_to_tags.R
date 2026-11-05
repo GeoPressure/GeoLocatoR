@@ -13,9 +13,9 @@
 #' six columns are returned when `params` is empty.
 #'
 #' @details
-#' Manufacturer names are normalised for common GeoPressure sources, and SOI or
-#' Migrate Technology model metadata are propagated when present in the parameter
-#' objects.
+#' Manufacturer names are normalised for common GeoPressure sources. Model and
+#' firmware are read from `param$tag_create$settings` (GeoPressureR >= 3.8.0),
+#' else from the older `param$soi_settings` and `param$migratec_model`.
 #'
 #' @seealso [params_to_observations()] and [tags_to_measurements()] for related
 #'   conversions from GeoPressureR objects to GeoLocator-DP resources.
@@ -73,48 +73,17 @@ params_to_tags <- function(params) {
       )
     }
 
-    # Add model/firmware if soi_settings present
-    if ("soi_settings" %in% names(param)) {
-      s <- param$soi_settings
-      t <- tryCatch(
-        {
-          # Older SOI settings files name these HWVersion and SWVersion.
-          dplyr::mutate(
-            t,
-            model = s[["HW Version"]] %||% s$HWVersion,
-            firmware = s[["FW Version"]] %||% s$SWVersion
-          )
-        },
-        error = function(e) {
-          cli_abort(
-            c(
-              glue::glue(
-                "Error in {{.code params_to_tags}} for param {{.val {i}}} (soi_settings):"
-              ),
-              "x" = e$message
-            )
-          )
-        }
-      )
+    # GeoPressureR >= 3.8.0 stores model and firmware in tag_create$settings; older
+    # versions in soi_settings (HWVersion/SWVersion in older SOI files) or migratec_model.
+    settings <- param$tag_create$settings
+    soi <- param$soi_settings
+    model <- settings$model %||% soi[["HW Version"]] %||% soi$HWVersion %||% param$migratec_model
+    firmware <- settings$firmware %||% soi[["FW Version"]] %||% soi$SWVersion
+    if (!is.null(model)) {
+      t$model <- model
     }
-
-    # Add model if migratec_model present
-    if ("migratec_model" %in% names(param)) {
-      t <- tryCatch(
-        {
-          dplyr::mutate(t, model = param$migratec_model)
-        },
-        error = function(e) {
-          cli_abort(
-            c(
-              glue::glue(
-                "Error in {{.code params_to_tags}} for param {{.val {i}}} (migratec_model):"
-              ),
-              "x" = e$message
-            )
-          )
-        }
-      )
+    if (!is.null(firmware)) {
+      t$firmware <- firmware
     }
 
     tag_list[[i]] <- t

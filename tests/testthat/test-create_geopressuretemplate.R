@@ -161,6 +161,33 @@ test_that("generated config rebuilds known from observations rather than params"
   expect_equal(unlist(config$A$tag_set_map$known$stap_id), c(1, -1))
 })
 
+test_that("generated config writes functions of params read from JSON as R expressions", {
+  pkg <- template_config_pkg()
+  param <- param_create("A", default = TRUE)
+  param$geolight_map$twl_llp <- \(n) log(n) / n^2
+  param$geolight_map$fitted_location_duration <- Inf
+  param$graph_create$thr_gs <- 120
+  pkg[["params"]] <- list(param)
+  directory <- tempfile("template-json-")
+  on.exit(unlink(directory, recursive = TRUE))
+  write_gldp(pkg, directory)
+  pkg <- read_gldp(directory)
+  expect_type(pkg$params[[1]]$geolight_map$twl_llp, "character")
+
+  template <- file.path(directory, "template")
+  dir.create(template)
+  old <- setwd(template)
+  on.exit(setwd(old), add = TRUE, after = FALSE)
+  writeLines(c("default:", "  tag_set_map:", "    extent: [-16, 23, 0, 50]"), "config.yml")
+  create_geopressuretemplate_config(pkg)
+  config <- yaml.load_file("config.yml", handlers = list(expr = \(x) paste("!expr", x)))
+  expect_match(config$A$geolight_map$twl_llp, "^!expr function \\(n\\)")
+  expect_match(config$A$geolight_map$twl_llp, "log(n)/n^2", fixed = TRUE)
+  # Inf is read back as a number, equal to the default, so it is left out.
+  expect_null(config$A$geolight_map$fitted_location_duration)
+  expect_equal(config$A$graph_create$thr_gs, 120)
+})
+
 test_that("generated config does not apply the clock drift a second time", {
   pkg <- template_config_pkg()
   param <- param_create("A", default = TRUE)

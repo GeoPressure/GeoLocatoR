@@ -75,7 +75,10 @@ to the format expected by GeoPressureR. The conversion includes:
 \item \code{twilights} table → \code{tag$twilight} (twilight, rise, label)
 }
 
-When the package has no saved parameters for the tag, \code{tag$param$tag_create$manufacturer}
+Saved parameters are returned as a GeoPressureR \code{param} object, in the layout they were
+saved with (read packages are moved to the GeoPressureR >= 3.8.0 layout, with logger
+metadata in \code{tag_create$settings}). When the package has no saved parameters for the tag,
+or they do not record its manufacturer, \code{tag$param$tag_create$manufacturer}
 is set to \code{"datapackage"} to record where the data came from. It is not a manufacturer that
 \code{\link[GeoPressureR:tag_create]{GeoPressureR::tag_create()}} accepts, so the tag cannot be re-created from these parameters.
 }

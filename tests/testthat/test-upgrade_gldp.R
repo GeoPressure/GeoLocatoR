@@ -498,7 +498,7 @@ test_that("upgrade_gldp keeps a params resource, which has no table schema", {
 
   upgraded <- suppressMessages(upgrade_gldp(pkg))
 
-  expect_identical(gldp_version(upgraded), "v1.2")
+  expect_identical(gldp_version(upgraded), "v1.3")
   expect_identical(gldp_resource(upgraded, "params")$path, "params.json")
 })
 
@@ -653,7 +653,7 @@ test_that("upgrade_gldp fills pressurepaths j for packages up to v1.1 only", {
   pkg <- add_gldp_resource(pkg, "pressurepaths", pp, cast_type = TRUE)
 
   out <- suppressMessages(upgrade_gldp(pkg))
-  expect_identical(gldp_version(out), "v1.2")
+  expect_identical(gldp_version(out), "v1.3")
   expect_identical(pressurepaths(out)$j, c(1L, 1L, 1L))
 
   # A file-backed table is loaded so that its gaps can be filled.
