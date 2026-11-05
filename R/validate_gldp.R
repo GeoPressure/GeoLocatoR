@@ -24,6 +24,8 @@
 #'    `fieldsMatch` rule, and each column must satisfy its declared constraints
 #'    such as type, requiredness, uniqueness, allowed values, patterns,
 #'    and numeric or length limits. Rows must be unique on the schema `primaryKey`.
+#'    Schema-declared foreign keys must resolve to rows of their parent resource, for
+#'    all resources, core ones included.
 #'    The tables GeoLocator-DP defines (`tags`, `observations`, ...) must be tabular
 #'    resources with a table schema. The `params` resource and custom resources are
 #'    checked when they carry a table schema, and are otherwise reported as not checked.
@@ -61,7 +63,6 @@
 #'    present. These include:
 #'    - realistic ranges for `edges$n`;
 #'    - duration checks for `staps` and `edges`;
-#'    - schema-declared foreign key consistency across all resources, core ones included;
 #'    - warnings for unusual `edges` distances, durations, or wind/ground-speed magnitudes,
 #'      for `pressurepaths$altitude` outside -200 to 10,000 m, for `staps$stap_id` of 300
 #'      or more, for `paths$j` of 500 or more, and for datetime fields in `staps`,
@@ -171,6 +172,9 @@ validate_gldp_resources <- function(pkg) {
       cli_alert_info("{.field {resource$name}} has no table schema and is not checked.")
     }
   }
+
+  cli_h3("Check Foreign Keys")
+  valid <- valid & validate_gldp_foreign_keys(pkg)
 
   invisible(valid)
 }

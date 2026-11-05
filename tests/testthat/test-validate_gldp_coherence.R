@@ -15,14 +15,14 @@ test_that("a foreign key without a reference resource points at its own resource
     pkg
   }
 
-  expect_true(suppressMessages(validate_gldp_geopressure_coherence(
+  expect_true(suppressMessages(validate_gldp_foreign_keys(
     make_pkg(c(NA, "a"), list(fields = "id"))
   )))
-  expect_true(suppressMessages(validate_gldp_geopressure_coherence(
+  expect_true(suppressMessages(validate_gldp_foreign_keys(
     make_pkg(c(NA, "a"), list(resource = "", fields = "id"))
   )))
   expect_message(
-    expect_false(validate_gldp_geopressure_coherence(
+    expect_false(validate_gldp_foreign_keys(
       make_pkg(c(NA, "orphan"), list(fields = "id"))
     )),
     "missing in parent"

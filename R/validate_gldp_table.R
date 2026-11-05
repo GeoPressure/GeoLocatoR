@@ -158,3 +158,110 @@ validate_gldp_fields_match <- function(
 
   invisible(valid)
 }
+
+#' Validate schema-declared foreign keys
+#'
+#' Internal helper that checks the foreign keys declared in each resource
+#' schema against the rows of the parent resource.
+#'
+#' @param pkg A GeoLocator Data Package object.
+#'
+#' @return Invisibly returns `TRUE` when all foreign keys resolve, `FALSE`
+#'   otherwise.
+#' @noRd
+validate_gldp_foreign_keys <- function(pkg) {
+  # Foreign-key checks require both child and parent tables, including file-backed ones.
+  pkg <- gldp_materialize_tables(pkg)
+  valid <- TRUE
+  resources <- pkg$resources %||% list()
+  resource_names <- vapply(resources, \(x) x$name %||% NA_character_, character(1))
+
+  for (resource in resources) {
+    child_name <- as.character(resource$name %||% NA_character_)[1]
+    child_data <- resource$data %||% NULL
+    foreign_keys <- resource$schema$foreignKeys %||% list()
+
+    if (!is.data.frame(child_data) || length(foreign_keys) == 0) {
+      next
+    }
+
+    for (fk in foreign_keys) {
+      child_fields <- as.character(unlist(fk$fields %||% character(0), use.names = FALSE))
+      # A reference without `resource` (v2) or with `resource: ""` (v1) points
+      # at the resource itself.
+      parent_name <- as.character(fk$reference$resource %||% "")[1]
+      if (!nzchar(parent_name)) {
+        parent_name <- child_name
+      }
+      parent_fields <- as.character(unlist(
+        fk$reference$fields %||% character(0),
+        use.names = FALSE
+      ))
+
+      if (
+        length(child_fields) == 0 ||
+          length(child_fields) != length(parent_fields)
+      ) {
+        next
+      }
+
+      parent_idx <- match(parent_name, resource_names)
+      parent_data <- if (is.na(parent_idx)) NULL else resources[[parent_idx]]$data %||% NULL
+      if (is.null(parent_data) || !is.data.frame(parent_data)) {
+        cli_alert_danger(
+          "Foreign key check for {.field {child_name}} failed: parent resource {.field {parent_name}} is missing."
+        )
+        valid <- FALSE
+        next
+      }
+
+      absent_child_fields <- setdiff(child_fields, names(child_data))
+      if (length(absent_child_fields) > 0) {
+        # A column the schema declares optional (e.g. `observations$tag_id`)
+        # may be left out of the file and then holds no key to check.
+        optional_fields <- purrr::map_chr(
+          purrr::discard(resource$schema$fields, \(f) isTRUE(f$constraints$required)),
+          "name"
+        )
+        if (!all(absent_child_fields %in% optional_fields)) {
+          cli_alert_danger(
+            "Foreign key check for {.field {child_name}} failed: missing child fields: {.field {child_fields}}."
+          )
+          valid <- FALSE
+        }
+        next
+      }
+      if (!all(parent_fields %in% names(parent_data))) {
+        cli_alert_danger(
+          "Foreign key check for {.field {child_name}} failed: missing parent fields in {.field {parent_name}}: {.field {parent_fields}}."
+        )
+        valid <- FALSE
+        next
+      }
+
+      child_keys <- child_data[, child_fields, drop = FALSE]
+      child_keys <- child_keys[stats::complete.cases(child_keys), , drop = FALSE]
+      if (nrow(child_keys) == 0) {
+        next
+      }
+      child_keys[] <- lapply(child_keys, as.character)
+      child_keys <- unique(child_keys)
+
+      parent_keys <- parent_data[, parent_fields, drop = FALSE]
+      parent_keys <- parent_keys[stats::complete.cases(parent_keys), , drop = FALSE]
+      parent_keys[] <- lapply(parent_keys, as.character)
+      parent_keys <- unique(parent_keys)
+      names(parent_keys) <- child_fields
+
+      missing_keys <- anti_join(child_keys, parent_keys, by = child_fields)
+      if (nrow(missing_keys) > 0) {
+        cli_alert_danger(
+          "{nrow(missing_keys)} foreign key row{?s} in {.field {child_name}} {cli::qty(nrow(missing_keys))}{?is/are} missing in parent {.field {parent_name}}."
+        )
+        valid <- FALSE
+      }
+    }
+  }
+
+  invisible(valid)
+}

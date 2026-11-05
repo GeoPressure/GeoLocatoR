@@ -470,12 +470,13 @@ test_that("validate_gldp_geopressure_coherence only warns on implausible years, 
   expect_match(msgs, "paths\\$j.*unusually large", all = FALSE)
 })
 
-test_that("validate_gldp_geopressure_coherence checks foreign keys", {
+test_that("validate_gldp_foreign_keys checks foreign keys", {
   pkg <- make_geopressure_test_pkg()
+  expect_true(suppressMessages(validate_gldp_foreign_keys(pkg)))
   path_idx <- which(vapply(pkg$resources, \(r) identical(r$name, "paths"), logical(1)))
   pkg[["resources"]][[path_idx[1]]]$data$stap_id[1] <- 999
 
-  expect_false(suppressMessages(validate_gldp_geopressure_coherence(pkg)))
+  expect_false(suppressMessages(validate_gldp_foreign_keys(pkg)))
 })
 
 test_that("resource validation reads file-backed tables and reports missing identity metadata", {
@@ -550,11 +551,11 @@ test_that("file-backed foreign keys fail for a single orphan tag", {
   write_gldp(pkg, directory)
   lazy <- read_gldp(directory, force_read = FALSE)
   messages <- capture_messages({
-    valid <- validate_gldp_geopressure_coherence(lazy)
+    valid <- validate_gldp_foreign_keys(lazy)
   })
   expect_false(valid)
   expect_true(any(grepl("foreign key", messages, ignore.case = TRUE)))
-  expect_false(suppressMessages(validate_gldp_geopressure_coherence(read_gldp(directory))))
+  expect_false(suppressMessages(validate_gldp_foreign_keys(read_gldp(directory))))
 })
 
 test_that("one orphan measurement tag and one unobserved ring each invalidate core coherence", {
@@ -682,13 +683,13 @@ test_that("foreign-key validation reports missing child and parent columns", {
   resource <- gldp_resource(pkg, "paths")
   resource$data$stap_id <- NULL
   gldp_resource(pkg, "paths") <- resource
-  expect_message(expect_false(validate_gldp_geopressure_coherence(pkg)), "missing child fields")
+  expect_message(expect_false(validate_gldp_foreign_keys(pkg)), "missing child fields")
 
   pkg <- make_geopressure_test_pkg()
   resource <- gldp_resource(pkg, "staps")
   resource$data$stap_id <- NULL
   gldp_resource(pkg, "staps") <- resource
-  expect_message(expect_false(validate_gldp_geopressure_coherence(pkg)), "missing parent fields")
+  expect_message(expect_false(validate_gldp_foreign_keys(pkg)), "missing parent fields")
 })
 
 test_that("coherence checks accept observations without optional columns", {
@@ -720,6 +721,7 @@ test_that("coherence checks accept observations without optional columns", {
   expect_no_error(suppressMessages(validate_gldp_coherence(pkg)))
   expect_true(suppressMessages(validate_gldp_observations(observations(pkg))))
   expect_true(suppressMessages(validate_gldp_geopressure_coherence(pkg)))
+  expect_true(suppressMessages(validate_gldp_foreign_keys(pkg)))
 })
 
 test_that("coherence checks report a missing observations resource without erroring", {
