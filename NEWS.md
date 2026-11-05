@@ -1,3 +1,24 @@
+# GeoLocatoR (development version)
+
+## Main
+
+- [Write a valid `config.yml` in `create_geopressuretemplate()` when an observation needs a `stap_id`](https://github.com/GeoPressure/GeoLocatoR/commit/6e7a984) (broken since v1.3.2).
+- `read_gldp()` [reads custom tables whose schema is a path and GeoLocator-DP schema URLs with a patch version](https://github.com/GeoPressure/GeoLocatoR/commit/d6c97d8), and [reads v1.0 packages that give the table schema in the resource `$schema`](https://github.com/GeoPressure/GeoLocatoR/commit/9033bbe).
+
+## Minor
+
+- [Turn a date or datetime that is not ISO 8601 into missing, with a warning, in setters and `add_gldp_resource()`](https://github.com/GeoPressure/GeoLocatoR/commit/f4486f1); values such as `2020/01/02` are no longer accepted.
+- [Report parsing issues of file-backed tables with the resource name](https://github.com/GeoPressure/GeoLocatoR/commit/72595ff).
+- [Do not count a missing sensor in `numberTags`](https://github.com/GeoPressure/GeoLocatoR/commit/e15571c).
+- `validate_gldp()` [confirms when the profile check passes](https://github.com/GeoPressure/GeoLocatoR/commit/5e79c71).
+- `gldp_to_eml()` [no longer fails on text with an HTML entity](https://github.com/GeoPressure/GeoLocatoR/commit/b43a059), and `gldp_to_dwc()` [links `georeferenceSources` to geopressure.org](https://github.com/GeoPressure/GeoLocatoR/commit/21e6770).
+- `create_geopressuretemplate()` [keeps saved crop dates when observations give none](https://github.com/GeoPressure/GeoLocatoR/commit/6b010b5).
+- `select_gldp()` [drops observations without `tag_id` and `ring_number`](https://github.com/GeoPressure/GeoLocatoR/commit/6a0f6bd).
+- `read_zenodo()` [deletes its download folder when a download fails](https://github.com/GeoPressure/GeoLocatoR/commit/93942a9), [leaves `organization` unset for creators without affiliation](https://github.com/GeoPressure/GeoLocatoR/commit/d22af54) and [writes a single keyword or grant as a JSON array](https://github.com/GeoPressure/GeoLocatoR/commit/6f89d96). [`print()` lists keywords stored as a list](https://github.com/GeoPressure/GeoLocatoR/commit/65bd7d7).
+- [Document `zenodo_to_gldp()` and `gldp_to_zenodo()` as defunct](https://github.com/GeoPressure/GeoLocatoR/commit/c6edd0e), [fix the `gldp_to_tag()` example](https://github.com/GeoPressure/GeoLocatoR/commit/ccb16e5) and [the `read_gldp(drop_measurements)` documentation](https://github.com/GeoPressure/GeoLocatoR/commit/3cd6aac).
+- [Drop the unused quarto, rmarkdown and tidyverse suggestions](https://github.com/GeoPressure/GeoLocatoR/commit/11f390e).
+- Tests [skip when offline instead of stopping](https://github.com/GeoPressure/GeoLocatoR/commit/dd52708), and [pkgdown deploys only from main](https://github.com/GeoPressure/GeoLocatoR/commit/3246e44).
+
 # GeoLocatoR v1.4.0
 
 ## Main
