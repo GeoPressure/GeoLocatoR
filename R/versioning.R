@@ -43,7 +43,8 @@ gldp_version <- function(x) {
     cli_abort("{.field $schema} is missing or empty, cannot determine the GLDP version.")
   }
 
-  m <- regexec("GeoLocator-DP/([0-9A-Za-z.-]+)/", schema)
+  # The profile accepts a short ref (`v1.2`) or a tag ref (`refs/tags/v1.2`).
+  m <- regexec("GeoLocator-DP/(?:refs/tags/)?([0-9A-Za-z.-]+)/", schema, perl = TRUE)
   out <- regmatches(schema, m)[[1]]
 
   if (length(out) < 2) {

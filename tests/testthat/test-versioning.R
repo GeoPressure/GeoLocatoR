@@ -20,3 +20,12 @@ test_that("unsupported versions report the requested and supported versions", {
   pkg[["$schema"]] <- gldp_schema_url("v1.1")
   expect_error(upgrade_gldp(pkg, to_version = "v99"), "Allowed versions are.*v1.1")
 })
+
+test_that("gldp_version reads a schema URL that uses a tag ref", {
+  # The GeoLocator-DP profile accepts `refs/tags/<version>` as well as `<version>`.
+  pkg <- create_gldp()
+  pkg[["$schema"]] <-
+    "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/refs/tags/v1.0/geolocator-dp-profile.json"
+
+  expect_identical(gldp_version(pkg), "v1.0")
+})
