@@ -145,3 +145,8 @@ test_that("generated config only references the sensor files of each tag", {
   expect_identical(config$A$tag_create$light_file, "light.csv")
   expect_null(config$B$tag_create$light_file)
 })
+
+test_that("generated config references temperature files", {
+  config <- template_config_write(template_config_pkg())
+  expect_identical(config$A$tag_create$temperature_external_file, "temperature_external.csv")
+})
