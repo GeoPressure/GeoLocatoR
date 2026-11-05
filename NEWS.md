@@ -26,14 +26,6 @@
 
 **Full Changelog**: <https://github.com/GeoPressure/GeoLocatoR/compare/v1.3.1...v1.3.2>
 
-# GeoLocatoR (development version)
-
-- Read `tags.csv` column `datapackage_id` as text in `read_geopressuretemplate()`, including when every value is missing. Previously, readr inferred an entirely empty column as logical, causing a type mismatch in `validate_gldp()`.
-- `read_geopressuretemplate()` applies explicit column parsers only to columns present in `tags.csv` and `observations.csv`, avoiding warnings when optional metadata columns are absent. Present columns retain their declared types, and invalid values still produce parsing warnings. Excel imports are unchanged.
-- Fix `config_to_tibble()` to read each tag's resolved GeoPressureTemplate configuration, including inherited settings, instead of returning GeoPressureR defaults. Preserve multiple graph likelihoods and stationary-period IDs, and return fitted location durations as numeric values.
-
-- `read_geopressuretemplate()` explicitly removes known GeoPressureR working columns from interim twilights, staps, paths and edges before adding them as package resources. These columns were already discarded by GeoLocator-DP schema matching; the warnings appeared when GeoLocatoR [started reporting dropped columns](https://github.com/GeoPressure/GeoLocatoR/commit/adad0b1732c2d64cbbe9329d23495c2c4e8f2c78). Imported resource data are unchanged, unexpected extra columns still warn, and existing interim files do not need to be rerun.
-
 # GeoLocatoR v1.3.1
 
 ## Main
