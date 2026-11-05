@@ -186,3 +186,15 @@ test_that("generated known positions only hold the columns tag_set_map() reads",
   config <- template_config_write(template_config_pkg())
   expect_named(config$A$tag_set_map$known, c("stap_id", "known_lat", "known_lon"))
 })
+
+test_that("README is written from a plain-text description", {
+  directory <- tempfile("template-readme-")
+  dir.create(directory)
+  old <- setwd(directory)
+  on.exit({
+    setwd(old)
+    unlink(directory, recursive = TRUE)
+  })
+  create_geopressuretemplate_readme(create_gldp(description = "Tracking data of hoopoes"))
+  expect_true("Tracking data of hoopoes" %in% readLines("README.md"))
+})
