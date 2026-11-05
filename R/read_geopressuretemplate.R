@@ -28,8 +28,10 @@
 #' @param directory Path to the GeoPressureTemplate directory.
 #' @param from Character vector specifying which sources to import. Supported
 #'   values are `"raw-tag"` and/or `"interim"`.
-#' @param pkg Optional GeoLocator Data Package object to update. Defaults to a
-#'   new package created with [create_gldp()].
+#' @param pkg Optional GeoLocator Data Package object to fill. Defaults to a
+#'   new package created with [create_gldp()]. Its metadata is kept, but any
+#'   existing resources are overwritten. Overwriting asks for confirmation, so a
+#'   `pkg` with resources can only be used in an interactive session.
 #'
 #' @return The updated `geolocatordp` object.
 #'
@@ -59,10 +61,17 @@ read_geopressuretemplate <- function(
 
   # pkg has already data
   if (length(frictionless::resource_names(pkg)) > 0) {
+    # Without a prompt, returning pkg unchanged would silently skip the import.
+    if (!interactive()) {
+      cli_abort(c(
+        "x" = "{.arg pkg} already has resources {.field {frictionless::resource_names(pkg)}}.",
+        "i" = "Overwriting them must be confirmed in an interactive session.",
+        ">" = "Remove them with {.fun frictionless::remove_resource} first."
+      ))
+    }
     cli_bullets(
       c(
-        "!" = "The {.pkg pkg} has already resources
-        {.field {purrr::map_vec(pkg$resources, ~.x$name)}}."
+        "!" = "{.arg pkg} already has resources {.field {frictionless::resource_names(pkg)}}."
       )
     )
     res <- utils::askYesNo(

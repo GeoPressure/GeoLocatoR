@@ -253,3 +253,13 @@ test_that("xlsx metadata is parsed by column name", {
   expect_identical(observations(pkg)$mass, 30)
   expect_equal(observations(pkg)$datetime, as.POSIXct("2020-01-01 06:00:00", tz = "UTC"))
 })
+
+test_that("a pkg with resources is not overwritten without confirmation", {
+  directory <- template_interim()
+  on.exit(unlink(directory, recursive = TRUE))
+  pkg <- add_gldp_resource(create_gldp(), "tags", data.frame(tag_id = "BB"))
+  expect_error(
+    read_geopressuretemplate(directory, from = "interim", pkg = pkg),
+    "interactive session"
+  )
+})
