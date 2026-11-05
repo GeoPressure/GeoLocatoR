@@ -109,7 +109,7 @@ normalize_upgraded_resources <- function(x) {
 
     # Extra columns retain their source types and units when the target permits
     # extensions. Standard fields and columns removed by migrations use the target schema.
-    # A schema given by a path or URL not bundled declares no fields to carry over.
+    # Only an inline schema has extra fields to keep.
     if (target_schema$fieldsMatch %in% c("partial", "subset") && is.list(resource$schema)) {
       extra_fields <- Filter(
         function(field) {
@@ -398,9 +398,8 @@ upgrade_gldp_v0_6_to_v1_0 <- function(x) {
 upgrade_gldp_v1_0_to_v1_1 <- function(x) {
   # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v1.1
   # The table schema moved from the resource `$schema` to its `schema`, and
-  # `type` became required. read_gldp() copies a `$schema` table schema URL to
-  # `schema`, and `normalize_upgraded_resources()` rebuilds the resources against
-  # the target schemas and `$schema`, so only the profile URL changes here.
+  # `type` became required. read_gldp() and `normalize_upgraded_resources()`
+  # handle both, so only the profile URL changes here.
   x[["$schema"]] <- gldp_schema_url("v1.1")
   x
 }

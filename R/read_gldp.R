@@ -85,8 +85,7 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
     if (!is.null(r[["$schema"]])) {
       r[["$schema"]] <- gsub("Rafnuss", "GeoPressure", r[["$schema"]], fixed = TRUE)
     }
-    # Up to v1.0, the profile put the table schema URL in the resource `$schema`;
-    # `upgrade_gldp()` replaces that `$schema` with the Data Package profile.
+    # Up to v1.0, the table schema URL is in the resource `$schema`.
     if (is.null(r$schema) && grepl("-table-schema\\.json$", r[["$schema"]] %||% "")) {
       r[["schema"]] <- r[["$schema"]]
     }
@@ -137,8 +136,7 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
       logical(1)
     ))
     pkg[["resources"]][read_order] <- purrr::map(pkg[["resources"]][read_order], \(r) {
-      # Only tables are loaded: custom and `params` resources have no table schema,
-      # and one given by a path or URL not bundled cannot be cast.
+      # Only resources with an inline table schema are loaded.
       if (!is.list(r$schema)) {
         return(r)
       }
@@ -193,8 +191,7 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
     )
   }
 
-  # A file-backed table is read again by each derived property: report each
-  # parsing issue once.
+  # Report each parsing issue once.
   seen <- character(0)
   withCallingHandlers(
     pkg |> upgrade_gldp() |> update_gldp(),
