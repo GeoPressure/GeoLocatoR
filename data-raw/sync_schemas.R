@@ -1,6 +1,6 @@
 # Manual maintainer script:
 # - Refresh local GeoLocator-DP schemas bundled in inst/schemas.
-# - Run this when a GeoLocator-DP schema version/branch changes.
+# - Run this after a GeoLocator-DP release: each version is synced from its tag.
 # - Runtime code is offline-only and reads schemas from inst/schemas.
 # - Versions synced are taken from .gldp_supported_versions in R/versioning.R.
 # - `main` is excluded (only released version schemas are stored locally).
