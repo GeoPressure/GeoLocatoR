@@ -12,7 +12,7 @@ test_that("create_geopressuretemplate creates a project shell", {
   param$tag_set_map$extent <- c(-20, 30, -5, 55)
   param$geopressure_map$margin <- 42
   param$twilight_create$twl_calib <- "not-used"
-  pkg$params <- list(param)
+  pkg[["params"]] <- list(param)
 
   # Create project
   suppressMessages({
@@ -149,4 +149,13 @@ test_that("generated config only references the sensor files of each tag", {
 test_that("generated config references temperature files", {
   config <- template_config_write(template_config_pkg())
   expect_identical(config$A$tag_create$temperature_external_file, "temperature_external.csv")
+})
+
+test_that("generated config rebuilds known from observations rather than params", {
+  pkg <- template_config_pkg()
+  param <- param_create("A", default = TRUE)
+  param$tag_set_map$known <- data.frame(stap_id = 1, known_lat = 46, known_lon = 7)
+  pkg[["params"]] <- list(param)
+  config <- template_config_write(pkg)
+  expect_equal(unlist(config$A$tag_set_map$known$stap_id), c(1, -1))
 })

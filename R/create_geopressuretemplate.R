@@ -441,6 +441,9 @@ create_geopressuretemplate_config <- function(pkg) {
           }
         })
         param_config$tag_create$directory <- NULL
+        # `known` is rebuilt from observations below; modifyList() cannot merge two
+        # data.frames with different numbers of rows.
+        param_config$tag_set_map$known <- NULL
         if ("geopressuretemplate" %in% names(param)) {
           param_config$geopressuretemplate <- param$geopressuretemplate
         }
