@@ -75,7 +75,7 @@ config2tibble <- function(
 #' @param pkg A GeoLocator Data Package object.
 #' @param ... Overrides passed to [utils::bibentry()] when computing
 #'   `bibliographicCitation`.
-#' @return `pkg`, with the derived property updated.
+#' @return `pkg`, with the derived property updated, or unchanged for the last three.
 #' @name update_gldp_deprecated
 NULL
 
@@ -196,10 +196,10 @@ create_gldp_geopressuretemplate <- function(directory = ".") {
   read_geopressuretemplate(directory = directory, pkg = create_gldp())
 }
 
-#' Deprecated: `zenodo_to_gldp()`
+#' Defunct: `zenodo_to_gldp()`
 #'
 #' @description
-#' `r lifecycle::badge("deprecated")`
+#' `r lifecycle::badge("defunct")`
 #'
 #' `zenodo_to_gldp()` was removed. Use [read_zenodo()] after adapting arguments,
 #' because it is not a strict drop-in replacement.
@@ -214,16 +214,16 @@ zenodo_to_gldp <- function(id, ...) {
     what = "zenodo_to_gldp()",
     with = "read_zenodo()",
     details = glue::glue(
-      "`read_zenodo()` has different behavior/arguments. ",
-      "Migrate your call explicitly (notably `endpoint`, `token`, and `sandbox`)."
+      "`read_zenodo()` has different behaviour/arguments. ",
+      "Migrate your call explicitly (notably `token` and `sandbox`)."
     )
   )
 }
 
-#' Deprecated: `gldp_to_zenodo()`
+#' Defunct: `gldp_to_zenodo()`
 #'
 #' @description
-#' `r lifecycle::badge("deprecated")`
+#' `r lifecycle::badge("defunct")`
 #'
 #' `gldp_to_zenodo()` was removed with no replacement.
 #'

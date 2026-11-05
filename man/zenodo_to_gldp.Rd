@@ -2,7 +2,7 @@
 % Please edit documentation in R/deprecations.R
 \name{zenodo_to_gldp}
 \alias{zenodo_to_gldp}
-\title{Deprecated: \code{zenodo_to_gldp()}}
+\title{Defunct: \code{zenodo_to_gldp()}}
 \usage{
 zenodo_to_gldp(id, ...)
 }
@@ -15,7 +15,7 @@ zenodo_to_gldp(id, ...)
 This function is defunct and always errors with migration guidance.
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}}
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#defunct}{\figure{lifecycle-defunct.svg}{options: alt='[Defunct]'}}}{\strong{[Defunct]}}
 
 \code{zenodo_to_gldp()} was removed. Use \code{\link[=read_zenodo]{read_zenodo()}} after adapting arguments,
 because it is not a strict drop-in replacement.
