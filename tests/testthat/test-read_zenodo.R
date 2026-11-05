@@ -298,6 +298,26 @@ test_that("read_zenodo_attach_metadata keeps contributor roles as a list", {
   expect_null(out$contributors[[2]]$roles)
 })
 
+test_that("read_zenodo_attach_metadata drops absent licence, keyword and grant values", {
+  pkg <- structure(list(), class = c("geolocatordp", "datapackage", "list"))
+  record <- list(
+    id = "1",
+    metadata = list(
+      rights = list(list(title = list(en = "Custom licence"))),
+      funding = list(list(funder = list(id = "00k4n6c32")), list(funder = list(name = "SNSF")))
+    ),
+    links = list()
+  )
+
+  out <- read_zenodo_attach_metadata(pkg, record)
+  expect_identical(out$licenses, list(list(title = "Custom licence")))
+  expect_identical(out$grants, "SNSF")
+  expect_false("keywords" %in% names(out))
+
+  out <- read_zenodo_attach_metadata(pkg, list(id = "1", metadata = list(), links = list()))
+  expect_false(any(c("licenses", "grants") %in% names(out)))
+})
+
 test_that("read_zenodo_attach_metadata computes access status and embargo", {
   pkg <- structure(list(), class = c("geolocatordp", "datapackage", "list"))
 
