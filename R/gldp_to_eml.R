@@ -141,9 +141,10 @@ gldp_to_eml <- function(pkg, directory) {
         any(c("projectleader", "researcher", "datacurator") %in% roles_lower)
     ) {
       creators <- c(creators, list(party))
-    } else if (!("contactperson" %in% roles_lower) && length(roles) > 0) {
-      # If not a creator or contact, add as associated party with first role (when available)
-      party$role <- roles[1]
+    } else if (!("contactperson" %in% roles_lower) && any(roles_lower != "rightsholder")) {
+      # If not a creator or contact, add as associated party with its first role; a rights
+      # holder is added below with its own role.
+      party$role <- roles[roles_lower != "rightsholder"][1]
       associated_parties <- c(associated_parties, list(party))
     }
 
