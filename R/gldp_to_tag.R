@@ -190,7 +190,12 @@ gldp_to_tag_single <- function(pkg, tid) {
         dplyr::arrange(.data$date)
       if (sensor_gldp == "pressure") {
         df <- df |> dplyr::mutate(label = dplyr::coalesce(.data$label, ""))
-        if (all(df$label == "")) {
+        # GeoPressureR::tag_label() labels pressure whenever pressure or acceleration is labelled.
+        labelled <- meas$sensor %in%
+          c("pressure", "activity", "mean_acceleration_z") &
+          !is.na(meas$label) &
+          meas$label != ""
+        if (!any(labelled)) {
           df <- df |> dplyr::select(-"label")
         }
       }
