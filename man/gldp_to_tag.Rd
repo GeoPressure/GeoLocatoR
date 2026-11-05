@@ -23,17 +23,19 @@ A GeoPressureR \code{tag} object contains:
 \item \code{param}: parameter object (see \code{\link[GeoPressureR:param_create]{GeoPressureR::param_create()}})
 \item \code{pressure}: data.frame with columns \code{date} and \code{value}, plus \code{label} and \code{stap_id} when
 labels are available
-\item \code{light}: data.frame with columns \code{date} and \code{value} (if light data available)
+\item \code{light}: data.frame with columns \code{date} and \code{value}, plus \code{stap_id} when labels are available
+(if light data available)
 \item \code{acceleration}: data.frame with columns \code{date}, \code{value} (activity measure), and optionally
 \code{mean_acceleration_z}, \code{label}, and \code{stap_id} (when labels are available)
 \item \code{temperature_external}: data.frame with columns \code{date} and \code{value}
 (if external temperature data available)
 \item \code{temperature_internal}: data.frame with columns \code{date} and \code{value}
 (if internal temperature data available)
-\item \code{magnetic}: data.frame with columns \code{date}, \code{magnetic_x}, \code{magnetic_y}, \code{magnetic_z}
-(if magnetic data available)
-\item \code{stap}: data.frame with columns \code{stap_id}, \code{start}, \code{end}, and optionally \code{known_lat},
-\code{known_lon}, \code{include} (if stationary periods defined)
+\item \code{magnetic}: data.frame with columns \code{date}, \code{magnetic_x}, \code{magnetic_y}, \code{magnetic_z},
+\code{acceleration_x}, \code{acceleration_y}, \code{acceleration_z}, plus \code{stap_id} when labels are
+available (if magnetic or raw acceleration data available)
+\item \code{stap}: data.frame with columns \code{stap_id}, \code{start}, \code{end}, and optionally \code{known_lat} and
+\code{known_lon} (if stationary periods defined)
 \item \code{twilight}: data.frame with columns \code{twilight}, \code{rise}, and optionally \code{label}
 (if twilight data available)
 }
@@ -50,7 +52,7 @@ to the format expected by GeoPressureR. The conversion includes:
 \item Filtering measurements by \code{tag_id}
 \item Reshaping data from long format (measurements) to wide format (sensor-specific data.frames)
 \item Combining related sensors (e.g., \code{activity} and \code{mean_acceleration_z} into \code{acceleration};
-\code{magnetic_x/y/z} into \code{magnetic})
+\code{magnetic_x/y/z} and \code{acceleration_x/y/z} into \code{magnetic})
 \item Adding stationary period (\code{stap}) data if available in the package
 \item Adding twilight data if available in the package
 \item Setting appropriate parameter values from GLDP metadata
@@ -61,20 +63,21 @@ to the format expected by GeoPressureR. The conversion includes:
 \item \code{pressure} → \code{pressure} (date, value, label)
 \item \code{light} → \code{light} (date, value)
 \item \code{activity} + \code{mean_acceleration_z} → \code{acceleration} (date, value, mean_acceleration_z, label) where value = activity
-\item \code{temperature-external} → \code{temperature_external} (date, value)
-\item \code{temperature-internal} → \code{temperature_internal} (date, value)
-\item \code{magnetic_x/y/z} → \code{magnetic} (date, magnetic_x, magnetic_y, magnetic_z)
+\item \code{temperature_external} → \code{temperature_external} (date, value)
+\item \code{temperature_internal} → \code{temperature_internal} (date, value)
+\item \code{magnetic_x/y/z} + \code{acceleration_x/y/z} → \code{magnetic} (date, magnetic_x/y/z, acceleration_x/y/z)
 }
 
 \strong{Additional data extracted:}
 \itemize{
 \item \code{params.json} → \code{tag$param} when it contains parameters for the tag
-\item \code{staps} table → \code{tag$stap} (stap_id, start, end, known_lat, known_lon, include)
+\item \code{staps} table → \code{tag$stap} (stap_id, start, end, known_lat, known_lon)
 \item \code{twilights} table → \code{tag$twilight} (twilight, rise, label)
 }
 
-Note that the resulting \code{tag} object will have \code{manufacturer = "datapackage"} in its
-parameters, consistent with how GeoPressureR handles data from GeoLocator Data Packages.
+When the package has no saved parameters for the tag, \code{tag$param$tag_create$manufacturer}
+is set to \code{"datapackage"} to record where the data came from. It is not a manufacturer that
+\code{\link[GeoPressureR:tag_create]{GeoPressureR::tag_create()}} accepts, so the tag cannot be re-created from these parameters.
 }
 \examples{
 \dontrun{

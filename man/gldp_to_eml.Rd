@@ -31,9 +31,10 @@ The following properties are set:
 \item \code{abstract}: Package description.
 \item \code{pubDate}: Publication year extracted from publication/creation date.
 \item \code{creator}: Contributors with roles \code{"ProjectLeader"}, \code{"Researcher"}, or
-\code{"DataCurator"} when available.
-\item \code{contact}: Contributors with role \code{"ContactPerson"} as provided in
-contributors.
+\code{"DataCurator"}, or without any role. When no contributor qualifies, all
+contributors are creators.
+\item \code{contact}: Contributors with role \code{"ContactPerson"}, or else the first
+creator.
 \item \code{associatedParty}: Other contributors,
 including those with role \code{"RightsHolder"}.
 \item \code{intellectualRights}: License information.
@@ -47,8 +48,8 @@ Coverage information:
 \itemize{
 \item \code{temporalCoverage}: Date range from package temporal coverage (if available),
 derived from measurement timestamps.
-\item \code{geographicCoverage}: Bounding box from package spatial coverage (if available),
-calculated from all locations in observations, paths, and pressurepaths.
+\item \code{geographicCoverage}: Bounding box of the package \code{spatial} coverage, when the
+package already carries one. It is not computed from the package data.
 \item \code{taxonomicCoverage}: Species list from package taxonomic coverage (if available),
 derived from unique scientific names in tags.
 }

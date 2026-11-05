@@ -19,8 +19,10 @@ Prints a human-readable summary of a GeoLocator Data Package, as an
 extension of \code{\link[frictionless:print.datapackage]{print.datapackage()}}.
 }
 \examples{
+\dontrun{
 pkg <- read_zenodo("17367319", quiet = TRUE)
 print(pkg)
+}
 
 }
 \concept{print functions}

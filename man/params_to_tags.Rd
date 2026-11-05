@@ -11,16 +11,17 @@ params_to_tags(params)
 generated during the GeoPressure workflow. See \href{https://geopressure.org/GeoPressureR/reference/param_create.html}{\code{GeoPressureR::param_create()} } for more information.}
 }
 \value{
-A \code{\link[tibble:tibble]{tibble::tibble()}} data frame with columns \code{tag_id}, \code{manufacturer}, \code{scientific_name},
-\code{ring_number}, and, when available, \code{model} and \code{firmware}.
-
-Manufacturer names are normalized for common GeoPressure sources, and SOI or
-Migrate-specific model metadata are propagated when present in the parameter
-objects.
+A \code{\link[tibble:tibble]{tibble::tibble()}} data frame with columns \code{tag_id} and \code{ring_number} (always
+missing), plus \code{manufacturer}, \code{scientific_name}, \code{model} and \code{firmware} when available.
 }
 \description{
 Convert a list of GeoPressureR parameter objects into a \code{tags} tibble
 following the GeoLocator Data Package structure.
+}
+\details{
+Manufacturer names are normalised for common GeoPressure sources, and SOI or
+Migrate Technology model metadata are propagated when present in the parameter
+objects.
 }
 \seealso{
 \code{\link[=params_to_observations]{params_to_observations()}} and \code{\link[=tags_to_measurements]{tags_to_measurements()}} for related

@@ -20,7 +20,6 @@ staps(x) <- value
 \description{
 \code{staps()} gets the staps from a GeoLocator Data Package object.
 
-\verb{staps<-()} is the assignment equivalent.
-It should only be used within other functions, where the expected data
-structure can be guaranteed.
+\verb{staps<-()} is the assignment equivalent. It replaces the resource
+and casts \code{value} to the types of its schema.
 }

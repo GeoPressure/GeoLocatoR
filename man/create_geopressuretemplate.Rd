@@ -13,7 +13,7 @@ component is used as the project name.}
 \item{pkg}{Optional \code{geolocatordp} object used to fill project metadata,
 config, and data files.}
 
-\item{open}{If \code{TRUE}, the package is opened in a new RStudio session.}
+\item{open}{If \code{TRUE}, the project is opened in a new RStudio session.}
 }
 \value{
 The path to the created project directory.

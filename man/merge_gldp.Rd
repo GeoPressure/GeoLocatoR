@@ -43,13 +43,16 @@ and resource data is combined based on their presence in either package.
 \strong{datapackage_id in tags:}
 \itemize{
 \item For the \code{tags} resource, each row must have a \code{datapackage_id}.
-\item Missing \code{datapackage_id} values are filled with the package \code{id}.
+\item Missing \code{datapackage_id} values are filled with the package \code{id}, so the
+merge aborts when such a package has no \code{id}.
 \item The merge aborts if \code{tags$datapackage_id} overlaps between the two inputs.
 }
 
 \strong{Metadata merging rules:}
 \itemize{
-\item \strong{version}: Uses the package default version from \code{create_gldp()}.
+\item \strong{\verb{$schema}}: The latest GeoLocator-DP version, as set by \code{create_gldp()}. The
+source packages' \code{version} is not kept on the merged package; it is listed in
+\code{datapackages$version}.
 \item \strong{title}: Combined from both packages, separated by a "/".
 \item \strong{contributors}: Combined from both packages. Entries for the same person
 (same ORCID in \code{path}, or the same name when no ORCID is given) are merged
@@ -61,11 +64,12 @@ into one, keeping the first entry's name and the union of \code{roles} and
 \item \strong{codeRepository}: Combined from both packages, with duplicates removed.
 \item \strong{datapackages}: Carries the merged provenance table described above.
 \item \strong{relatedIdentifiers}: Combined, with duplicates removed, and each unique
-source \code{datapackage_id} (or package \code{id}) is added as \code{IsCompiledBy}.
+source \code{datapackage_id} (or package \code{id}) is added as \code{IsCompiledBy}, a DOI
+without its \verb{https://doi.org/} prefix.
 \item \strong{params}: Concatenated from all inputs; every entry must contain a
 non-empty \code{param$id}.
 \item \strong{created}: Set to the current timestamp at the time of merging.
-\item All others are dropped
+\item All others are dropped.
 }
 
 \strong{datapackages provenance table:}
@@ -78,6 +82,7 @@ temporal coverage (\code{temporal_start}, \code{temporal_end}), taxonomic summar
 }
 }
 \examples{
+\dontrun{
 pkg1 <- read_zenodo("17367319", quiet = TRUE)
 pkg2 <- read_zenodo("17257520", quiet = TRUE)
 
@@ -86,6 +91,7 @@ merged
 
 # List-style input is also supported
 merged <- merge_gldp(list(pkg1, pkg2))
+}
 
 }
 \seealso{

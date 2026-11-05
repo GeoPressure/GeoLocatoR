@@ -17,8 +17,9 @@ read_zenodo(
 \item{id}{Zenodo identifier. Can be a record id, DOI, DOI URL, or Zenodo
 record URL. Supported examples include \code{"18467383"},
 \code{"10.5281/zenodo.18467383"}, \code{"https://doi.org/10.5281/zenodo.18467383"},
-and \code{"https://zenodo.org/records/18467383"}. For Zenodo Sandbox records,
-set \code{sandbox = TRUE}.}
+and \code{"https://zenodo.org/records/18467383"}. A Zenodo Sandbox record URL
+or DOI (prefix \code{10.5072}) is read from Zenodo Sandbox; for a bare Sandbox
+record id, set \code{sandbox = TRUE}.}
 
 \item{token}{Optional Zenodo access token for authenticated requests. Supply
 it explicitly, or leave \code{NULL} to resolve it from environment variables or

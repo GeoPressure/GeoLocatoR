@@ -14,8 +14,8 @@ config_to_tibble(
 Defaults to \code{"config.yml"} in the current directory, or the value of the
 \code{R_CONFIG_FILE} environment variable if set.}
 
-\item{filter_return}{Logical. If \code{TRUE} (default), only columns that vary across tags
-are returned. If \code{FALSE}, all configuration columns are included even if they have
+\item{filter_return}{Logical. If \code{TRUE} (default), only \code{id} and the columns that vary
+across tags are returned. If \code{FALSE}, all configuration columns are included even if they have
 the same value for all tags.}
 }
 \value{
@@ -24,13 +24,13 @@ parameter. The exact columns returned depend on the configuration file structure
 the \code{filter_return} parameter.
 }
 \description{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+
 Reads a GeoPressureTemplate \code{config.yml} file and converts it into a tibble format with
 one row per tag and columns for each configuration parameter. This is useful for comparing
 configurations across multiple tags or for programmatic analysis of tag settings.
 }
 \details{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
-
 This function uses \code{\link[GeoPressureR:geopressuretemplate_config]{GeoPressureR::geopressuretemplate_config()}} internally to parse
 each tag's configuration. It then flattens the nested list structure and applies
 appropriate type conversions for each parameter (e.g., converting dates to strings,
@@ -39,7 +39,7 @@ functions to their deparsed representation).
 The function handles various GeoPressureR configuration parameters including:
 \itemize{
 \item Tag creation settings (manufacturer, file paths, crop dates)
-\item Labeling parameters (flight/stap duration warnings)
+\item Labelling file
 \item Map settings (extent, known locations, pressure/light thresholds)
 \item Graph creation and movement model parameters
 \item Bird characteristics (mass, wing measurements)

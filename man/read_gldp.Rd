@@ -12,18 +12,23 @@ file, or a URL to \code{datapackage.json}.}
 
 \item{force_read}{If \code{TRUE} (default), loads resource data into memory so
 the returned object is self-contained in memory. This means that each
-resource is read immediately with \code{\link[frictionless:read_resource]{frictionless::read_resource()}}, cast to
-the schema types, stored in \code{resource$data}, and its \code{path} field is removed.
-The \code{measurements} resource is read last.
-Packages older than GeoLocator-DP v1.0 are loaded even when \code{FALSE}, because
-their upgrades transform table values and cannot operate on file paths alone.}
+table is read immediately with \code{\link[frictionless:read_resource]{frictionless::read_resource()}}, cast to
+the schema types, stored in \code{resource$data}, and its \code{path} field is
+removed. The \code{measurements} resource is read last, and resources without
+a table schema keep their \code{path}.
+Some tables are loaded even when \code{FALSE}, because their upgrade changes
+values and cannot operate on file paths alone: every table of a package
+older than GeoLocator-DP v1.0, and \code{pressurepaths} and \code{observations} of
+a v1.0 or v1.1 package.}
 
 \item{drop_measurements}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}} If \code{TRUE},
 drops the \code{measurements} resource after reading \code{datapackage.json} and
 before the optional \code{force_read} step loads resource data into memory. Use
 this to save memory and avoid slowdowns when working mainly with derived
 GeoPressure resources such as \code{staps}, \code{paths}, \code{edges}, or
-\code{pressurepaths}.}
+\code{pressurepaths}. The derived \code{temporal} coverage and the measurement
+counts in \code{numberTags} are then left out, and \code{taxonomic} lists the
+species of every tag.}
 }
 \value{
 A \code{geolocatordp} object.
