@@ -180,6 +180,34 @@ test_that("validate_gldp_resources accepts v1 and v2 tabular resources", {
   ))
 })
 
+test_that("validate_gldp_resources reports custom and params resources without failing", {
+  # The profile allows `params` and custom resources to be any file. Only the
+  # tables GeoLocator-DP defines must be tabular.
+  pkg <- create_gldp()
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = "AA",
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "test",
+      model = "test"
+    )
+  )
+  pkg[["resources"]] <- c(
+    pkg$resources,
+    list(
+      list(name = "params", path = "params.json"),
+      list(name = "readme", path = "readme.pdf")
+    )
+  )
+  expect_message(expect_true(validate_gldp_resources(pkg)), "is not checked")
+
+  pkg[["resources"]][[1]]$schema <- NULL
+  expect_message(expect_false(validate_gldp_resources(pkg)), "not a tabular resource")
+})
+
 test_that("validate_gldp_meta checks missing title", {
   local_mocked_bindings(
     resources = function(x) character(0),
