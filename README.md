@@ -35,7 +35,7 @@ data is organized, accessible, and ready to share.
 - **Integration with GeoPressureTemplate**: GeoLocatoR is compatible
   with
   [GeoPressureTemplate](https://github.com/GeoPressure/GeoPressureTemplate)
-  — a template repository for analyzing geolocator data using
+  — a template repository for analysing geolocator data using
   GeoPressureR. Use both together to streamline your analysis and
   maintain a standardized project structure.
 - **Built on frictionless**: This package is built using the
