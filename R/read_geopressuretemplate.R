@@ -355,13 +355,19 @@ read_geopressuretemplate <- function(
 
     if (!is.null(t) && file.exists("config.yml")) {
       raw_config <- yaml::yaml.load_file("config.yml", eval.expr = FALSE)
-      # Top-level tag fields are not preserved by GeoPressureR config parsing.
-      for (field in c("ring_number", "tag_comments")) {
+      # Interim tag params do not carry these config fields, so read them from
+      # config.yml, keyed by their path in each tag entry.
+      config_fields <- list(
+        ring_number = "ring_number",
+        tag_comments = "tag_comments",
+        scientific_name = c("bird_create", "scientific_name")
+      )
+      for (field in names(config_fields)) {
         values <- tibble::tibble(
           tag_id = project_files$config_ids,
           # Unquoted ring numbers are read from YAML as numbers.
           value = purrr::map_chr(unname(raw_config[project_files$config_ids]), \(x) {
-            as.character(x[[field]] %||% NA)
+            as.character(purrr::pluck(x, !!!config_fields[[field]], .default = NA))
           })
         ) |>
           filter(!is.na(.data$value))

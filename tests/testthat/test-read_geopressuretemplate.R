@@ -223,3 +223,10 @@ test_that("numeric ring numbers in config.yml are read as text", {
   pkg <- suppressMessages(read_geopressuretemplate(directory, from = "interim"))
   expect_identical(tags(pkg)$ring_number, "12345")
 })
+
+test_that("interim tags take their species from config.yml", {
+  directory <- template_interim(c("AA:", "  bird_create:", "    scientific_name: Upupa epops"))
+  on.exit(unlink(directory, recursive = TRUE))
+  pkg <- suppressMessages(read_geopressuretemplate(directory, from = "interim"))
+  expect_identical(tags(pkg)$scientific_name, "Upupa epops")
+})
