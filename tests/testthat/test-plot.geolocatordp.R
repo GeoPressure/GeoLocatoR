@@ -95,6 +95,7 @@ test_that("plot.geolocatordp explains which resources a plot type needs", {
   expect_error(plot(pkg, "coverage"), "needs .*measurements")
   expect_error(plot(pkg, "ring"), "needs .*measurements")
   expect_error(plot(pkg, "unknown"), "Unsupported plot type")
+  expect_error(plot(create_gldp()), "neither .*measurements.* nor .*paths.* and .*staps")
 })
 
 test_that("plot.geolocatordp plots coverage without observations, and asks tags for a ring plot", {

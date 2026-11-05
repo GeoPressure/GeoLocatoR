@@ -1,17 +1,19 @@
-#' Plot GeoLocator Data Package coverage
+#' Plot a GeoLocator Data Package
 #'
 #' @description
-#' Creates visualizations for a GeoLocator Data Package, including coverage plots
-#' showing data availability across time for different sensors and tags.
+#' Creates visualizations for a GeoLocator Data Package: the data availability
+#' across time for each sensor and tag, the observation history of each ring, or
+#' a map of the most likely paths.
 #'
 #' @param x A GeoLocator Data Package object.
 #' @param type Type of the plot to display: `"coverage"` (requires `measurements`,
 #'   and draws `observations` when present), `"ring"` (requires `observations`,
 #'   `measurements` and `tags`) or `"map"` (requires `paths` and `staps`). When
 #'   `NULL`, the first type the package supports is used.
-#' @param ... Additional parameters passed to plotting functions.
+#' @param ... Unused, for compatibility with the [plot()] generic.
 #'
-#' @return a plot, ggplotly or leaflet object.
+#' @return A ggplot2 object for `"coverage"` and `"ring"`, a leaflet map for
+#'   `"map"`.
 #'
 #' @examples
 #' \dontrun{
@@ -38,7 +40,9 @@ plot.geolocatordp <- function(x, type = NULL, ...) {
   if (is.null(type)) {
     type <- names(required)[vapply(required, \(r) all(r %in% available), logical(1))][1]
     if (is.na(type)) {
-      cli_abort("This package has no {.field measurements} or {.field paths} to plot.")
+      cli_abort(
+        "This package has neither {.field measurements} nor {.field paths} and {.field staps} to plot."
+      )
     }
   }
   if (!type %in% names(required)) {
@@ -157,12 +161,13 @@ plot_pkg_coverage <- function(x) {
 }
 
 
-#' Plot coverage data for a GeoLocator Data Package
+#' Plot the observation history of each ring
 #'
-#' Internal helper function to create a coverage plot showing observations across time for all tags.
+#' Internal helper function to plot the observations of each ring over the period
+#' covered by its tags' measurements.
 #'
 #' @param x A GeoLocator Data Package object
-#' @return A ggplot2 object showing the coverage plot
+#' @return A ggplot2 object showing the ring plot
 #' @noRd
 plot_pkg_ring <- function(x) {
   o <- observations(x) |>
@@ -217,12 +222,13 @@ plot_pkg_ring <- function(x) {
     )
 }
 
-#' Plot coverage data for a GeoLocator Data Package
+#' Map the most likely paths of a GeoLocator Data Package
 #'
-#' Internal helper function to create a coverage plot showing observations across time for all tags.
+#' Internal helper function to map the most likely path of each tag, with markers
+#' sized by the duration of its stationary periods.
 #'
 #' @param x A GeoLocator Data Package object
-#' @return A ggplot2 object showing the coverage plot
+#' @return A leaflet map
 #' @noRd
 plot_pkg_map <- function(x) {
   if (!requireNamespace("leaflet", quietly = TRUE)) {
