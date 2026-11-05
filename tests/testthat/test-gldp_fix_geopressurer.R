@@ -119,7 +119,7 @@ test_that("gldp_fix_soi_axes() converts x/y from the hardware version", {
   # hw <= 2.3: new = -old on x and y.
   expect_message(pkg <- gldp_fix_soi_axes(make_mag_pkg("GDL3pam-v2.3")), "Converted")
   expect_equal(unname(mag_values(pkg)), c(-1, -2, 3, -4, -5, 6))
-  expect_equal(pkg[["soiMagAxis"]], c("right", "forward", "down"))
+  expect_equal(pkg$params, list(list(id = "AA", mag_axis = c("right", "forward", "down"))))
   expect_equal(measurements(pkg)$value[measurements(pkg)$sensor == "pressure"], 1000)
 
   # hw >= 2.4: new x = -old y, new y = -old x.
@@ -129,9 +129,12 @@ test_that("gldp_fix_soi_axes() converts x/y from the hardware version", {
 
 test_that("gldp_fix_soi_axes() prefers the mag_axis and version saved in params", {
   # params record the hw > 2.3 mapping although the model says v2.3.
-  params <- list(list(id = "AA", mag_axis = c("backward", "left", "down")))
+  params <- list(list(id = "AA", mag_axis = c("backward", "left", "down"), other = 1))
   pkg <- suppressMessages(gldp_fix_soi_axes(make_mag_pkg("GDL3pam-v2.3", params)))
   expect_equal(unname(mag_values(pkg)), c(-2, -1, 3, -5, -4, 6))
+  # The params entry is updated, not replaced.
+  expect_equal(pkg$params[[1]]$mag_axis, c("right", "forward", "down"))
+  expect_equal(pkg$params[[1]]$other, 1)
 
   # Data from GeoPressureR >= 3.8.0 are already in the new frame.
   params <- list(list(id = "AA", GeoPressureR_version = package_version("3.8.0")))
@@ -166,12 +169,12 @@ test_that("gldp_fix_geopressurer() converts the SOI axes only once", {
   expect_equal(unname(mag_values(pkg)), c(-1, -2, 3, -4, -5, 6))
 })
 
-test_that("the SOI axis marker survives write_gldp() and read_gldp()", {
+test_that("the recorded SOI axis mapping survives write_gldp() and read_gldp()", {
   pkg <- suppressMessages(gldp_fix_geopressurer(make_mag_pkg()))
   dir <- tempfile()
   on.exit(unlink(dir, recursive = TRUE))
   suppressMessages(write_gldp(pkg, dir))
   pkg2 <- suppressMessages(suppressWarnings(read_gldp(file.path(dir, "datapackage.json"))))
-  expect_equal(unlist(pkg2[["soiMagAxis"]]), c("right", "forward", "down"))
+  expect_equal(pkg2$params[[1]]$mag_axis, c("right", "forward", "down"))
   expect_equal(unname(mag_values(pkg2)), c(-1, -2, 3, -4, -5, 6))
 })

@@ -360,8 +360,8 @@ read_soi <- function(
   # GeoPressureR: forward = raw y from 3.8.0, the hardware-based mapping before.
   if (utils::packageVersion("GeoPressureR") < "3.8.0") {
     pkg <- gldp_fix_soi_axes(pkg, quiet = TRUE)
-  } else if (length(gldp_soi_mag_axis(pkg)) > 0) {
-    pkg[["soiMagAxis"]] <- c("right", "forward", "down")
+  } else {
+    pkg <- gldp_params_set_mag_axis(pkg, names(gldp_soi_mag_axis(pkg)))
   }
 
   # Update metadata

@@ -1,19 +1,16 @@
 #' Repair data written by GeoPressureR bugs
 #'
 #' @description
-#' Runs [gldp_fix_edges_gs()], which only changes inconsistent rows, and
-#' [gldp_fix_soi_axes()] unless `soiMagAxis` records that the SOI axes are
-#' already in the GeoPressureR 3.8.0 frame.
+#' Runs [gldp_fix_edges_gs()] and [gldp_fix_soi_axes()]. Both are idempotent:
+#' repaired edges are consistent and converted tags record their new
+#' `mag_axis` in `params`.
 #'
 #' @param pkg A GeoLocator Data Package object.
 #' @return The repaired `pkg`.
 #' @noRd
 gldp_fix_geopressurer <- function(pkg) {
   pkg <- gldp_fix_edges_gs(pkg)
-  if (is.null(pkg[["soiMagAxis"]])) {
-    pkg <- gldp_fix_soi_axes(pkg)
-  }
-  pkg
+  gldp_fix_soi_axes(pkg)
 }
 
 #' GeoPressureR version used for each tag
@@ -116,9 +113,11 @@ gldp_fix_edges_gs <- function(pkg, quiet = FALSE) {
   if (!quiet) {
     n_sim <- sum(!is.na(mismatch))
     cli_inform(c(
-      "i" = "Recomputed {.field gs_u}/{.field gs_v} and removed {.field ws_u}/{.field ws_v} on \\
+      "!" = "Recomputed {.field gs_u}/{.field gs_v} and removed {.field ws_u}/{.field ws_v} on \\
       {sum(fix)} of {n_sim} checked simulated {.field edges} {cli::qty(n_sim)}row{?s}, \\
-      mismatched by GeoPressureR 3.2.0 to 3.7.0."
+      assigned to the wrong flight by GeoPressureR 3.2.0 to 3.7.0.",
+      "i" = "See {.url https://github.com/GeoPressure/GeoPressureR/commit/6f5dda6527eed51ec67e8393043c91579160da64}.",
+      "i" = "Save the corrected package with {.fun write_gldp} and re-upload it."
     ))
   }
   pkg
@@ -253,17 +252,17 @@ gldp_fix_soi_axes <- function(pkg, quiet = FALSE) {
       d
     })
   }
-  # The stored data cannot tell which frame they are in: mark the package as
-  # converted so that reading it again does not convert it twice.
-  if (length(mag_axis) > 0) {
-    pkg[["soiMagAxis"]] <- c("right", "forward", "down")
-  }
+  # The data cannot tell which frame they are in: recording the new mapping
+  # makes a second read a no-op.
+  pkg <- gldp_params_set_mag_axis(pkg, names(purrr::compact(mag_axis)))
 
   if (!quiet && length(conversion) > 0) {
     cli_inform(c(
-      "i" = "Converted magnetic and acceleration axes of {length(conversion)} SOI \\
-      tag{?s} to forward = raw y, right = raw x (GeoPressureR >= 3.8.0): \\
-      {.val {names(conversion)}}."
+      "!" = "Converted the magnetic and acceleration x/y of {length(conversion)} SOI \\
+      tag{?s} to forward = raw y, right = raw x, as in GeoPressureR 3.8.0: \\
+      {.val {names(conversion)}}.",
+      "i" = "See {.url https://github.com/GeoPressure/GeoPressureR/pull/187}.",
+      "i" = "Save the corrected package with {.fun write_gldp} and re-upload it."
     ))
   }
   if (!quiet && length(undecided) > 0) {
@@ -273,5 +272,27 @@ gldp_fix_soi_axes <- function(pkg, quiet = FALSE) {
       "i" = "Their x/y axes may be in the frame of GeoPressureR < 3.8.0."
     ))
   }
+  pkg
+}
+
+#' Record the GeoPressureR 3.8.0 axis mapping in params
+#'
+#' @param pkg A GeoLocator Data Package object.
+#' @param ids Tag ids whose SOI axes are in the new frame.
+#' @return `pkg` with `mag_axis = c("right", "forward", "down")` in the params
+#'   of `ids`, adding a params entry for tags without one.
+#' @noRd
+gldp_params_set_mag_axis <- function(pkg, ids) {
+  params <- pkg$params %||% list()
+  param_ids <- purrr::map_chr(params, \(p) as.character(p$id %||% NA))
+  for (id in ids) {
+    i <- match(id, param_ids)
+    if (is.na(i)) {
+      params <- c(params, list(list(id = id)))
+      i <- length(params)
+    }
+    params[[i]]$mag_axis <- c("right", "forward", "down")
+  }
+  pkg[["params"]] <- params
   pkg
 }
