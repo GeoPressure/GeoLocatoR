@@ -13,6 +13,8 @@
 #' **Resource merging logic:**
 #' - A resource is added even if only one input package contains it.
 #' - For each resource, rows from available inputs are combined with `dplyr::bind_rows()`.
+#' - Custom resources (not GeoLocator-DP tables) are dropped from the merged
+#'   package, with a message naming them.
 #'
 #' **Check for unique tag_id:**
 #' - The merge aborts if any `tag_id` is present in both packages.
@@ -85,6 +87,16 @@ merge_gldp <- function(x, y = NULL, ...) {
   pkgs <- purrr::map(pkgs, update_gldp)
   resources_by_pkg <- purrr::map(pkgs, frictionless::resource_names)
   resources <- unique(unlist(resources_by_pkg, use.names = FALSE))
+
+  # Custom resources have no GeoLocator-DP schema to merge them with, so they are dropped.
+  gldp_tables <- gldp_profile_resource_names(gldp_profile_schema(gldp_version(create_gldp())))
+  custom_resources <- setdiff(resources, gldp_tables)
+  if (length(custom_resources) > 0) {
+    cli_inform(c(
+      "!" = "Dropping custom resource{?s} {.val {custom_resources}}, which {.fn merge_gldp} cannot merge."
+    ))
+    resources <- intersect(resources, gldp_tables)
+  }
 
   # Warn when several spec versions are present.
   versions <- unique(purrr::map_chr(pkgs, gldp_version))

@@ -33,6 +33,8 @@ and resource data is combined based on their presence in either package.
 \itemize{
 \item A resource is added even if only one input package contains it.
 \item For each resource, rows from available inputs are combined with \code{dplyr::bind_rows()}.
+\item Custom resources (not GeoLocator-DP tables) are dropped from the merged
+package, with a message naming them.
 }
 
 \strong{Check for unique tag_id:}
