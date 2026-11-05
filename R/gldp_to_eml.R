@@ -9,8 +9,10 @@
 #'
 #' @param pkg A GeoLocator Data Package object.
 #' @param directory Path to local directory to write files to.
+#'   If `NULL`, nothing is written and the EML list is only returned, which can
+#'   be useful for adapting it before writing with [EML::write_eml()].
 #'
-#' @return `eml.xml` file written to disk.
+#' @return `eml.xml` file written to disk, unless `directory` is `NULL`.
 #'   Invisibly, an [EML::eml] object.
 #'
 #' @section Transformation details:
@@ -278,6 +280,10 @@ gldp_to_eml <- function(pkg, directory) {
     },
     dataset = dataset
   )
+
+  if (is.null(directory)) {
+    return(invisible(eml))
+  }
 
   # Write file
   if (!dir.exists(directory)) {

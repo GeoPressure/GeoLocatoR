@@ -9,10 +9,12 @@ gldp_to_eml(pkg, directory)
 \arguments{
 \item{pkg}{A GeoLocator Data Package object.}
 
-\item{directory}{Path to local directory to write files to.}
+\item{directory}{Path to local directory to write files to.
+If \code{NULL}, nothing is written and the EML list is only returned, which can
+be useful for adapting it before writing with \code{\link[EML:write_eml]{EML::write_eml()}}.}
 }
 \value{
-\code{eml.xml} file written to disk.
+\code{eml.xml} file written to disk, unless \code{directory} is \code{NULL}.
 Invisibly, an \link[EML:eml]{EML::eml} object.
 }
 \description{

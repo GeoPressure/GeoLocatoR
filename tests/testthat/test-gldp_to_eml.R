@@ -162,3 +162,16 @@ test_that("gldp_to_eml sets the packageId system from the identifier type", {
   eml <- suppressMessages(gldp_to_eml(pkg, tmp))
   expect_equal(eml$system, "uuid")
 })
+
+test_that("gldp_to_eml returns the EML list without writing for a NULL directory", {
+  skip_if_not_installed("EML")
+
+  pkg <- create_gldp(title = "Example package")
+  pkg$contributors <- list(list(title = "Doe, Jane", givenName = "Jane", familyName = "Doe"))
+  withr::local_dir(withr::local_tempdir())
+
+  expect_invisible(gldp_to_eml(pkg, NULL))
+  eml <- gldp_to_eml(pkg, NULL)
+  expect_equal(eml$dataset$title, "Example package")
+  expect_length(list.files(), 0)
+})
