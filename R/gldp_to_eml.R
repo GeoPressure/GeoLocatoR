@@ -21,9 +21,10 @@
 #' - `abstract`: Package description.
 #' - `pubDate`: Publication year extracted from publication/creation date.
 #' - `creator`: Contributors with roles `"ProjectLeader"`, `"Researcher"`, or
-#'   `"DataCurator"` when available.
-#' - `contact`: Contributors with role `"ContactPerson"` as provided in
-#'   contributors.
+#'   `"DataCurator"`, or without any role. When no contributor qualifies, all
+#'   contributors are creators.
+#' - `contact`: Contributors with role `"ContactPerson"`, or else the first
+#'   creator.
 #' - `associatedParty`: Other contributors,
 #'   including those with role `"RightsHolder"`.
 #' - `intellectualRights`: License information.
@@ -35,8 +36,8 @@
 #' Coverage information:
 #' - `temporalCoverage`: Date range from package temporal coverage (if available),
 #'   derived from measurement timestamps.
-#' - `geographicCoverage`: Bounding box from package spatial coverage (if available),
-#'   calculated from all locations in observations, paths, and pressurepaths.
+#' - `geographicCoverage`: Bounding box of the package `spatial` coverage, when the
+#'   package already carries one. It is not computed from the package data.
 #' - `taxonomicCoverage`: Species list from package taxonomic coverage (if available),
 #'   derived from unique scientific names in tags.
 #'
@@ -163,9 +164,6 @@ gldp_to_eml <- function(pkg, directory) {
   if (length(contacts) == 0 && length(creators) > 0) {
     contacts <- creators[1]
   }
-
-  # Deduplicate creators if needed (simple check)
-  # EML::set_responsibleParty returns a list, so we have a list of lists.
 
   # Abstract
   abstract_text <- to_plain_text(pkg$description)
