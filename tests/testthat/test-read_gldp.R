@@ -108,6 +108,31 @@ test_that("read_gldp leaves resources that are not tables on their path", {
   expect_identical(tags(pkg_back)$tag_id, "A")
 })
 
+test_that("read_gldp reads the GeoLocator-DP example package offline", {
+  # The example gives each table schema as a URL, and declares `type: "table"`
+  # without the Data Package v1 `profile` that frictionless 1.3.0 requires.
+  directory <- tempfile("read-example-")
+  copy <- tempfile("read-example-copy-")
+  on.exit(unlink(c(directory, copy), recursive = TRUE), add = TRUE)
+  dir.create(directory)
+  file.copy(
+    list.files(test_path("fixtures", "geolocator-dp-example"), full.names = TRUE),
+    directory
+  )
+
+  # Its measurements use `acceleration`, which is not a v1.2 sensor.
+  expect_warning(pkg <- read_gldp(directory), "measurements")
+
+  expect_identical(gldp_resource(pkg, "tags")$schema, gldp_resource_schema("v1.2", "tags"))
+  expect_identical(nrow(tags(pkg)), 8L)
+  expect_identical(nrow(observations(pkg)), 18L)
+
+  write_gldp(pkg, copy)
+  pkg_back <- read_gldp(copy)
+  expect_equal(tags(pkg_back), tags(pkg))
+  expect_equal(observations(pkg_back), observations(pkg))
+})
+
 test_that("read_gldp handles invalid input", {
   # Test with non-existent file
   expect_error(read_gldp("nonexistent.json"))
