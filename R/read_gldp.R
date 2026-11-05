@@ -66,14 +66,7 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
     }
   }
 
-  pkg <- withCallingHandlers(
-    frictionless::read_package(x),
-    warning = function(w) {
-      if (inherits(w, "frictionless_warning_version_not_supported")) {
-        invokeRestart("muffleWarning")
-      }
-    }
-  )
+  pkg <- frictionless::read_package(x)
   base_dir <- dirname(x)
 
   # A Data Package without `$schema` is not a GeoLocator Data Package either.
@@ -106,11 +99,6 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
       if (length(m) == 3) {
         r[["schema"]] <- gldp_resource_schema(m[2], m[3])
       }
-    }
-    # frictionless 1.3.0 only reads a table with the Data Package v1 `profile`,
-    # which `type: "table"` replaces from GeoLocator-DP v1.1.
-    if (identical(r$type, "table") && is.null(r$profile)) {
-      r[["profile"]] <- "tabular-data-resource"
     }
     r
   })

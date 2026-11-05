@@ -136,7 +136,7 @@ references:
     affiliation: Research Institute for Nature and Forest (INBO)
   year: '2026'
   doi: 10.32614/CRAN.package.frictionless
-  version: '>= 1.3.0'
+  version: '>= 2.0.0'
 - type: software
   title: GeoPressureR
   abstract: 'GeoPressureR: Global Positioning by Atmospheric Pressure'

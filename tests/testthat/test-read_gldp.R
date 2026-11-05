@@ -112,7 +112,7 @@ test_that("read_gldp leaves resources that are not tables on their path", {
 
 test_that("read_gldp reads the GeoLocator-DP example package offline", {
   # The example gives each table schema as a URL, and declares `type: "table"`
-  # without the Data Package v1 `profile` that frictionless 1.3.0 requires.
+  # without the Data Package v1 `profile`.
   directory <- tempfile("read-example-")
   copy <- tempfile("read-example-copy-")
   on.exit(unlink(c(directory, copy), recursive = TRUE), add = TRUE)
@@ -133,6 +133,43 @@ test_that("read_gldp reads the GeoLocator-DP example package offline", {
   pkg_back <- read_gldp(copy)
   expect_equal(tags(pkg_back), tags(pkg))
   expect_equal(observations(pkg_back), observations(pkg))
+})
+
+test_that("read_gldp reads a v1.0 package with the Data Package v1 profile", {
+  # GeoLocator-DP v1.0 packages mark tables with `profile: "tabular-data-resource"`.
+  # They are still read, and written back with `$schema` and `type` instead.
+  directory <- withr::local_tempdir()
+  copy <- withr::local_tempdir()
+  pkg <- add_gldp_resource(
+    create_gldp(),
+    "tags",
+    data.frame(
+      tag_id = "A",
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "test",
+      model = "test"
+    )
+  )
+  write_gldp(pkg, directory)
+  descriptor <- jsonlite::read_json(file.path(directory, "datapackage.json"))
+  descriptor[["$schema"]] <- gldp_schema_url("v1.0")
+  descriptor$resources[[1]][c("$schema", "type")] <- NULL
+  descriptor$resources[[1]]$profile <- "tabular-data-resource"
+  jsonlite::write_json(
+    descriptor,
+    file.path(directory, "datapackage.json"),
+    auto_unbox = TRUE
+  )
+
+  pkg_back <- suppressMessages(read_gldp(directory))
+  expect_identical(tags(pkg_back)$tag_id, "A")
+  expect_null(gldp_resource(pkg_back, "tags")$profile)
+  expect_identical(gldp_resource(pkg_back, "tags")$type, "table")
+
+  write_gldp(pkg_back, copy)
+  written <- jsonlite::read_json(file.path(copy, "datapackage.json"))
+  expect_null(written$resources[[1]]$profile)
 })
 
 test_that("read_gldp reports a Data Package without $schema", {
