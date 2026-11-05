@@ -565,9 +565,9 @@ read_geopressuretemplate <- function(
 
     if (added_any) {
       pkg <- pkg |>
-        update_gldp_taxonomic() |>
-        update_gldp_number_tags() |>
-        update_gldp_temporal()
+        gldp_update_taxonomic() |>
+        gldp_update_number_tags() |>
+        gldp_update_temporal()
     } else {
       cli_inform("No tag/observation/measurement data found to add.")
     }

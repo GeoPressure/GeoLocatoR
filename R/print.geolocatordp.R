@@ -19,7 +19,7 @@
 #' @export
 print.geolocatordp <- function(x, ...) {
   check_gldp(x)
-  x <- update_gldp_order_resources(x)
+  x <- gldp_update_order_resources(x)
 
   cli_h1("A GeoLocator Data Package `pkg` ({gldp_version(x)})")
 

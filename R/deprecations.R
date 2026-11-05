@@ -78,7 +78,61 @@ config2tibble <- function(
   config_to_tibble(file = file, filter_return = filter_return)
 }
 
-#' @rdname update_gldp
+#' Deprecated: granular `update_gldp_*()` functions
+#'
+#' @description
+#' `r lifecycle::badge("deprecated")`
+#'
+#' Use [update_gldp()], which recomputes every derived property of a package.
+#' `update_gldp_order_resources()`, `update_gldp_temporal()`,
+#' `update_gldp_taxonomic()`, `update_gldp_number_tags()` and
+#' `update_gldp_bibliographic_citation()` each still recompute one of them.
+#' `update_gldp_metadata()`, `update_gldp_spatial()` and
+#' `update_gldp_reference_location()` return `pkg` unchanged.
+#'
+#' @param pkg A GeoLocator Data Package object.
+#' @param ... Overrides passed to [utils::bibentry()] when computing
+#'   `bibliographicCitation`.
+#' @return `pkg`, with the derived property updated.
+#' @name update_gldp_deprecated
+NULL
+
+#' @rdname update_gldp_deprecated
+#' @export
+update_gldp_order_resources <- function(pkg) {
+  lifecycle::deprecate_soft("1.4.0", "update_gldp_order_resources()", "update_gldp()")
+  gldp_update_order_resources(pkg)
+}
+
+#' @rdname update_gldp_deprecated
+#' @export
+update_gldp_temporal <- function(pkg) {
+  lifecycle::deprecate_soft("1.4.0", "update_gldp_temporal()", "update_gldp()")
+  gldp_update_temporal(pkg)
+}
+
+#' @rdname update_gldp_deprecated
+#' @export
+update_gldp_taxonomic <- function(pkg) {
+  lifecycle::deprecate_soft("1.4.0", "update_gldp_taxonomic()", "update_gldp()")
+  gldp_update_taxonomic(pkg)
+}
+
+#' @rdname update_gldp_deprecated
+#' @export
+update_gldp_number_tags <- function(pkg) {
+  lifecycle::deprecate_soft("1.4.0", "update_gldp_number_tags()", "update_gldp()")
+  gldp_update_number_tags(pkg)
+}
+
+#' @rdname update_gldp_deprecated
+#' @export
+update_gldp_bibliographic_citation <- function(pkg, ...) {
+  lifecycle::deprecate_soft("1.4.0", "update_gldp_bibliographic_citation()", "update_gldp()")
+  gldp_update_bibliographic_citation(pkg, ...)
+}
+
+#' @rdname update_gldp_deprecated
 #' @export
 update_gldp_metadata <- function(pkg) {
   lifecycle::deprecate_warn(
@@ -89,7 +143,7 @@ update_gldp_metadata <- function(pkg) {
   pkg
 }
 
-#' @rdname update_gldp
+#' @rdname update_gldp_deprecated
 #' @export
 update_gldp_spatial <- function(pkg) {
   lifecycle::deprecate_warn(
@@ -100,7 +154,7 @@ update_gldp_spatial <- function(pkg) {
   pkg
 }
 
-#' @rdname update_gldp
+#' @rdname update_gldp_deprecated
 #' @export
 update_gldp_reference_location <- function(pkg) {
   lifecycle::deprecate_warn(

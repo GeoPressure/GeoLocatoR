@@ -62,8 +62,8 @@ tags <- function(x) {
     resource_name = "tags",
     post = \(pkg) {
       pkg |>
-        update_gldp_taxonomic() |>
-        update_gldp_number_tags()
+        gldp_update_taxonomic() |>
+        gldp_update_number_tags()
     }
   )
 }
@@ -122,9 +122,9 @@ measurements <- function(x) {
     # `taxonomic` only lists the species of tags with measurements.
     post = \(pkg) {
       pkg |>
-        update_gldp_temporal() |>
-        update_gldp_taxonomic() |>
-        update_gldp_number_tags()
+        gldp_update_temporal() |>
+        gldp_update_taxonomic() |>
+        gldp_update_number_tags()
     }
   )
 }
@@ -205,7 +205,7 @@ paths <- function(x) {
     x = x,
     value = value,
     resource_name = "paths",
-    post = update_gldp_number_tags
+    post = gldp_update_number_tags
   )
 }
 
@@ -259,6 +259,6 @@ pressurepaths <- function(x) {
     x = x,
     value = value,
     resource_name = "pressurepaths",
-    post = update_gldp_number_tags
+    post = gldp_update_number_tags
   )
 }
