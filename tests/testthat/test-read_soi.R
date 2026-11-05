@@ -37,12 +37,11 @@ test_that("read_soi() keeps tags and observations when no tag data can be read",
     GDL_ID = c("AAAA", "BBBB"),
     RingNumber = c("R1", "R2"),
     UTC_Attached = as.POSIXct("2020-05-01", tz = "UTC"),
-    directory = dir
+    directory = c(dir, NA)
   )
 
-  # An empty directory makes GeoPressureR fail for every tag
-  warnings <- capture_warnings(pkg <- suppressMessages(read_soi(gdl, dir)))
-  expect_match(warnings, "Could not read the data")
+  # An empty directory makes GeoPressureR fail for the only tag with a directory
+  expect_warning(pkg <- suppressMessages(read_soi(gdl, dir)), "Could not read the data")
   expect_error(measurements(pkg), class = "gldp_error_resource_not_found")
   expect_identical(tags(pkg)$tag_id, c("AAAA", "BBBB"))
 })
