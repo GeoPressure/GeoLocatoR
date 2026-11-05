@@ -7,7 +7,7 @@ Authors@R:
       person("Peter", "Desmet", , "peter.desmet@inbo.be", role = "ctb", comment = c(ORCID = "0000-0002-8442-8025"))
     )
 Description: An R package to help you create and read geolocator data using the GeoLocator Data Package standard.
-URL: https://github.com/GeoPressure/Geolocator,
+URL: https://github.com/GeoPressure/GeoLocatoR,
     https://geopressure.org/GeoLocatoR/
 BugReports: https://github.com/GeoPressure/GeoLocatoR/issues
 Depends: 

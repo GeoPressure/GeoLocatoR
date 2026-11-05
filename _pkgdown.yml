@@ -74,7 +74,7 @@ navbar:
       text: User Guide
       href: https://geopressure.org/GeoPressureManual/geolocator-intro.html
     geolocator-dp:
-      text: GeolocatorDP
+      text: GeoLocator DP
       href: https://geopressure.org/GeoLocator-DP/
 
 vignettes:
