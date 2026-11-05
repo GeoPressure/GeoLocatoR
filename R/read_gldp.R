@@ -6,7 +6,10 @@
 #' 1. reads the package descriptor with [frictionless::read_package()];
 #' 2. checks that it uses the GeoLocator-DP profile schema;
 #' 3. optionally loads resource tables into memory;
-#' 4. reads `params.json` when present;
+#' 4. reads the GeoPressureR parameters into `pkg$params`, from the file of the
+#'    `params` resource or else `params.json` when present, in plain JSON (see
+#'    [write_gldp()] for what JSON keeps) or in the [jsonlite::serializeJSON()]
+#'    format written by GeoLocatoR < 1.5.0;
 #' 5. upgrades older package versions when needed;
 #' 6. recomputes derived package properties with [update_gldp()].
 #'
@@ -215,8 +218,15 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
     })
   }
 
+  # GeoLocatoR < 1.5.0 wrote params.json without declaring the `params` resource.
+  # Params are kept in `pkg$params`, and write_gldp() declares the resource again.
+  params_path <- gldp_resource(pkg, "params")$path %||% "params.json"
+  if (!grepl("^https?://", params_path)) {
+    params_path <- file.path(base_dir, params_path)
+  }
+  pkg$resources <- purrr::discard(pkg$resources, \(r) identical(r$name, "params"))
+
   pkg$params <- list()
-  params_path <- file.path(base_dir, "params.json")
   # A remote package may have no params.json: one that cannot be opened is absent.
   params_json <- if (grepl("^https?://", params_path)) {
     tryCatch(readLines(params_path, warn = FALSE), error = \(e) NULL, warning = \(w) NULL)
@@ -224,8 +234,31 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
     readLines(params_path, warn = FALSE)
   }
   if (!is.null(params_json)) {
+    params_json <- paste(params_json, collapse = "\n")
     pkg$params <- tryCatch(
-      jsonlite::unserializeJSON(paste(params_json, collapse = "\n")),
+      {
+        json <- jsonlite::parse_json(params_json)
+        if (identical(json$type, "list") && "value" %in% names(json)) {
+          # GeoLocatoR < 1.5.0 wrote params with jsonlite::serializeJSON(), with R types.
+          jsonlite::unserializeJSON(params_json)
+        } else {
+          # Plain JSON, as written by write_gldp(). Each param is parsed on its own
+          # so that its arrays of records become data frames, but not the list of params.
+          purrr::map(json, \(p) {
+            jsonlite::fromJSON(
+              jsonlite::toJSON(
+                p,
+                auto_unbox = TRUE,
+                digits = NA,
+                null = "null",
+                always_decimal = TRUE
+              ),
+              simplifyDataFrame = TRUE,
+              simplifyMatrix = FALSE
+            )
+          })
+        }
+      },
       error = function(e) {
         cli_warn("Could not parse {.file params.json}: {e$message}")
         list()

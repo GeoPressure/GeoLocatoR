@@ -19,8 +19,27 @@ Invisibly returns \code{directory}.
 \description{
 Write a GeoLocator Data Package to disk with
 \code{\link[frictionless:write_package]{frictionless::write_package()}}. Standard datapackage files are written from
-the package descriptor and resources, while \code{pkg$params} is serialized
-separately to \code{params.json} when it is not empty.
+the package descriptor and resources, while \code{pkg$params} is written
+separately to \code{params.json} when it is not empty, and declared as the
+\code{params} resource of the package.
+
+\code{params.json} is plain JSON, one object per parameter list, readable without
+R. JSON has no R types, so reading it back with \code{\link[=read_gldp]{read_gldp()}} returns:
+\itemize{
+\item numbers to 15 significant digits;
+\item dates and times as ISO 8601 text, in UTC and to the second;
+\item version numbers (e.g. \code{GeoPressureR_version}) as text;
+\item functions and unevaluated calls as their R source text;
+\item a scalar \code{NA}, \code{Inf} or \code{NaN}, and \code{NA} in text, as the text \code{"NA"},
+\code{"Inf"} or \code{"NaN"} (numeric vectors of length > 1 keep them);
+\item a vector or column of missing values only as logical;
+\item empty vectors as empty lists, and atomic vectors without their names;
+\item objects without their R class (such as \code{param}, \code{twl_calib} or glue
+text), and factors as text.
+}
+
+Data frames, such as \code{tag_set_map$known}, \code{NULL} values, logical, integer and
+double types, and the length of vectors are kept.
 }
 \seealso{
 \code{\link[=create_gldp]{create_gldp()}} to create a package and \code{\link[=read_gldp]{read_gldp()}} to read one

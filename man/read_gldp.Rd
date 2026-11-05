@@ -41,7 +41,10 @@ The function:
 \item reads the package descriptor with \code{\link[frictionless:read_package]{frictionless::read_package()}};
 \item checks that it uses the GeoLocator-DP profile schema;
 \item optionally loads resource tables into memory;
-\item reads \code{params.json} when present;
+\item reads the GeoPressureR parameters into \code{pkg$params}, from the file of the
+\code{params} resource or else \code{params.json} when present, in plain JSON (see
+\code{\link[=write_gldp]{write_gldp()}} for what JSON keeps) or in the \code{\link[jsonlite:serializeJSON]{jsonlite::serializeJSON()}}
+format written by GeoLocatoR < 1.5.0;
 \item upgrades older package versions when needed;
 \item recomputes derived package properties with \code{\link[=update_gldp]{update_gldp()}}.
 }
