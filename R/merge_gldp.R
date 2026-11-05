@@ -19,7 +19,8 @@
 #'
 #' **datapackage_id in tags:**
 #' - For the `tags` resource, each row must have a `datapackage_id`.
-#' - Missing `datapackage_id` values are filled with the package `id`.
+#' - Missing `datapackage_id` values are filled with the package `id`, so the
+#'   merge aborts when such a package has no `id`.
 #' - The merge aborts if `tags$datapackage_id` overlaps between the two inputs.
 #'
 #' **Metadata merging rules:**
@@ -232,9 +233,17 @@ merge_gldp_prepare_tags <- function(pkg, resources) {
 
   tags <- gldp_read_resource(pkg, resource_name = "tags")
   if (!"datapackage_id" %in% names(tags)) {
-    tags$datapackage_id <- pkg$id
+    tags$datapackage_id <- NA_character_
   }
-  tags$datapackage_id[is.na(tags$datapackage_id) | tags$datapackage_id == ""] <- pkg$id
+  # Tags without a datapackage_id take the package id, which identifies their source.
+  missing <- is.na(tags$datapackage_id) | tags$datapackage_id == ""
+  if (any(missing) && !is_non_empty_string(pkg$id)) {
+    cli_abort(c(
+      "x" = "Cannot merge a package without {.field id} whose tags have no {.field datapackage_id}.",
+      "i" = "Set {.code pkg[[\"id\"]]} (for example its DOI) on every input package before merging."
+    ))
+  }
+  tags$datapackage_id[missing] <- pkg$id
   tags
 }
 
