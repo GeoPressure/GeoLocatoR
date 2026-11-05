@@ -6,7 +6,12 @@
 #'
 #' The import can combine two sources:
 #' 1. `"interim"`: read `.RData` outputs from `data/interim/`, convert them to
-#'    package resources, and store raw parameter objects in `pkg$params`.
+#'    package resources, and store raw parameter objects in `pkg$params`. Each
+#'    file must hold `tag` and `param`. Trajectories are the variables named
+#'    `path_<type>`, `edge_<type>` and `pressurepath_<type>`, where `<type>`
+#'    is a trajectory type of GeoLocator-DP (`tag`, `most_likely`,
+#'    `simulation` or `geopressureviz`); other types are skipped with a
+#'    warning.
 #' 2. `"raw-tag"`: create tag objects from `data/raw-tag/` and `config.yml`,
 #'    then derive `measurements`, `tags`, `observations`, and `params`.
 #'
@@ -18,7 +23,10 @@
 #' 3.2.0 to 3.7.0. Other data are left as stored.
 #'
 #' The `ring_number`, `tag_comments` and `bird_create$scientific_name` entries
-#' of each tag in `config.yml` fill the generated `tags`.
+#' of each tag in `config.yml` fill the generated `tags`. They are read with
+#' [config::get()], so a tag inherits them from the `default` entry, and
+#' numbers are kept as written (an unquoted ring number `0012345` stays
+#' `"0012345"`).
 #'
 #' Manual data files take precedence over generated metadata:
 #' - `data/tags.csv` or `data/tags.xlsx` replaces generated `tags`. Tags missing
@@ -114,47 +122,13 @@ read_geopressuretemplate <- function(
     if ("interim" %in% from) {
       all_files <- unname(project_files$interim_files)
 
-      # List of variable names to be processed
-      var_names_required <- c("tag", "param")
-      var_names_path <- c(
-        "path_simulation",
-        "path_tag",
-        "path_most_likely",
-        "path_geopressureviz"
-      )
-      var_names_edges <- c(
-        "edge_most_likely",
-        "edge_simulation",
-        "edge_geopressureviz",
-        "edge_tag"
-      )
-      var_names_pressurepath <- c(
-        "pressurepath_most_likely",
-        "pressurepath_simulation",
-        "pressurepath_geopressureviz",
-        "pressurepath_tag"
-      )
-      var_names <- c(
-        var_names_required,
-        var_names_path,
-        var_names_edges,
-        var_names_pressurepath
-      )
-
-      # Initialize lists dynamically
-      interim <- stats::setNames(vector("list", length(var_names)), var_names)
-      interim <- lapply(interim, function(x) vector("list", length(all_files)))
-
-      # Loop through files and populate the result lists
-      all_files |>
-        purrr::iwalk(
-          \(f, idx) {
-            save_list <- load(f)
-            for (var in var_names) {
-              if (var %in% save_list) {
-                interim[[var]][[idx]] <<- get(var)
-              }
-            }
+      # Load each interim file in its own environment
+      loaded <- all_files |>
+        purrr::map(
+          \(f) {
+            env <- new.env()
+            load(f, envir = env)
+            as.list(env, sorted = TRUE)
           },
           .progress = list(
             type = "custom",
@@ -164,6 +138,43 @@ read_geopressuretemplate <- function(
             clear = FALSE
           )
         )
+      var_names_required <- c("tag", "param")
+
+      # Trajectories are saved as <prefix>_<type> (e.g. path_most_likely,
+      # pressurepath_geopressureviz), so they are found by prefix rather than by a
+      # list of names that each GeoPressureR version extends. Their type must be
+      # one GeoLocator-DP defines.
+      var_names <- grep(
+        "^(path|edge|pressurepath)_",
+        unique(unlist(purrr::map(loaded, names))),
+        value = TRUE
+      )
+      types <- c(path = "paths", edge = "edges", pressurepath = "pressurepaths") |>
+        purrr::map(\(r) {
+          fields <- gldp_resource_schema(gldp_version(pkg), r)$fields
+          purrr::detect(fields, \(f) f$name == "type")$constraints$enum
+        })
+      defined <- purrr::map2_lgl(
+        sub("_.*", "", var_names),
+        sub("^[a-z]+_", "", var_names),
+        \(prefix, type) type %in% types[[prefix]]
+      )
+      if (!all(defined)) {
+        cli_warn(c(
+          "!" = "Skipped interim variable{?s} {.var {var_names[!defined]}}, of a type \\
+          GeoLocator-DP does not define.",
+          "i" = "Defined types are {.val {types$path}}."
+        ))
+      }
+      var_names <- var_names[defined]
+      var_names_path <- var_names[startsWith(var_names, "path_")]
+      var_names_edges <- var_names[startsWith(var_names, "edge_")]
+      var_names_pressurepath <- var_names[startsWith(var_names, "pressurepath_")]
+
+      # One list per variable, with an element per file (NULL when absent)
+      interim <- c(var_names_required, var_names) |>
+        purrr::set_names() |>
+        purrr::map(\(var) purrr::map(loaded, var))
 
       # Check for required variables
       for (var in var_names_required) {
@@ -378,7 +389,30 @@ read_geopressuretemplate <- function(
     }
 
     if (!is.null(t) && file.exists("config.yml")) {
-      raw_config <- yaml::yaml.load_file("config.yml", eval.expr = FALSE)
+      # config::get() applies the `default` entry and `inherits`, as GeoPressureR
+      # does, but YAML reads an unquoted ring number such as 0012345 as the octal
+      # number 5349. It reads a copy of config.yml with numbers kept as written.
+      as_written <- \(x) x
+      raw_config <- yaml::yaml.load_file(
+        "config.yml",
+        eval.expr = FALSE,
+        handlers = list(
+          int = as_written,
+          `int#oct` = as_written,
+          `int#hex` = as_written,
+          `int#base60` = as_written,
+          float = as_written,
+          `float#fix` = as_written
+        )
+      )
+      # config::get() requires a default entry.
+      raw_config$default <- raw_config$default %||% list()
+      config_file <- withr::local_tempfile(fileext = ".yml")
+      yaml::write_yaml(raw_config, config_file)
+      tag_config <- unique(t$tag_id) |>
+        purrr::set_names() |>
+        purrr::map(\(id) config::get(config = id, file = config_file, use_parent = FALSE))
+
       # Interim tag params do not carry these config fields, so read them from
       # config.yml, keyed by their path in each tag entry.
       config_fields <- list(
@@ -388,9 +422,8 @@ read_geopressuretemplate <- function(
       )
       for (field in names(config_fields)) {
         values <- tibble::tibble(
-          tag_id = project_files$config_ids,
-          # Unquoted ring numbers are read from YAML as numbers.
-          value = purrr::map_chr(unname(raw_config[project_files$config_ids]), \(x) {
+          tag_id = names(tag_config),
+          value = purrr::map_chr(unname(tag_config), \(x) {
             as.character(purrr::pluck(x, !!!config_fields[[field]], .default = NA))
           })
         ) |>

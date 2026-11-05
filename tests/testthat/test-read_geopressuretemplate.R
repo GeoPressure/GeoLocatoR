@@ -301,6 +301,61 @@ test_that("numeric ring numbers in config.yml are read as text", {
   on.exit(unlink(directory, recursive = TRUE))
   pkg <- suppressMessages(read_geopressuretemplate(directory, from = "interim"))
   expect_identical(tags(pkg)$ring_number, "12345")
+
+  # YAML reads an unquoted leading zero as an octal number.
+  directory <- template_interim(c("AA:", "  ring_number: 0012345"))
+  on.exit(unlink(directory, recursive = TRUE), add = TRUE)
+  pkg <- suppressMessages(read_geopressuretemplate(directory, from = "interim"))
+  expect_identical(tags(pkg)$ring_number, "0012345")
+})
+
+test_that("config.yml fields of a tag inherit from the default entry", {
+  directory <- template_interim(c(
+    "default:",
+    "  tag_comments: shared comment",
+    "  bird_create:",
+    "    scientific_name: Upupa epops",
+    "AA:",
+    "  tag_comments: own comment"
+  ))
+  on.exit(unlink(directory, recursive = TRUE))
+  pkg <- suppressMessages(read_geopressuretemplate(directory, from = "interim"))
+  expect_identical(tags(pkg)$scientific_name, "Upupa epops")
+  expect_identical(tags(pkg)$tag_comments, "own comment")
+})
+
+test_that("interim trajectories are found by prefix, with their type from the suffix", {
+  directory <- template_interim()
+  on.exit(unlink(directory, recursive = TRUE))
+  path <- file.path(directory, "data", "interim", "AA.RData")
+  load(path)
+  pressurepath <- data.frame(
+    date = as.POSIXct("2020-01-01", tz = "UTC"),
+    stap_id = 1,
+    lat = 0,
+    lon = 0,
+    j = 1
+  )
+  pressurepath_geopressureviz <- pressurepath
+  pressurepath_tag <- pressurepath
+  path_unknown <- data.frame(stap_id = 1, lat = 0, lon = 0, j = 1)
+  marginal <- list()
+  save(
+    param,
+    tag,
+    pressurepath_geopressureviz,
+    pressurepath_tag,
+    path_unknown,
+    marginal,
+    file = path
+  )
+
+  expect_warning(
+    pkg <- suppressMessages(read_geopressuretemplate(directory, from = "interim")),
+    "path_unknown"
+  )
+  expect_setequal(pressurepaths(pkg)$type, c("geopressureviz", "tag"))
+  expect_null(gldp_resource(pkg, "paths"))
 })
 
 test_that("interim tags take their species from config.yml", {
