@@ -71,7 +71,8 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
   )
   base_dir <- dirname(x)
 
-  if (!grepl("geolocator-dp-profile\\.json$", pkg$`$schema`)) {
+  # A Data Package without `$schema` is not a GeoLocator Data Package either.
+  if (!grepl("geolocator-dp-profile\\.json$", pkg[["$schema"]] %||% "")) {
     cli_abort(
       "The datapackage provided does not seem to be a GeoLocator Data Package."
     )

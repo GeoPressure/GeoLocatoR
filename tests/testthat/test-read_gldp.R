@@ -133,6 +133,18 @@ test_that("read_gldp reads the GeoLocator-DP example package offline", {
   expect_equal(observations(pkg_back), observations(pkg))
 })
 
+test_that("read_gldp reports a Data Package without $schema", {
+  directory <- tempfile("read-no-schema-")
+  on.exit(unlink(directory, recursive = TRUE), add = TRUE)
+  dir.create(directory)
+  writeLines('{"name": "plain", "resources": []}', file.path(directory, "datapackage.json"))
+
+  expect_error(
+    suppressWarnings(read_gldp(directory)),
+    "does not seem to be a GeoLocator Data Package"
+  )
+})
+
 test_that("read_gldp handles invalid input", {
   # Test with non-existent file
   expect_error(read_gldp("nonexistent.json"))
