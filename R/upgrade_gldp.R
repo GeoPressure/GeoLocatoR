@@ -374,7 +374,7 @@ upgrade_gldp_v0_6_to_v1_0 <- function(x) {
 #' @noRd
 upgrade_gldp_v1_0_to_v1_1 <- function(x) {
   # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v1.1
-  # The table schema moved from `resource$$schema` to `resource$schema`, and
+  # The table schema moved from the resource `$schema` to its `schema`, and
   # `type` became required. Resources are rebuilt against the v1.1 schemas by
   # `normalize_upgraded_resources()`, so only the profile URL changes here.
   x[["$schema"]] <- gldp_schema_url("v1.1")
