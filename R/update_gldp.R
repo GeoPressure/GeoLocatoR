@@ -252,3 +252,58 @@ gldp_update_bibliographic_citation <- function(pkg, ...) {
 
   pkg
 }
+
+#' Convert contributors to person objects
+#'
+#' Internal helper function to convert a list of contributors to person objects
+#' for use in DESCRIPTION files.
+#'
+#' @param contributors A list of contributor objects from a GeoLocator Data Package
+#' @return A list of person objects
+#' @noRd
+contributors_to_persons <- function(contributors) {
+  role_mapping <- c(
+    "contactperson" = "ctr", # Contractor (assumed due to lack of clear match)
+    "contributor" = "ctb", # Contributor
+    "datacollector" = "dtc", # Data contributor
+    "datacurator" = "dtc", # Data contributor (no closer match)
+    "datamanager" = "dtc", # Data contributor (no closer match)
+    "distributor" = "ctr", # Contractor (assumed)
+    "editor" = "rev", # Reviewer
+    "hostinginstitution" = "cph", # Copyright holder (legal entity)
+    "producer" = "aut", # Author (substantial contribution)
+    "projectleader" = "cre", # Creator (project leader matches)
+    "projectmanager" = "cre", # Creator (manager of the project)
+    "projectmember" = "ctb", # Contributor (smaller contributions)
+    "registrationagency" = "ctr", # Contractor (assumed)
+    "registrationauthority" = "ctr", # Contractor (assumed)
+    "relatedperson" = "trl", # Translator (assumed)
+    "researcher" = "aut", # Author
+    "researchergroup" = "aut", # Author (group treated as authors)
+    "rightsholder" = "cph", # Copyright holder
+    "sponsor" = "fnd", # Funder
+    "supervisor" = "ths", # Thesis advisor
+    "workpackageleader" = "cre" # Creator (assumed leader role)
+  )
+
+  persons <- contributors |>
+    purrr::map(
+      ~ {
+        utils::person(
+          # An organisation has a title instead of a given name; either can be absent.
+          given = .x$givenName %||% .x$title,
+          family = .x$familyName,
+          email = .x$email,
+          role = purrr::map_vec(
+            .x$roles,
+            ~ coalesce(role_mapping[tolower(.x)], "ctb")
+          ),
+          comment = c(.x$path, .x$organization)
+        )
+      }
+    )
+
+  persons <- do.call(c, Filter(Negate(is.null), persons))
+
+  persons
+}
