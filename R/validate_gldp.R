@@ -21,6 +21,9 @@
 #'    `fieldsMatch` rule, and each column must satisfy its declared constraints
 #'    such as type, format, requiredness, uniqueness, allowed values, patterns,
 #'    and numeric or length limits. Rows must be unique on the schema `primaryKey`.
+#'    The tables GeoLocator-DP defines (`tags`, `observations`, ...) must be tabular
+#'    resources with a table schema. The `params` resource and custom resources are
+#'    checked when they carry a table schema, and are otherwise reported as not checked.
 #'
 #' 3. **Coherence validation**
 #'    Cross-resource consistency checks are then applied.
@@ -145,13 +148,13 @@ validate_gldp_profile <- function(pkg) {
 
 #' Validate GeoLocator Data Package resources
 #'
-#' Internal helper that validates each package resource against its own resource
-#' schema. Resources must be tabular data resources with a declared schema and
-#' in-memory data.
+#' Internal helper that loads file-backed tables and validates each tabular
+#' resource against its own table schema. The tables GeoLocator-DP defines must
+#' be tabular; other resources without a table schema are reported, not checked.
 #'
 #' @param pkg A GeoLocator Data Package object
-#' @return Invisibly returns `TRUE` when all resources can be validated and pass
-#'   their schema checks, `FALSE` otherwise.
+#' @return Invisibly returns `TRUE` when all GeoLocator-DP tables can be validated
+#'   and all tabular resources pass their schema checks, `FALSE` otherwise.
 #' @noRd
 validate_gldp_resources <- function(pkg) {
   pkg <- gldp_materialize_tables(pkg)
@@ -163,6 +166,10 @@ validate_gldp_resources <- function(pkg) {
     cli_alert_danger("Package must contain at least one resource.")
     valid <- FALSE
   }
+
+  # Only the tables GeoLocator-DP defines must be tabular. `params` and custom
+  # resources may be any file, so they have no table schema to check against.
+  tables <- setdiff(gldp_profile_resource_names(gldp_profile_schema(gldp_version(pkg))), "params")
 
   for (i in seq_along(pkg$resources)) {
     resource <- pkg$resources[[i]]
@@ -177,10 +184,15 @@ validate_gldp_resources <- function(pkg) {
 
     if (is_tabular_resource) {
       valid <- valid & validate_gldp_table(resource$data, resource$schema, resource$name)
+    } else if (resource$name %in% tables) {
+      cli_h3("Check Resources {.field {resource$name}}")
+      cli_alert_danger(
+        "{.field {resource$name}} is not a tabular resource with a table schema, so it could not be checked."
+      )
+      valid <- FALSE
     } else {
       cli_h3("Check Resources {.field {resource$name}}")
-      cli::cli_alert_warning("Could not check {.field {resource$name}}")
-      valid <- FALSE
+      cli_alert_info("{.field {resource$name}} has no table schema and is not checked.")
     }
   }
 
