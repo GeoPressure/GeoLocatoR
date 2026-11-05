@@ -389,21 +389,22 @@ read_geopressuretemplate <- function(
         cli_abort("The {.pkg readxl} package is required to read {.file data/tags.xlsx}.")
       }
       file <- "data/tags.xlsx"
-      tf <- readxl::read_excel(
-        file,
-        col_types = c(
-          tag_id = "text",
-          ring_number = "text",
-          scientific_name = "text",
-          manufacturer = "text",
-          model = "text",
-          firmware = "text",
-          weight = "numeric",
-          attachment_type = "text",
-          readout_method = "text",
-          tag_comments = "text"
-        )
+      col_types <- c(
+        tag_id = "text",
+        datapackage_id = "text",
+        ring_number = "text",
+        scientific_name = "text",
+        manufacturer = "text",
+        model = "text",
+        firmware = "text",
+        weight = "numeric",
+        attachment_type = "text",
+        readout_method = "text",
+        tag_comments = "text"
       )
+      # readxl matches col_types by position, so order them by the sheet header.
+      header <- names(readxl::read_excel(file, n_max = 0))
+      tf <- readxl::read_excel(file, col_types = unname(coalesce(col_types[header], "guess")))
       cli_alert_success(
         "Reading tags from {.file {file.path(directory, file)}}."
       )
@@ -466,27 +467,30 @@ read_geopressuretemplate <- function(
           "The {.pkg readxl} package is required to read {.file data/observations.xlsx}."
         )
       }
+      col_types <- c(
+        ring_number = "text",
+        tag_id = "text",
+        observation_type = "text",
+        datetime = "date",
+        latitude = "numeric",
+        longitude = "numeric",
+        location_name = "text",
+        device_status = "text",
+        observer = "text",
+        catching_method = "text",
+        age_class = "text",
+        sex = "text",
+        condition = "text",
+        mass = "numeric",
+        wing_length = "numeric",
+        additional_metric = "text",
+        observation_comments = "text"
+      )
+      # readxl matches col_types by position, so order them by the sheet header.
+      header <- names(readxl::read_excel("./data/observations.xlsx", n_max = 0))
       o <- readxl::read_excel(
         "./data/observations.xlsx",
-        col_types = c(
-          ring_number = "text", # ring_number: character
-          tag_id = "text", # tag_id: character
-          observation_type = "text", # observation_type: character
-          datetime = "date", # datetime: date-time (ISO 8601 format)
-          latitude = "numeric", # latitude: numeric
-          longitude = "numeric", # longitude: numeric
-          location_name = "text", # location_name: character
-          device_status = "text", # device_status: character
-          observer = "text", # observer: character
-          catching_method = "text", # catching_method: character
-          age_class = "text", # age_class: character
-          sex = "text", # sex: character
-          condition = "text", # condition: character
-          mass = "numeric", # mass: numeric
-          wing_length = "numeric", # wing_length: numeric
-          additional_metric = "text", # additional_metric: character
-          observation_comments = "text" # observation_comments: character
-        )
+        col_types = unname(coalesce(col_types[header], "guess"))
       )
       cli_alert_success(
         "Reading observations from {.file {file.path(directory, 'data/observations.xlsx')}}."
