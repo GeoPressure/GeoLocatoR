@@ -1,4 +1,4 @@
-# GeoLocatoR (development version)
+# GeoLocatoR v1.4.1
 
 ## Main
 
@@ -18,6 +18,8 @@
 - [Document `zenodo_to_gldp()` and `gldp_to_zenodo()` as defunct](https://github.com/GeoPressure/GeoLocatoR/commit/c6edd0e), [fix the `gldp_to_tag()` example](https://github.com/GeoPressure/GeoLocatoR/commit/ccb16e5) and [the `read_gldp(drop_measurements)` documentation](https://github.com/GeoPressure/GeoLocatoR/commit/3cd6aac).
 - [Drop the unused quarto, rmarkdown and tidyverse suggestions](https://github.com/GeoPressure/GeoLocatoR/commit/11f390e).
 - Tests [skip when offline instead of stopping](https://github.com/GeoPressure/GeoLocatoR/commit/dd52708), and [pkgdown deploys only from main](https://github.com/GeoPressure/GeoLocatoR/commit/3246e44).
+
+**Full Changelog**: <https://github.com/GeoPressure/GeoLocatoR/compare/v1.4.0...v1.4.1>
 
 # GeoLocatoR v1.4.0
 
