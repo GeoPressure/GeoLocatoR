@@ -17,12 +17,6 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
   if (identical(from_version, to_version)) {
     return(x)
   }
-  if (is.na(from_rank) || is.na(to_rank)) {
-    cli_abort(c(
-      "x" = "Unsupported version comparison ({.val {from_version}} -> {.val {to_version}})."
-    ))
-  }
-
   if (from_rank > to_rank) {
     cli_abort(c(
       "x" = "Downgrade is not supported ({.val {from_version}} -> {.val {to_version}})."
@@ -278,7 +272,6 @@ upgrade_gldp_v0_4_to_v0_5 <- function(x) {
 
     missing <- is.na(d$type) | trimws(as.character(d$type)) == ""
     # v0.5 requires `type`; unresolved rows keep the historical default.
-    d$type[is.na(d$type)] <- "most_likely"
     d$type[missing] <- "most_likely"
     d$type <- as.character(d$type)
     d
