@@ -45,3 +45,15 @@ test_that("read_soi() keeps tags and observations when no tag data can be read",
   expect_error(measurements(pkg), class = "gldp_error_resource_not_found")
   expect_identical(tags(pkg)$tag_id, c("AAAA", "BBBB"))
 })
+
+test_that("read_soi() names the model by the tag type when the hardware version is unknown", {
+  gdl <- tibble(
+    GDL_ID = c("AAAA", "BBBB"),
+    GDL_Type = "GDL3pam",
+    HardwareVersion = c("2.4", NA),
+    directory = NA_character_
+  )
+
+  pkg <- suppressMessages(read_soi(gdl))
+  expect_identical(tags(pkg)$model, c("GDL3pam-2.4", "GDL3pam"))
+})
