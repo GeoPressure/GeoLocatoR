@@ -93,11 +93,11 @@ normalize_upgraded_resources <- function(x) {
         replace = TRUE
       )
     } else {
-      # Keep schema in sync when data are not loaded in memory.
+      # Keep schema and descriptor in sync when data are not loaded in memory.
       lazy_resource <- gldp_resource(x, resource_name)
       if (!is.null(lazy_resource)) {
         lazy_resource$schema <- target_schema
-        gldp_resource(x, resource_name) <- lazy_resource
+        gldp_resource(x, resource_name) <- gldp_mark_table_resource(lazy_resource)
       }
     }
 

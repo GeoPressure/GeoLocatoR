@@ -342,6 +342,29 @@ test_that("upgrade_gldp migrates a v1.0 package to v1.1", {
   expect_false(is.null(tags_res$schema$fields))
 })
 
+test_that("upgrade_gldp updates the descriptor of a file-backed table", {
+  # v1.0 used the resource `$schema` for the table schema URL. From v1.1 it holds
+  # the Data Package resource profile, and `type: "table"` is required.
+  pkg <- create_gldp(version = "v1.0")
+  pkg[["resources"]] <- list(list(
+    name = "tags",
+    path = "tags.csv",
+    profile = "tabular-data-resource",
+    `$schema` = "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/v1.0/tags-table-schema.json",
+    schema = gldp_resource_schema("v1.0", "tags")
+  ))
+
+  resource <- gldp_resource(suppressMessages(upgrade_gldp(pkg)), "tags")
+
+  expect_identical(
+    resource[["$schema"]],
+    "https://datapackage.org/profiles/2.0/dataresource.json"
+  )
+  expect_identical(sum(names(resource) == "$schema"), 1L)
+  expect_identical(resource$type, "table")
+  expect_identical(resource$path, "tags.csv")
+})
+
 test_that("upgrade_gldp keeps a params resource, which has no table schema", {
   pkg <- create_gldp(version = "v1.1")
   pkg <- add_gldp_resource(pkg, "tags", data.frame(tag_id = "A", ring_number = "R1"))
