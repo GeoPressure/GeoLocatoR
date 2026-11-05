@@ -85,6 +85,11 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
     if (!is.null(r[["$schema"]])) {
       r[["$schema"]] <- gsub("Rafnuss", "GeoPressure", r[["$schema"]], fixed = TRUE)
     }
+    # Up to v1.0, the profile put the table schema URL in the resource `$schema`;
+    # `upgrade_gldp()` replaces that `$schema` with the Data Package profile.
+    if (is.null(r$schema) && grepl("-table-schema\\.json$", r[["$schema"]] %||% "")) {
+      r[["schema"]] <- r[["$schema"]]
+    }
     # A GeoLocator-DP table schema given by URL is taken from the bundled
     # schemas, so that it is read offline and can be cast and matched by name.
     if (is.character(r$schema)) {

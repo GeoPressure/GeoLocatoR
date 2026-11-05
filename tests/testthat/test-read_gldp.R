@@ -211,6 +211,40 @@ test_that("read_gldp reads a v1.0 package with the Data Package v1 profile", {
   expect_null(written$resources[[1]]$profile)
 })
 
+test_that("read_gldp reads a v1.0 package giving the table schema in $schema", {
+  # The v1.0 profile puts the table schema URL in the resource `$schema` and
+  # does not require `schema`.
+  directory <- tempfile("read-v1-0-schema-")
+  on.exit(unlink(directory, recursive = TRUE), add = TRUE)
+  dir.create(directory)
+  writeLines(
+    c("tag_id,ring_number,scientific_name,manufacturer,model", "A,R1,Upupa epops,test,test"),
+    file.path(directory, "tags.csv")
+  )
+  writeLines(
+    '{
+      "$schema": "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/v1.0/geolocator-dp-profile.json",
+      "resources": [
+        {
+          "$schema": "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/v1.0/tags-table-schema.json",
+          "name": "tags",
+          "path": "tags.csv"
+        }
+      ]
+    }',
+    file.path(directory, "datapackage.json")
+  )
+
+  for (force_read in c(TRUE, FALSE)) {
+    pkg <- suppressMessages(read_gldp(directory, force_read = force_read))
+    resource <- gldp_resource(pkg, "tags")
+    expect_identical(tags(pkg)$tag_id, "A")
+    expect_identical(resource$schema$fields, gldp_resource_schema("v1.2", "tags")$fields)
+    expect_identical(resource[["$schema"]], .gldp_data_resource_profile)
+    expect_identical(resource$type, "table")
+  }
+})
+
 test_that("read_gldp reports a Data Package without $schema", {
   directory <- tempfile("read-no-schema-")
   on.exit(unlink(directory, recursive = TRUE), add = TRUE)
