@@ -583,3 +583,50 @@ test_that("foreign-key validation reports missing child and parent columns", {
   gldp_resource(pkg, "staps") <- resource
   expect_message(expect_false(validate_gldp_geopressure_coherence(pkg)), "missing parent fields")
 })
+
+test_that("coherence checks accept observations without optional columns", {
+  pkg <- create_gldp()
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = "AA",
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "test",
+      model = "test"
+    )
+  )
+  pkg <- add_gldp_resource(
+    pkg,
+    "observations",
+    data.frame(
+      ring_number = "R1",
+      observation_type = "capture",
+      datetime = as.POSIXct("2020-01-01", tz = "UTC"),
+      latitude = 47,
+      longitude = 8,
+      age_class = "0",
+      sex = "U"
+    )
+  )
+  expect_no_error(suppressMessages(validate_gldp_coherence(pkg)))
+  expect_true(suppressMessages(validate_gldp_observations(observations(pkg))))
+  expect_true(suppressMessages(validate_gldp_geopressure_coherence(pkg)))
+})
+
+test_that("coherence checks report a missing observations resource without erroring", {
+  pkg <- create_gldp()
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = "AA",
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "test",
+      model = "test"
+    )
+  )
+  expect_false(suppressMessages(validate_gldp_coherence(pkg)))
+})
