@@ -606,6 +606,14 @@ create_geopressuretemplate_config <- function(pkg) {
   }
   t_config <- remove_expressions(t_config)
 
+  # Flow sequences are written as placeholders without spaces, which the YAML emitter
+  # cannot wrap, and substituted after conversion.
+  inline <- character()
+  as_inline <- function(text) {
+    inline <<- c(inline, text)
+    glue::glue("__YAML_INLINE_{length(inline)}__")
+  }
+
   inline_vectors <- function(x) {
     if (is.atomic(x) && length(x) > 1) {
       values <- vapply(
@@ -615,7 +623,7 @@ create_geopressuretemplate_config <- function(pkg) {
         },
         character(1)
       )
-      return(glue::glue("__YAML_INLINE_VECTOR__[{glue::glue_collapse(values, sep = ', ')}]"))
+      return(as_inline(glue::glue("[{glue::glue_collapse(values, sep = ', ')}]")))
     }
     if (is.list(x) && !is.data.frame(x)) {
       return(lapply(x, inline_vectors))
@@ -639,18 +647,16 @@ create_geopressuretemplate_config <- function(pkg) {
           if (!is.numeric(x)) {
             x <- glue::glue('"{x}"')
           }
-          tmp <- glue::glue("[{glue::glue_collapse(x, sep = ', ')}]")
-          glue::glue("{tmp}{add_text}")
+          as_inline(glue::glue("[{glue::glue_collapse(x, sep = ', ')}]{add_text}"))
         })
         names(tmp) <- names(k)
         tmp
       }
     )
   )
-
-  # Manually fix issue with tibble export
-  t_yaml <- gsub("\\]\\'", "]", gsub("\\'\\[", "[", t_yaml))
-  t_yaml <- gsub("__YAML_INLINE_VECTOR__(\\[[^\\n]+\\])", "\\1", t_yaml)
+  for (i in seq_along(inline)) {
+    t_yaml <- gsub(glue::glue("__YAML_INLINE_{i}__"), inline[i], t_yaml, fixed = TRUE)
+  }
 
   # Combine default config.yml with trim_yaml
   combined_yaml <- c(readLines("config.yml"), t_yaml)

@@ -188,6 +188,19 @@ test_that("generated known positions only hold the columns tag_set_map() reads",
   expect_named(config$A$tag_set_map$known, c("stap_id", "known_lat", "known_lon"))
 })
 
+test_that("generated config parses with unassigned and long known positions", {
+  pkg <- template_config_pkg()
+  o <- observations(pkg)
+  sightings <- o[rep(which(o$tag_id == "A")[1], 30), ]
+  sightings$observation_type <- "sighting"
+  sightings$datetime <- as.POSIXct("2020-01-01 12:00", tz = "UTC") + seq_len(30)
+  sightings$latitude <- 46.123456 + seq_len(30) / 1000
+  pkg <- add_gldp_resource(pkg, "observations", rbind(o, sightings), replace = TRUE)
+  config <- template_config_write(pkg)
+  expect_equal(unlist(config$A$tag_set_map$known$stap_id), c(1, rep(0, 30), -1))
+  expect_length(unlist(config$A$tag_set_map$known$known_lat), 32)
+})
+
 test_that("README is written from a plain-text description", {
   directory <- tempfile("template-readme-")
   dir.create(directory)
