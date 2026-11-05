@@ -53,7 +53,7 @@ read_zenodo_download_files <- function(
     reqs <- purrr::map(entries, \(f) {
       url <- f$links$content
       if (is.null(url)) {
-        url <- glue::glue(("{zenodo_record$links$self}/files/{f$key}/content"))
+        url <- glue::glue("{zenodo_record$links$self}/files/{f$key}/content")
       }
       req <- httr2::request(url) |>
         httr2::req_user_agent(glue::glue("GeoLocatoR/{utils::packageVersion('GeoLocatoR')}")) |>
