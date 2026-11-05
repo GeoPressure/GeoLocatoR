@@ -102,3 +102,13 @@ test_that("update_gldp_bibliographic_citation reads the year of a partial date",
   pkg <- create_gldp(title = "Example", created = "June 2024")
   expect_match(update_gldp_bibliographic_citation(pkg)$bibliographicCitation, "Example")
 })
+
+test_that("update_gldp_bibliographic_citation uses the id DOI when conceptid is not a DOI", {
+  pkg <- create_gldp(
+    title = "Example",
+    conceptid = "15259675",
+    id = "https://doi.org/10.5281/zenodo.15259676"
+  )
+  pkg <- update_gldp_bibliographic_citation(pkg)
+  expect_match(pkg$bibliographicCitation, "doi:10.5281/zenodo.15259676", fixed = TRUE)
+})
