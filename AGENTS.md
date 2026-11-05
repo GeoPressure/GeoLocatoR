@@ -32,6 +32,7 @@
 - Introduce helpers only when they clearly remove real duplication.
 - Prefer `glue::glue()` / `glue::glue_collapse()` over `paste()` / `paste0()`.
 - Prefer `purrr` for mapping and list transformations.
+- Inside dplyr verbs, refer to a variable that shares a column name with `.env$x` or `!!x`.
 - Do not introduce new dependencies unless explicitly approved.
 
 ## File organisation
@@ -62,12 +63,23 @@
 - Wrap network/auth-dependent examples in `\dontrun{}`.
 - Edit `README.Rmd`, not `README.md`.
 - Do not manually edit generated files (`NAMESPACE`, `man/*.Rd`).
+- In docs, roxygen, messages, NEWS and changelogs, state the change or fact only; ask before adding explanations or background.
+
+## Data changes
+- Change stored data on read or upgrade only when the package or its params show which case applies (e.g. a recorded GeoPressureR version); otherwise leave the data and warn.
+- Put version-specific conversions in an `upgrade_gldp()` step, so a package that declares the newer GeoLocator-DP version is not changed again.
+
+## Tests
+- Tests must run offline: get the shared Zenodo package with `shared_pkg()` and skip other network tests with `skip_if_offline()`.
 
 ## Development, PR, and release workflow
 - Develop on `dev`: make focused commits, run the mandatory checks (format, lint
   and tests, see Checks and format), and push to `origin/dev`.
 - Open pull requests from `dev` to `main`. Merge `main` into `dev` and resolve
   conflicts before merging the pull request.
+- Merge pull requests with a merge commit, never squash or rebase: release notes link to the original commits.
+- Name release branches `release-X.Y.Z`; never give a branch the name of a tag.
+- When `dev` holds minor changes and a patch is needed, branch `release-X.Y.Z` from `main`, cherry-pick the patch-level commits, and merge `main` back into `dev` after the release.
 - Use a draft pull request while release metadata or release checks are
   incomplete. Mark it ready only when the final version, NEWS entry, and
   required GitHub checks are complete.
@@ -127,6 +139,7 @@
 - Refresh `inst/schemas/` with `sync_gldp_schemas()` against a released
   GeoLocator-DP tag, never by copying from a branch or a working tree. A sync
   that changes nothing is the proof the bundle matches the release.
+- When a release needs a new GeoLocator-DP or GeoPressureR version, release in this order: GeoLocator-DP tag, GeoPressureR, GeoLocatoR. Raise the minimum version in `DESCRIPTION` and `CITATION.cff`.
 - Edit `CITATION.cff` by hand for the version line. `cffr::cff_write()`
   regenerates the whole file and drops its dependency references.
 
