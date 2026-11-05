@@ -214,3 +214,21 @@ test_that("CC-BY variants are not written as a plain CC-BY licence", {
   )
   expect_false(file.exists("LICENSE.md"))
 })
+
+test_that("README DOI badge uses the package DOI", {
+  directory <- tempfile("template-badge-")
+  dir.create(directory)
+  old <- setwd(directory)
+  on.exit({
+    setwd(old)
+    unlink(directory, recursive = TRUE)
+  })
+  create_geopressuretemplate_readme(create_gldp(name = "my-package"))
+  expect_false(any(grepl("zenodo", readLines("README.md"))))
+  create_geopressuretemplate_readme(create_gldp(id = "https://doi.org/10.5281/zenodo.123"))
+  expect_true(any(grepl(
+    "(https://doi.org/10.5281/zenodo.123)",
+    readLines("README.md"),
+    fixed = TRUE
+  )))
+})
