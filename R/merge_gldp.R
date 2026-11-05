@@ -463,7 +463,7 @@ merge_gldp_datapackages <- function(pkgs) {
 #' name identifies a single person; entries with different ORCIDs stay separate.
 #' The first entry is kept, completed with fields it lacks (such as the ORCID
 #' `path`) from the other entries, with the union of `roles` and of `organization`
-#' (values split on `;`, joined with `; `; a value contained in a longer one,
+#' (values split on `;`, joined with `; `; an organization contained in a longer one,
 #' such as `"Institute"` in `"Institute, University"`, is dropped).
 #' @noRd
 merge_gldp_contributors <- function(contributors) {
@@ -504,15 +504,7 @@ merge_gldp_contributors <- function(contributors) {
     values <- unlist(purrr::map(entries, \(ctr) ctr[[field]]), use.names = FALSE)
     values <- trimws(unlist(strsplit(as.character(values), ";", fixed = TRUE)))
     values <- values[!is.na(values) & nzchar(values)]
-    values <- values[!duplicated(tolower(values))]
-    # Drop a value contained in a longer one ("Institute" in "Institute, University").
-    contained <- purrr::map_lgl(seq_along(values), \(i) {
-      any(
-        nchar(values[-i]) > nchar(values[i]) &
-          grepl(tolower(values[i]), tolower(values[-i]), fixed = TRUE)
-      )
-    })
-    values[!contained]
+    values[!duplicated(tolower(values))]
   }
   purrr::map(unique(key), \(k) {
     entries <- contributors[key == k]
@@ -529,6 +521,15 @@ merge_gldp_contributors <- function(contributors) {
       merged$roles <- as.list(roles)
     }
     organization <- split_values(entries, "organization")
+    # Drop an affiliation contained in a longer one ("Institute" in "Institute, University").
+    # Roles are a vocabulary, where "researcher" is not part of "researchergroup".
+    contained <- purrr::map_lgl(seq_along(organization), \(i) {
+      any(
+        nchar(organization[-i]) > nchar(organization[i]) &
+          grepl(tolower(organization[i]), tolower(organization[-i]), fixed = TRUE)
+      )
+    })
+    organization <- organization[!contained]
     if (length(organization) > 0) {
       merged$organization <- paste(organization, collapse = "; ")
     }
