@@ -213,8 +213,8 @@ gldp_to_eml <- function(pkg, directory) {
 
   # Spatial
   if (!is.null(spatial)) {
-    # Extract bounding box from the polygon's outer ring.
-    coords <- matrix(unlist(spatial$coordinates[[1]]), ncol = 2, byrow = TRUE)
+    # Bounding box of all positions, so a Point and a Polygon both work.
+    coords <- matrix(unlist(spatial$coordinates), ncol = 2, byrow = TRUE)
     lons <- coords[, 1]
     lats <- coords[, 2]
 
