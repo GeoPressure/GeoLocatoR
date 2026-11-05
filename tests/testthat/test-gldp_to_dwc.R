@@ -282,6 +282,11 @@ test_that("gldp_to_dwc leaves observation and uncertainty fields empty without m
   expect_true(all(is.na(occurrence$lifeStage)))
   expect_true(all(is.na(occurrence$coordinateUncertaintyInMeters)))
   expect_match(occurrence$eventRemarks, "^Location reconstructed")
+  expect_match(
+    occurrence$georeferenceSources,
+    "https://geopressure.org/GeoPressureR/",
+    fixed = TRUE
+  )
   expect_equal(
     occurrence$dynamicProperties[1],
     '{"pathType":"most_likely","locationSource":"reconstructed"}'
