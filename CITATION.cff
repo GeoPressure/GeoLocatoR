@@ -19,6 +19,10 @@ authors:
   given-names: Raphaël
   email: rafnuss@gmail.com
   orcid: https://orcid.org/0000-0002-8185-1020
+- family-names: Desmet
+  given-names: Peter
+  email: peter.desmet@inbo.be
+  orcid: https://orcid.org/0000-0002-8442-8025
 repository-code: https://github.com/GeoPressure/GeoLocatoR
 url: https://geopressure.org/GeoLocatoR/
 contact:
