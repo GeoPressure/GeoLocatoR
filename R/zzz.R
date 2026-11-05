@@ -176,11 +176,8 @@ contributors_to_persons <- function(contributors) {
     purrr::map(
       ~ {
         utils::person(
-          given = ifelse(
-            is.null(.x$givenName) & !is.null(.x$title),
-            .x$title,
-            .x$givenName
-          ),
+          # An organisation has a title instead of a given name; either can be absent.
+          given = .x$givenName %||% .x$title,
           family = .x$familyName,
           email = .x$email,
           role = purrr::map_vec(
