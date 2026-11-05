@@ -586,16 +586,14 @@ raw_tag_id_to_tag <- function(id, display_config_error = TRUE) {
 
   tag <- tryCatch(
     {
-      GeoPressureR::tag_label_read(
-        tag = tag,
-        file = config$tag_label$file
+      # do.call() evaluates the default label path, which GeoPressureR stores as an
+      # unevaluated glue call referring to `tag`.
+      tag <- do.call(
+        GeoPressureR::tag_label_read,
+        list(tag = tag, file = config$tag_label$file)
       )
 
-      GeoPressureR::tag_label_stap(
-        tag = tag,
-        quiet = TRUE,
-        file = config$tag_label$file
-      )
+      tag <- GeoPressureR::tag_label_stap(tag, quiet = TRUE)
 
       tag <- do.call(
         GeoPressureR::tag_set_map,
