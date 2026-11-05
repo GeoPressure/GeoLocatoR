@@ -101,7 +101,8 @@ gldp_to_eml <- function(pkg, directory) {
     family_name <- contributor$familyName
     organization_name <- contributor$organization
     contributor_title <- contributor$title %||% contributor$name %||% NULL
-    if (is.null(organization_name)) {
+    # A title stands for the organization only when the contributor has no personal name.
+    if (is.null(organization_name) && is.null(given_name) && is.null(family_name)) {
       organization_name <- contributor_title
     }
     email <- contributor$email

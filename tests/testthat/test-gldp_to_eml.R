@@ -78,6 +78,23 @@ test_that("gldp_to_eml adds a rights holder once", {
   expect_equal(names, c("Bird Institute", "Roe, Rick", "Roe, Rick"))
 })
 
+test_that("gldp_to_eml does not use a person's name as organization", {
+  skip_if_not_installed("EML")
+
+  tmp <- tempfile("gldp-to-eml-")
+  on.exit(unlink(tmp, recursive = TRUE))
+  pkg <- create_gldp(title = "Example package")
+  pkg$contributors <- list(
+    list(title = "Doe, Jane", givenName = "Jane", familyName = "Doe", roles = "researcher"),
+    list(title = "Bird Institute", roles = "researcher")
+  )
+
+  creators <- suppressMessages(gldp_to_eml(pkg, tmp))$dataset$creator
+  expect_null(creators[[1]]$organizationName)
+  expect_equal(creators[[1]]$individualName$surName, "Doe")
+  expect_equal(creators[[2]]$organizationName, "Bird Institute")
+})
+
 test_that("gldp_to_eml writes the bounding box of a Point and a Polygon", {
   skip_if_not_installed("EML")
 
