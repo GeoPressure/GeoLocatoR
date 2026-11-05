@@ -98,6 +98,51 @@ test_that("upgrade_gldp coerces legacy non-numeric IDs without a cast warning", 
   expect_true(is.na(paths(upgraded)$stap_id))
 })
 
+test_that("upgrade_gldp starts a main package at v0.1", {
+  main <- "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/main/geolocator-dp-profile.json"
+  make_pkg <- function(schema, tags, observations) {
+    pkg <- list(
+      "$schema" = schema,
+      resources = list(
+        list(name = "tags", data = tags),
+        list(name = "observations", data = observations)
+      )
+    )
+    class(pkg) <- c("geolocatordp", "datapackage", "list")
+    attr(pkg, "directory") <- "."
+    pkg
+  }
+
+  # A v0.1-shaped main package gets the v0.1 -> v0.2 renames.
+  pkg <- make_pkg(
+    main,
+    data.frame(tag_id = "tag-1", firwmare = "1.2"),
+    data.frame(ring_number = "R1", life_stage = "adult")
+  )
+  upgraded <- suppressMessages(upgrade_gldp(pkg, to_version = "v0.2"))
+  expect_identical(gldp_version(upgraded), "v0.2")
+  expect_true("firmware" %in% names(tags(upgraded)))
+  expect_true("age_class" %in% names(observations(upgraded)))
+
+  # A v0.2-shaped main package is upgraded as if it declared v0.2, except for
+  # the empty `numberTags` the v0.1 step adds, which read_gldp() recomputes.
+  tags <- data.frame(tag_id = "tag-1", firmware = "1.2")
+  observations <- data.frame(ring_number = "R1", age_class = "adult")
+  upgraded <- suppressMessages(upgrade_gldp(
+    make_pkg(main, tags, observations),
+    to_version = "v0.6"
+  ))
+  expect_identical(upgraded$numberTags, list())
+  upgraded$numberTags <- NULL
+  expect_identical(
+    upgraded,
+    suppressMessages(upgrade_gldp(
+      make_pkg(gldp_schema_url("v0.2"), tags, observations),
+      to_version = "v0.6"
+    ))
+  )
+})
+
 test_that("step v0.4 -> v0.5 reconstructs missing edges$type from j", {
   pkg <- list(
     "$schema" = "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/v0.4/geolocator-dp-profile.json",

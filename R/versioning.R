@@ -1,5 +1,7 @@
 # Supported GeoLocator-DP versions.
 # This vector is the single source of truth for runtime and schema sync.
+# `main` is a legacy alias read from packages GeoLocatoR wrote in 2024; it is
+# upgraded from v0.1 and never written.
 .gldp_supported_versions <- c(
   "main",
   "v0.1",
@@ -28,7 +30,7 @@
 #' Extract the GeoLocator-DP version from `` x$`$schema` ``.
 #'
 #' The function aborts if `$schema` is missing, cannot be parsed, or refers to
-#' an unsupported version.
+#' an unsupported version, including a development (`dev`) schema.
 #'
 #' @param x A GeoLocator Data Package object.
 #' @return Character string version (e.g. `"v1.0"`).
@@ -53,6 +55,13 @@ gldp_version <- function(x) {
 
   version <- out[2]
 
+  if (identical(version, "dev")) {
+    cli_abort(c(
+      "x" = "{.field $schema} points to the GeoLocator-DP {.val dev} branch: {.val {schema}}.",
+      "i" = "Development schemas are not supported; use a released version such as {.val {(.gldp_default_version)}}."
+    ))
+  }
+
   if (!version %in% .gldp_supported_versions) {
     cli_abort(
       c(
@@ -71,10 +80,12 @@ gldp_schema_url <- function(version = NULL) {
     version <- .gldp_default_version
   }
 
-  if (!version %in% .gldp_supported_versions) {
+  # `main` is readable as a legacy alias but no package is written against it.
+  released <- setdiff(.gldp_supported_versions, "main")
+  if (!version %in% released) {
     cli_abort(c(
       "!" = "Unsupported GeoLocator-DP version {.val {version}}.",
-      "i" = "Allowed versions are {.val {(.gldp_supported_versions)}}."
+      "i" = "Allowed versions are {.val {released}}."
     ))
   }
 

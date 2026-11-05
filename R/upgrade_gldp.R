@@ -44,8 +44,10 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
   while (!identical(from_version, to_version)) {
     x <- quiet_cast(switch(
       from_version,
+      # GeoLocatoR wrote `main` in 2024, from v0.1-shaped packages on. The v0.1 step
+      # only renames fields that are still present, so later shapes pass unchanged.
       "main" = {
-        x[["$schema"]] <- gldp_schema_url("v0.2")
+        x[["$schema"]] <- gldp_schema_url("v0.1")
         x
       },
       "v0.1" = upgrade_gldp_v0_1_to_v0_2(x),
