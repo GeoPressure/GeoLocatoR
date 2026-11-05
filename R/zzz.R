@@ -17,3 +17,22 @@ first_non_empty_string <- function(...) {
   }
   NULL
 }
+
+# Escape cli/glue braces in free text so field values are printed literally.
+cli_escape <- function(x) {
+  gsub("}", "}}", gsub("{", "{{", as.character(x), fixed = TRUE), fixed = TRUE)
+}
+
+# Returns TRUE when a value contains at least one meaningful entry.
+has_value <- function(value) {
+  if (is.null(value) || length(value) == 0) {
+    return(FALSE)
+  }
+  if (is.character(value)) {
+    return(any(!is.na(value) & nzchar(trimws(value))))
+  }
+  if (is.atomic(value)) {
+    return(!all(is.na(value)))
+  }
+  TRUE
+}
