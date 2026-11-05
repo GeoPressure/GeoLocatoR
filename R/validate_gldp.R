@@ -265,6 +265,11 @@ validate_gldp_table <- function(data, schema, name = schema$name) {
     # reader parses a column; it is not one of the JSON-Schema formats checked for
     # the profile. A field without `type` is `any`, so no type is inferred either.
     prop$format <- NULL
+    # A Table Schema `pattern` is an XML Schema regular expression, which must
+    # match the whole value; the profile's JSON-Schema patterns match anywhere.
+    if (!is.null(prop$pattern)) {
+      prop$pattern <- glue::glue("^(?:{prop$pattern})$")
+    }
 
     valid <- valid & validate_gldp_item(data[[field]], prop, field_name)
   }

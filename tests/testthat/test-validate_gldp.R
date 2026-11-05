@@ -225,6 +225,20 @@ test_that("validate_gldp_table reads Table Schema fields, not JSON-Schema proper
   )))
 })
 
+test_that("validate_gldp_table matches a pattern against the whole value", {
+  # Table Schema patterns are XML Schema regular expressions, implicitly anchored.
+  schema <- list(
+    name = "custom",
+    fieldsMatch = "equal",
+    fields = list(list(name = "code", type = "string", constraints = list(pattern = "[A-Z]{2}")))
+  )
+  expect_true(suppressMessages(validate_gldp_table(data.frame(code = c("AB", NA)), schema)))
+  expect_message(
+    expect_false(validate_gldp_table(data.frame(code = "xAB1"), schema)),
+    "do not match"
+  )
+})
+
 test_that("validate_gldp_meta checks missing title", {
   local_mocked_bindings(
     resources = function(x) character(0),
