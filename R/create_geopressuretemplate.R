@@ -474,12 +474,7 @@ create_geopressuretemplate_config <- function(pkg) {
           datetime = as.POSIXct(.data$datetime, tz = "UTC"),
           known_lon = .data$longitude,
           known_lat = .data$latitude,
-          location_name = .data$location_name,
-          device_status = .data$device_status,
-          condition = .data$condition,
-          age_class = .data$age_class,
-          sex = .data$sex,
-          observation_comments = .data$observation_comments
+          sex = .data$sex
         )
 
       # Add sex if unique and defined (i.e., not U)
@@ -488,38 +483,6 @@ create_geopressuretemplate_config <- function(pkg) {
       if (length(usex) == 1 && usex != "U") {
         co$sex <- usex
       }
-
-      # Conditionally remove the column
-      rm_col <- c("sex")
-      if (all(is.na(k$location_name) | k$location_name == "")) {
-        rm_col <- c(rm_col, "location_name")
-      }
-      if (
-        all(
-          is.na(k$device_status) |
-            k$device_status == "" |
-            k$device_status == "unknown"
-        )
-      ) {
-        rm_col <- c(rm_col, "device_status")
-      }
-      if (all(is.na(k$condition) | k$condition == "" | k$condition == "unknown")) {
-        rm_col <- c(rm_col, "condition")
-      }
-      if (
-        all(
-          is.na(k$age_class) |
-            k$age_class == "" |
-            k$age_class == 0 |
-            k$age_class == "0"
-        )
-      ) {
-        rm_col <- c(rm_col, "age_class")
-      }
-      if (all(is.na(k$observation_comments) | k$observation_comments == "")) {
-        rm_col <- c(rm_col, "observation_comments")
-      }
-      k <- k |> select(any_of(names(k)[!names(k) %in% rm_col]))
 
       # Add crop date from equipement and retrieval
       co$tag_create <- list(
@@ -586,13 +549,12 @@ create_geopressuretemplate_config <- function(pkg) {
         co$tag_create
       )
 
-      # Add known, keeping only observations with a location
+      # Add known, keeping only observations with a location. tag_set_map() warns on
+      # any other column.
       co$tag_set_map <- list(
         known = k |>
           filter(!is.na(.data$known_lat), !is.na(.data$known_lon)) |>
-          mutate(
-            datetime = format(.data$datetime, "%Y-%m-%d")
-          )
+          select("stap_id", "known_lat", "known_lon")
       )
 
       co <- utils::modifyList(param_config, co)
@@ -657,7 +619,7 @@ create_geopressuretemplate_config <- function(pkg) {
         tmp <- lapply(names(k), function(name) {
           x <- k[[name]]
           if (name == "stap_id" && any(x == 0)) {
-            add_text <- " # Modify the `stap_id` of `0` to the correct stap_id"
+            add_text <- " # Replace each `0` with the stap_id of that observation (sorted by datetime)"
           } else {
             add_text <- ""
           }

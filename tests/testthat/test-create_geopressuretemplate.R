@@ -181,3 +181,8 @@ test_that("generated config skips known positions without a location", {
   expect_equal(config$B$tag_set_map$known$known_lon, 7)
   expect_identical(config$B$tag_create$crop_end, "2020-01-02")
 })
+
+test_that("generated known positions only hold the columns tag_set_map() reads", {
+  config <- template_config_write(template_config_pkg())
+  expect_named(config$A$tag_set_map$known, c("stap_id", "known_lat", "known_lon"))
+})
