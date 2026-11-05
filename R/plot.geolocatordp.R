@@ -5,9 +5,10 @@
 #' showing data availability across time for different sensors and tags.
 #'
 #' @param x A GeoLocator Data Package object.
-#' @param type Type of the plot to display: `"coverage"` (requires `measurements`),
-#'   `"ring"` (requires `observations` and `measurements`) or `"map"` (requires
-#'   `paths` and `staps`). When `NULL`, the first type the package supports is used.
+#' @param type Type of the plot to display: `"coverage"` (requires `measurements`,
+#'   and draws `observations` when present), `"ring"` (requires `observations`,
+#'   `measurements` and `tags`) or `"map"` (requires `paths` and `staps`). When
+#'   `NULL`, the first type the package supports is used.
 #' @param ... Additional parameters passed to plotting functions.
 #'
 #' @return a plot, ggplotly or leaflet object.
@@ -30,7 +31,7 @@
 plot.geolocatordp <- function(x, type = NULL, ...) {
   required <- list(
     coverage = "measurements",
-    ring = c("observations", "measurements"),
+    ring = c("observations", "measurements", "tags"),
     map = c("paths", "staps")
   )
   available <- frictionless::resource_names(x)
@@ -90,7 +91,13 @@ plot_pkg_coverage <- function(x) {
     summarize(has_data = sum(!is.na(.data$value)) > 0) |> # Check if there is data (non-NA)
     ungroup()
 
-  o <- observations(x) |>
+  # Observations only add equipment and retrieval lines, so the plot works without them
+  o <- if ("observations" %in% frictionless::resource_names(x)) {
+    observations(x)
+  } else {
+    tibble(tag_id = character(), datetime = as.POSIXct(character()), observation_type = character())
+  }
+  o <- o |>
     filter(!is.na(.data$datetime)) |>
     filter(.data$tag_id %in% unique(m$tag_id))
 
@@ -131,6 +138,8 @@ plot_pkg_coverage <- function(x) {
         "sighting" = "orange",
         "other" = "purple"
       ),
+      # The observed types, so that a package without observations draws without warning
+      limits = force,
       name = "Observation Type"
     ) + # Customize colors and legend
     ggplot2::theme(
