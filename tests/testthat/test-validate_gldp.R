@@ -240,11 +240,6 @@ test_that("validate_gldp_table matches a pattern against the whole value", {
 })
 
 test_that("validate_gldp_meta checks missing title", {
-  local_mocked_bindings(
-    resources = function(x) character(0),
-    .package = "frictionless"
-  )
-
   pkg <- pkg_shared
   pkg[["title"]] <- ""
   pkg[["contributors"]] <- list(list(roles = "author"))
@@ -257,11 +252,6 @@ test_that("validate_gldp_meta checks missing title", {
 })
 
 test_that("validate_gldp_meta checks title prefix", {
-  local_mocked_bindings(
-    resources = function(x) character(0),
-    .package = "frictionless"
-  )
-
   pkg <- pkg_shared
   pkg[["title"]] <- "Wrong title"
   pkg[["contributors"]] <- list(list(roles = "author"))
@@ -274,11 +264,6 @@ test_that("validate_gldp_meta checks title prefix", {
 })
 
 test_that("validate_gldp_meta checks contributor role completeness", {
-  local_mocked_bindings(
-    resources = function(x) character(0),
-    .package = "frictionless"
-  )
-
   pkg <- pkg_shared
   pkg[["title"]] <- "GeoLocator Data Package: Example"
   pkg[["contributors"]] <- list(list(roles = character(0)))
@@ -291,11 +276,6 @@ test_that("validate_gldp_meta checks contributor role completeness", {
 })
 
 test_that("validate_gldp_meta checks record_type is dataset", {
-  local_mocked_bindings(
-    resources = function(x) character(0),
-    .package = "frictionless"
-  )
-
   pkg <- pkg_shared
   pkg[["title"]] <- "GeoLocator Data Package: Example"
   pkg[["contributors"]] <- list(list(roles = "author"))
@@ -308,10 +288,6 @@ test_that("validate_gldp_meta checks record_type is dataset", {
 })
 
 test_that("validate_gldp_meta checks allowed manufacturers", {
-  local_mocked_bindings(
-    resources = function(x) "tags",
-    .package = "frictionless"
-  )
   local_mocked_bindings(
     tags = function(x) {
       data.frame(manufacturer = "Unknown Manufacturer", stringsAsFactors = FALSE)
@@ -331,11 +307,6 @@ test_that("validate_gldp_meta checks allowed manufacturers", {
 })
 
 test_that("validate_gldp_meta checks relatedIdentifiers presence", {
-  local_mocked_bindings(
-    resources = function(x) character(0),
-    .package = "frictionless"
-  )
-
   pkg <- pkg_shared
   pkg[["title"]] <- "GeoLocator Data Package: Example"
   pkg[["contributors"]] <- list(list(roles = "author"))
@@ -348,11 +319,6 @@ test_that("validate_gldp_meta checks relatedIdentifiers presence", {
 })
 
 test_that("validate_gldp_meta checks selected community", {
-  local_mocked_bindings(
-    resources = function(x) character(0),
-    .package = "frictionless"
-  )
-
   pkg <- pkg_shared
   pkg[["title"]] <- "GeoLocator Data Package: Example"
   pkg[["contributors"]] <- list(list(roles = "author"))
@@ -365,11 +331,6 @@ test_that("validate_gldp_meta checks selected community", {
 })
 
 test_that("validate_gldp_meta checks codeRepository URL", {
-  local_mocked_bindings(
-    resources = function(x) character(0),
-    .package = "frictionless"
-  )
-
   pkg <- pkg_shared
   pkg[["title"]] <- "GeoLocator Data Package: Example"
   pkg[["contributors"]] <- list(list(roles = "author"))
@@ -382,10 +343,6 @@ test_that("validate_gldp_meta checks codeRepository URL", {
 })
 
 test_that("validate_gldp_meta checks taxonomic names against eBird taxonomy", {
-  local_mocked_bindings(
-    resources = function(x) character(0),
-    .package = "frictionless"
-  )
   local_mocked_bindings(
     request = function(url) list(url = url),
     req_headers = function(req, ...) req,
