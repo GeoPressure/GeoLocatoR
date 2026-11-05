@@ -167,6 +167,41 @@ test_that("merge_gldp errors on packages with duplicate datapackage_id", {
   expect_error(merge_gldp(pkg, pkg2), "duplicate .*datapackage_id")
 })
 
+# Offline package with one tag; `...` sets top-level fields such as `id`.
+local_merge_pkg <- function(tag_id, ...) {
+  pkg <- create_gldp(title = tag_id, ...)
+  add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = tag_id,
+      ring_number = "R1",
+      scientific_name = "Upupa epops",
+      manufacturer = "soi",
+      model = "GDL3"
+    )
+  )
+}
+
+test_that("merge_gldp requires an id for tags without datapackage_id", {
+  expect_error(
+    merge_gldp(
+      local_merge_pkg("AA"),
+      local_merge_pkg("BB", id = "https://doi.org/10.5281/zenodo.2")
+    ),
+    "without id"
+  )
+
+  merged <- merge_gldp(
+    local_merge_pkg("AA", id = "https://doi.org/10.5281/zenodo.1"),
+    local_merge_pkg("BB", id = "https://doi.org/10.5281/zenodo.2")
+  )
+  expect_equal(
+    tags(merged)$datapackage_id,
+    c("https://doi.org/10.5281/zenodo.1", "https://doi.org/10.5281/zenodo.2")
+  )
+})
+
 test_that("merge_gldp supports sequential merges", {
   pkg1 <- pkg_shared
   suppressMessages({
