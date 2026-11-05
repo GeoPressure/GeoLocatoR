@@ -1,6 +1,7 @@
 library(testthat)
 library(GeoLocatoR)
 library(GeoPressureR)
+library(yaml)
 
 # pkg_shared is loaded from setup.R
 
@@ -80,4 +81,67 @@ test_that("generated GeoPressureTemplate runs the full workflow", {
   })
 
   expect_true(file.exists(file.path(project_dir, interim_file)))
+})
+
+# Two tags with different sensors, written to a project holding only a default config.
+template_config_pkg <- function() {
+  d <- as.POSIXct("2020-01-01", tz = "UTC") + 3600 * (0:3)
+  m <- rbind(
+    data.frame(
+      tag_id = "A",
+      sensor = "pressure",
+      datetime = d,
+      value = 1000,
+      label = NA_character_
+    ),
+    data.frame(tag_id = "A", sensor = "light", datetime = d, value = 1, label = NA_character_),
+    data.frame(
+      tag_id = "A",
+      sensor = "temperature_external",
+      datetime = d,
+      value = 20,
+      label = NA_character_
+    ),
+    data.frame(tag_id = "B", sensor = "pressure", datetime = d, value = 1000, label = NA_character_)
+  )
+  t <- data.frame(
+    tag_id = c("A", "B"),
+    ring_number = c("R1", "R2"),
+    scientific_name = "Upupa epops",
+    manufacturer = "Swiss Ornithological Institute",
+    model = "M"
+  )
+  o <- data.frame(
+    ring_number = rep(c("R1", "R2"), each = 2),
+    tag_id = rep(c("A", "B"), each = 2),
+    observation_type = c("equipment", "retrieval"),
+    datetime = as.POSIXct(c("2019-12-31", "2020-01-02"), tz = "UTC"),
+    latitude = 46,
+    longitude = 7,
+    age_class = "0",
+    sex = "U"
+  )
+  create_gldp() |>
+    add_gldp_resource("tags", t) |>
+    add_gldp_resource("observations", o) |>
+    add_gldp_resource("measurements", m)
+}
+
+template_config_write <- function(pkg) {
+  directory <- tempfile("template-config-")
+  dir.create(directory)
+  old <- setwd(directory)
+  on.exit({
+    setwd(old)
+    unlink(directory, recursive = TRUE)
+  })
+  writeLines(c("default:", "  tag_set_map:", "    extent: [-16, 23, 0, 50]"), "config.yml")
+  create_geopressuretemplate_config(pkg)
+  yaml.load_file("config.yml")
+}
+
+test_that("generated config only references the sensor files of each tag", {
+  config <- template_config_write(template_config_pkg())
+  expect_identical(config$A$tag_create$light_file, "light.csv")
+  expect_null(config$B$tag_create$light_file)
 })
