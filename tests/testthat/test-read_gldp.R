@@ -1,7 +1,7 @@
 library(testthat)
 library(GeoLocatoR)
 
-# pkg_shared is loaded from setup.R
+# shared_pkg() is defined in setup.R
 
 test_that("read_gldp reads a local datapackage.json", {
   path <- file.path(withr::local_tempdir(), "datapackage.json")
@@ -318,7 +318,7 @@ test_that("read_gldp canonicalizes legacy schema owners", {
 })
 
 test_that("write_gldp writes a datapackage readable by read_gldp", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   out_dir <- withr::local_tempdir()
   expect_no_error(write_gldp(pkg, directory = out_dir))
@@ -330,7 +330,7 @@ test_that("write_gldp writes a datapackage readable by read_gldp", {
 })
 
 test_that("write_gldp/read_gldp roundtrip keeps pkg$params via params.json", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   param <- GeoPressureR::param_create("TEST-PARAM", default = TRUE)
   pkg[["params"]] <- list(param)
 

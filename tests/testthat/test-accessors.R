@@ -1,10 +1,10 @@
 library(testthat)
 library(GeoLocatoR)
 
-# pkg_shared is loaded from setup.R
+# shared_pkg() is defined in setup.R
 
 test_that("tags getter and setter work correctly", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   tag_data <- tags(pkg)
   expect_true(is.data.frame(tag_data))
@@ -16,7 +16,7 @@ test_that("tags getter and setter work correctly", {
 })
 
 test_that("observations getter and setter work correctly", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   skip_if_not(
     "observations" %in% frictionless::resource_names(pkg),
@@ -32,7 +32,7 @@ test_that("observations getter and setter work correctly", {
 })
 
 test_that("measurements getter and setter work correctly", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   skip_if_not(
     "measurements" %in% frictionless::resource_names(pkg),
@@ -48,7 +48,7 @@ test_that("measurements getter and setter work correctly", {
 })
 
 test_that("staps getter and setter work correctly", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   skip_if_not(
     "staps" %in% frictionless::resource_names(pkg),
@@ -64,7 +64,7 @@ test_that("staps getter and setter work correctly", {
 })
 
 test_that("twilights getter and setter work correctly", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   skip_if_not(
     "twilights" %in% frictionless::resource_names(pkg),
@@ -80,7 +80,7 @@ test_that("twilights getter and setter work correctly", {
 })
 
 test_that("paths getter and setter work correctly", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   skip_if_not(
     "paths" %in% frictionless::resource_names(pkg),
@@ -96,7 +96,7 @@ test_that("paths getter and setter work correctly", {
 })
 
 test_that("edges getter and setter work correctly", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   skip_if_not(
     "edges" %in% frictionless::resource_names(pkg),
@@ -112,7 +112,7 @@ test_that("edges getter and setter work correctly", {
 })
 
 test_that("pressurepaths getter and setter work correctly", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
 
   skip_if_not(
     "pressurepaths" %in% frictionless::resource_names(pkg),
@@ -144,7 +144,7 @@ test_that("params is handled as a plain pkg property", {
 })
 
 test_that("accessors give an instructive error for a missing resource", {
-  pkg <- pkg_shared
+  pkg <- shared_pkg()
   pkg$resources <- purrr::keep(pkg$resources, \(r) r$name != "measurements")
 
   expect_error(measurements(pkg), class = "gldp_error_resource_not_found")
