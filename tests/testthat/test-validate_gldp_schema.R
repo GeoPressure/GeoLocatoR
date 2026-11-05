@@ -264,6 +264,14 @@ test_that("exclusive bounds reject values equal to the bound", {
   expect_false(suppressMessages(validate_gldp_item(5, list(exclusiveMaximum = 5), "x")))
 })
 
+test_that("a type mismatch stops the value checks", {
+  # Compared as text, "100" is not above 90; only the type mismatch is reported.
+  prop <- list(type = "number", maximum = 90)
+  messages <- capture_messages(expect_false(validate_gldp_item("100", prop, "lat")))
+  expect_length(messages, 1)
+  expect_match(messages, "Type mismatch")
+})
+
 test_that("schema validation rejects duplicated primary keys", {
   schema <- list(
     name = "paths",
