@@ -132,6 +132,10 @@ gldp_to_tag_single <- function(pkg, tid) {
       "i" = "The package must contain a measurements table to convert to tag objects."
     ))
   }
+  # `label` is an optional measurements column.
+  if (!"label" %in% names(meas)) {
+    meas$label <- NA_character_
+  }
 
   # Get tag metadata
   tag_meta <- tags(pkg) |>
