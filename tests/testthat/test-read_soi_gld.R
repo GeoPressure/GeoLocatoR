@@ -64,3 +64,12 @@ test_that("read_soi_gld() keeps retrieval coordinates and handles column selecti
   expect_identical(gdl$PriorityMemory, c(20, 20))
   expect_identical(suppressWarnings(read_soi_gld_orders(order_file))$AccSamplingRate, 25)
 })
+
+test_that("read_soi_gld() reports a failed Access export", {
+  skip_on_os("windows")
+  # An empty file is not an Access database, and CI has no mdb-export: both make the export fail
+  access_file <- withr::local_tempfile(fileext = ".accdb")
+  file.create(access_file)
+
+  expect_error(suppressWarnings(read_soi_gld(access_file = access_file)), "could not export")
+})
