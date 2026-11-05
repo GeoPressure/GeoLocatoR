@@ -126,3 +126,10 @@ test_that("plot.geolocatordp colours days with data alike with and without empty
   pkg <- add_gldp_resource(pkg, "measurements", m, replace = TRUE)
   expect_identical(fill_with_data(pkg), "black")
 })
+
+test_that("plot.geolocatordp draws the ring plot measurement periods in black", {
+  b <- ggplot2::ggplot_build(plot(local_plot_pkg(), "ring"))
+
+  expect_identical(unique(b$data[[1]]$colour), "black")
+  expect_identical(b$data[[1]]$yend, b$data[[1]]$y)
+})

@@ -181,14 +181,16 @@ plot_pkg_ring <- function(x) {
     ungroup()
 
   ggplot2::ggplot() +
+    # A fixed colour, outside aes(): the colour scale only knows observation types
     ggplot2::geom_segment(
       data = m,
       ggplot2::aes(
         x = .data$start,
         y = .data$ring_number,
         xend = .data$end,
-        color = "black"
-      )
+        yend = .data$ring_number
+      ),
+      color = "black"
     ) +
     ggplot2::geom_point(
       data = o,
