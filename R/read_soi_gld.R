@@ -47,6 +47,7 @@ read_soi_gld <- function(
       ))
     }
     data_order_file <- read_soi_gld_access(access_file)
+    on.exit(unlink(data_order_file), add = TRUE)
     data_file <- data_order_file[[1]]
     order_file <- data_order_file[[2]]
   } else {
@@ -334,27 +335,19 @@ read_soi_gld_access <- function(
     # and turns into NA, so request ISO dates explicitly
     date_args <- "-D '%Y-%m-%d' -T '%Y-%m-%d %H:%M:%S'"
 
-    # Export data
-    system(glue::glue(
-      "mdb-export {date_args} '{access_file}' GDL_Data > {data_file}"
-    ))
-
-    if (!file.exists(data_file)) {
-      cli_abort(c(
-        "x" = "The file {.file {data_file}} does not exist.",
-        "i" = "There has been an issue in creating the data file."
+    # Export each table. The shell creates the output file even when mdb-export
+    # fails, so only its exit status tells whether the export worked
+    for (table in c("GDL_Data", "GDL_Orders")) {
+      out_file <- if (table == "GDL_Data") data_file else order_file
+      status <- system(glue::glue(
+        "mdb-export {date_args} {shQuote(access_file)} {table} > {shQuote(out_file)}"
       ))
-    }
-
-    # Export orders
-    system(glue::glue(
-      "mdb-export {date_args} '{access_file}' GDL_Orders > {order_file}"
-    ))
-    if (!file.exists(order_file)) {
-      cli_abort(c(
-        "x" = "The file {.file {order_file}} does not exist.",
-        "i" = "There has been an issue in creating the order file."
-      ))
+      if (status != 0) {
+        cli_abort(c(
+          "x" = "{.code mdb-export} could not export {.field {table}} from {.file {access_file}}.",
+          "i" = "Check that mdbtools is installed and that the file is a valid Access database."
+        ))
+      }
     }
   } else if (.Platform$OS.type == "windows") {
     if (
@@ -371,6 +364,7 @@ read_soi_gld_access <- function(
         "Driver={{Microsoft Access Driver (*.mdb, *.accdb)}};Dbq={access_file};"
       )
     )
+    on.exit(DBI::dbDisconnect(con), add = TRUE)
     readr::write_csv(DBI::dbReadTable(con, "GDL_Orders"), order_file)
     readr::write_csv(DBI::dbReadTable(con, "GDL_Data"), data_file)
   }
