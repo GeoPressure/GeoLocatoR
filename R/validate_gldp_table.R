@@ -35,10 +35,9 @@ validate_gldp_table <- function(data, schema, name = schema$name) {
   # leave out a column carrying `required`. The standard has no way to say "the
   # required columns must be present, the optional ones may be absent"
   # (frictionlessdata/datapackage#1126), so it is checked here instead.
-  required <- names(schema_fields)[vapply(
+  required <- names(schema_fields)[purrr::map_lgl(
     schema_fields,
-    \(f) isTRUE(f$constraints$required),
-    logical(1)
+    \(f) isTRUE(f$constraints$required)
   )]
   absent_required <- setdiff(required, names(data))
 
@@ -244,12 +243,12 @@ validate_gldp_foreign_keys <- function(pkg) {
       if (nrow(child_keys) == 0) {
         next
       }
-      child_keys[] <- lapply(child_keys, as.character)
+      child_keys[] <- purrr::map(child_keys, as.character)
       child_keys <- unique(child_keys)
 
       parent_keys <- parent_data[, parent_fields, drop = FALSE]
       parent_keys <- parent_keys[stats::complete.cases(parent_keys), , drop = FALSE]
-      parent_keys[] <- lapply(parent_keys, as.character)
+      parent_keys[] <- purrr::map(parent_keys, as.character)
       parent_keys <- unique(parent_keys)
       names(parent_keys) <- child_fields
 

@@ -186,7 +186,7 @@ config_to_tibble <- function(
         "The following fields had length > 1 and were truncated: {glue::glue_collapse(names(config)[idx], sep = ', ')}"
       )
 
-      config[idx] <- lapply(config[idx], `[`, 1)
+      config[idx] <- purrr::map(config[idx], \(x) x[1])
     }
 
     as_tibble(config)

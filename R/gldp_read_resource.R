@@ -220,7 +220,7 @@ gldp_load_table <- function(pkg, resource_name) {
 #' @return Character vector of field names, in schema order.
 #' @noRd
 schema_field_names <- function(schema) {
-  vapply(schema$fields, \(f) as.character(f$name)[1], character(1))
+  purrr::map_chr(schema$fields, \(f) as.character(f$name)[1])
 }
 
 #' Cast data frame columns according to schema types

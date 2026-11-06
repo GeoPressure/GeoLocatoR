@@ -178,7 +178,7 @@ read_geopressuretemplate <- function(
 
       # Check for required variables
       for (var in var_names_required) {
-        is_null_var <- sapply(interim[[var]], is.null)
+        is_null_var <- purrr::map_lgl(interim[[var]], is.null)
         if (any(is_null_var)) {
           cli_abort(c(
             "x" = "File {.file {basename(all_files)[is_null_var]}} is missing variable {.var {var}}."
@@ -701,14 +701,13 @@ normalize_gldp_params <- function(params) {
   }
 
   # Params from GeoPressure should always expose a non-empty scalar id.
-  param_ids <- vapply(
+  param_ids <- purrr::map_chr(
     params,
     \(param) {
       id <- as.character(param$id %||% NA_character_)[1]
       id <- trimws(id)
       id
-    },
-    character(1)
+    }
   )
   if (any(is.na(param_ids) | !nzchar(param_ids))) {
     cli_abort(

@@ -63,9 +63,8 @@ gldp_resource <- function(pkg, resource_name) {
 #' @return Integer index into `pkg$resources`, or `integer(0)` when absent.
 #' @noRd
 gldp_resource_index <- function(pkg, resource_name) {
-  which(vapply(
+  which(purrr::map_lgl(
     pkg$resources %||% list(),
-    \(r) identical(r$name, resource_name),
-    logical(1)
+    \(r) identical(r$name, resource_name)
   ))
 }

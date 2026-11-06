@@ -127,7 +127,7 @@ gldp_to_tag <- function(pkg, tag_id = NULL) {
   }
 
   # Process each tag
-  tag_list <- lapply(tag_id, function(tid) {
+  tag_list <- purrr::map(tag_id, function(tid) {
     gldp_to_tag_single(pkg, tid, tables)
   })
 

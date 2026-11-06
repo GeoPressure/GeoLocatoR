@@ -142,10 +142,9 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
   # `read_package(load = ...)` upstream; once it lands this block can delegate
   # to it, with `drop_measurements` becoming a `load` selection.
   if (force_read) {
-    read_order <- order(vapply(
+    read_order <- order(purrr::map_lgl(
       pkg[["resources"]],
-      \(r) identical(r[["name"]], "measurements"),
-      logical(1)
+      \(r) identical(r[["name"]], "measurements")
     ))
     pkg[["resources"]][read_order] <- purrr::map(pkg[["resources"]][read_order], \(r) {
       # Only resources with an inline table schema are loaded.

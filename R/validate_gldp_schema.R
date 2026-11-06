@@ -155,10 +155,9 @@ validate_gldp_item <- function(item, prop, field) {
   # of values. GeoLocator-DP declares both, `categories` being the Data Package
   # v2 spelling that also carries a label per value, so read whichever is there.
   allowed <- if (!is.null(prop$categories)) {
-    vapply(
+    purrr::map_chr(
       prop$categories,
-      \(x) if (is.list(x)) as.character(x$value)[1] else as.character(x)[1],
-      character(1)
+      \(x) if (is.list(x)) as.character(x$value)[1] else as.character(x)[1]
     )
   } else if (!is.null(prop$enum)) {
     as.character(unlist(prop$enum))
@@ -234,7 +233,7 @@ check_format <- function(value, format, field) {
     time = function(v) all(is.na(v) | grepl("^\\d{2}:\\d{2}:\\d{2}$", v)),
     `utc-millisec` = function(v) all(is.na(v) | is.numeric(v)),
     regex = function(v) {
-      all(sapply(v, function(x) {
+      all(purrr::map_lgl(v, function(x) {
         if (is.na(x)) {
           return(TRUE)
         }
@@ -394,11 +393,11 @@ get_type_map <- function() {
         # default geopoint is "lon, lat", longitude first.
         regex_matches <- regexec(pattern, valid_vals[matches])
         coords <- regmatches(valid_vals[matches], regex_matches)
-        lon <- as.numeric(sapply(coords, function(x) {
-          if (length(x) > 1) x[2] else NA
+        lon <- as.numeric(purrr::map_chr(coords, function(x) {
+          if (length(x) > 1) x[2] else NA_character_
         }))
-        lat <- as.numeric(sapply(coords, function(x) {
-          if (length(x) > 2) x[3] else NA
+        lat <- as.numeric(purrr::map_chr(coords, function(x) {
+          if (length(x) > 2) x[3] else NA_character_
         }))
         valid_coords <- all(
           lat >= -90 & lat <= 90 & lon >= -180 & lon <= 180,
@@ -414,7 +413,7 @@ get_type_map <- function() {
       }
 
       # Handle each element in the vector
-      all(sapply(v, function(x) {
+      all(purrr::map_lgl(v, function(x) {
         if (is.na(x)) {
           return(TRUE)
         } # NA values are considered valid

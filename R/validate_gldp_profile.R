@@ -236,15 +236,14 @@ resolve_oneof <- function(value, prop, defs, field) {
   base$oneOf <- NULL
   base <- resolve_local_ref(base, defs)
 
-  alternatives <- lapply(prop$oneOf, function(alt) {
+  alternatives <- purrr::map(prop$oneOf, function(alt) {
     alt <- resolve_local_ref(alt, defs)
     infer_type(alt)
   })
 
-  matches <- vapply(
+  matches <- purrr::map_lgl(
     alternatives,
-    function(alt) check_type_silent(value, alt$type),
-    logical(1)
+    function(alt) check_type_silent(value, alt$type)
   )
 
   if (!any(matches)) {

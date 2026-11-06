@@ -242,8 +242,8 @@ gldp_update_bibliographic_citation <- function(pkg, ...) {
     url = url
   )
   defaults <- defaults[
-    !vapply(defaults, is.null, logical(1)) &
-      !vapply(defaults, \(v) is.character(v) && length(v) == 1 && !nzchar(v), logical(1))
+    !purrr::map_lgl(defaults, is.null) &
+      !purrr::map_lgl(defaults, \(v) is.character(v) && length(v) == 1 && !nzchar(v))
   ]
 
   bib_args <- utils::modifyList(defaults, list(...))
@@ -317,7 +317,7 @@ contributors_to_persons <- function(contributors) {
       }
     )
 
-  persons <- do.call(c, Filter(Negate(is.null), persons))
+  persons <- do.call(c, purrr::discard(persons, is.null))
 
   persons
 }
