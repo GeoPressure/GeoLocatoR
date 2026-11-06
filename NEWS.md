@@ -1,3 +1,18 @@
+# GeoLocatoR v1.5.1
+
+## Main
+
+- [Read tags and measurements once in `update_gldp()` and `gldp_to_tag()`](https://github.com/GeoPressure/GeoLocatoR/commit/8a73c82) instead of once per derived field or per tag.
+
+## Minor
+
+- `validate_gldp()` [checks foreign keys in the resources step](https://github.com/GeoPressure/GeoLocatoR/commit/2afac29) and [reports when they pass](https://github.com/GeoPressure/GeoLocatoR/commit/96d11a1).
+- `params_to_tags()` and `tags_to_measurements()` [report table type mismatches with the dplyr error](https://github.com/GeoPressure/GeoLocatoR/commit/c23bff7).
+- [Run the test suite from a local copy of the shared package](https://github.com/GeoPressure/GeoLocatoR/commit/af8c0be) and [skip network tests when offline](https://github.com/GeoPressure/GeoLocatoR/commit/4126718).
+- Internal reorganisation: [helpers moved out of `zzz.R`](https://github.com/GeoPressure/GeoLocatoR/commit/6f30217), [`read_zenodo` helpers in one file](https://github.com/GeoPressure/GeoLocatoR/commit/3a8dc39), [`gldp_` prefix for internal helpers](https://github.com/GeoPressure/GeoLocatoR/commit/c0b0883), [one table-loading helper](https://github.com/GeoPressure/GeoLocatoR/commit/558d1f0), [profile and table validation in their own files](https://github.com/GeoPressure/GeoLocatoR/commit/949fe2b), [tests paired with their source files](https://github.com/GeoPressure/GeoLocatoR/commit/6795198) ([2](https://github.com/GeoPressure/GeoLocatoR/commit/5c0b725)), and [code aligned with AGENTS.md](https://github.com/GeoPressure/GeoLocatoR/commit/bcf2dc2) ([2](https://github.com/GeoPressure/GeoLocatoR/commit/3616c7d)) ([3](https://github.com/GeoPressure/GeoLocatoR/commit/244edef)) ([4](https://github.com/GeoPressure/GeoLocatoR/commit/39f9cc9)).
+
+**Full Changelog**: <https://github.com/GeoPressure/GeoLocatoR/compare/v1.5.0...v1.5.1>
+
 # GeoLocatoR v1.5.0
 
 ## Main
