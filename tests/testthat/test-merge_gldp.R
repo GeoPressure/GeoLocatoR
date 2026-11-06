@@ -76,6 +76,8 @@ expected_source_ids <- function(pkgs) {
 }
 
 test_that("merge_gldp merges two packages", {
+  skip_on_cran()
+  skip_if_offline("zenodo.org")
   pkg <- shared_pkg()
   # Its SOI tags have no params, so their axis frame is unknown.
   suppressMessages(expect_warning(pkg2 <- read_zenodo("15259763"), "data left as stored"))
@@ -215,6 +217,8 @@ test_that("merge_gldp records source DOIs as bare DOIs", {
 })
 
 test_that("merge_gldp supports sequential merges", {
+  skip_on_cran()
+  skip_if_offline("zenodo.org")
   pkg1 <- shared_pkg()
   # Its SOI tags have no params, so their axis frame is unknown.
   suppressMessages(expect_warning(pkg2 <- read_zenodo("15259763"), "data left as stored"))
