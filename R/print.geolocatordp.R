@@ -291,13 +291,13 @@ html_to_text <- function(x, max_chars = 250L) {
   }
   if (grepl("<[A-Za-z/!][^>]*>", x)) {
     x <- tryCatch(
-      rvest::html_text2(rvest::read_html(paste0("<div>", x, "</div>"))),
+      rvest::html_text2(rvest::read_html(glue::glue("<div>{x}</div>"))),
       error = function(e) gsub("<[^>]+>", " ", x)
     )
   }
   x <- trimws(gsub("\\s+", " ", x))
   if (nchar(x) > max_chars) {
-    x <- paste0(substr(x, 1, max_chars), "...")
+    x <- as.character(glue::glue("{substr(x, 1, max_chars)}..."))
   }
   x
 }

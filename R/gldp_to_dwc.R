@@ -95,7 +95,10 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
     roles <- tolower(as.character(contributor$roles %||% character(0)))
     if ("rightsholder" %in% roles) {
       rights_holder <- contributor$title %||%
-        paste(stats::na.omit(c(contributor$givenName, contributor$familyName)), collapse = " ")
+        as.character(glue::glue_collapse(
+          stats::na.omit(c(contributor$givenName, contributor$familyName)),
+          " "
+        ))
       break
     }
   }
@@ -459,11 +462,9 @@ gldp_to_dwc <- function(pkg, directory, scientific_name_ids = NULL) {
       eventID = .data$occurrenceID,
       parentEventID = glue::glue("{.data$ring_number}_{.data$tag_id}"),
       eventType = "geolocator",
-      eventDate = paste(
-        format(.data$start, "%Y-%m-%dT%H:%M:%SZ"),
-        format(.data$end, "%Y-%m-%dT%H:%M:%SZ"),
-        sep = "/"
-      ),
+      eventDate = as.character(glue::glue(
+        "{format(.data$start, '%Y-%m-%dT%H:%M:%SZ')}/{format(.data$end, '%Y-%m-%dT%H:%M:%SZ')}"
+      )),
       samplingProtocol = .data$eventType,
       samplingEffort = NA_character_,
       eventRemarks = .data$eventRemarks,

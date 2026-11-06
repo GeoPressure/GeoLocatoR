@@ -197,7 +197,7 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
     readLines(params_path, warn = FALSE)
   }
   if (!is.null(params_json)) {
-    params_json <- paste(params_json, collapse = "\n")
+    params_json <- glue::glue_collapse(params_json, "\n")
     pkg[["params"]] <- tryCatch(
       {
         json <- jsonlite::parse_json(params_json)

@@ -273,13 +273,13 @@ upgrade_gldp_v0_4_to_v0_5 <- function(x) {
         all(c("tag_id", "stap_s", "stap_t") %in% names(d))
 
       if (can_map) {
-        key <- paste(paths$tag_id, paths$stap_id)
+        key <- glue::glue("{paths$tag_id} {paths$stap_id}")
         type_map <- stats::setNames(as.character(paths$type), key)
 
-        d$type[missing] <- type_map[paste(d$tag_id[missing], d$stap_s[missing])]
+        d$type[missing] <- type_map[glue::glue("{d$tag_id[missing]} {d$stap_s[missing]}")]
         missing <- is.na(d$type) | trimws(as.character(d$type)) == ""
         if (any(missing)) {
-          d$type[missing] <- type_map[paste(d$tag_id[missing], d$stap_t[missing])]
+          d$type[missing] <- type_map[glue::glue("{d$tag_id[missing]} {d$stap_t[missing]}")]
         }
       }
     }
@@ -479,7 +479,7 @@ gldp_fill_pressurepaths_j <- function(data, quiet = TRUE) {
   if (!any(missing)) {
     return(data)
   }
-  key <- paste(data$tag_id, data$type, sep = "\r")
+  key <- as.character(glue::glue("{data$tag_id}\r{data$type}"))
   # One known j per tag_id and type: it is the j of the whole trajectory.
   known <- unique(data.frame(key = key[!missing], j = data$j[!missing]))
   known <- known[!known$key %in% known$key[duplicated(known$key)], , drop = FALSE]
