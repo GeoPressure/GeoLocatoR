@@ -24,6 +24,8 @@
 #'    `fieldsMatch` rule, and each column must satisfy its declared constraints
 #'    such as type, requiredness, uniqueness, allowed values, patterns,
 #'    and numeric or length limits. Rows must be unique on the schema `primaryKey`.
+#'    Schema-declared foreign keys must resolve to rows of their parent resource, for
+#'    all resources, core ones included.
 #'    The tables GeoLocator-DP defines (`tags`, `observations`, ...) must be tabular
 #'    resources with a table schema. The `params` resource and custom resources are
 #'    checked when they carry a table schema, and are otherwise reported as not checked.
@@ -61,7 +63,6 @@
 #'    present. These include:
 #'    - realistic ranges for `edges$n`;
 #'    - duration checks for `staps` and `edges`;
-#'    - schema-declared foreign key consistency across all resources, core ones included;
 #'    - warnings for unusual `edges` distances, durations, or wind/ground-speed magnitudes,
 #'      for `pressurepaths$altitude` outside -200 to 10,000 m, for `staps$stap_id` of 300
 #'      or more, for `paths$j` of 500 or more, and for datetime fields in `staps`,
@@ -122,48 +123,6 @@ validate_gldp <- function(pkg) {
   invisible(valid)
 }
 
-#' Validate GeoLocator Data Package profile
-#'
-#' Internal helper that validates package-level metadata against the GeoLocator-DP
-#' profile schema. Resource descriptors are excluded and not checked; resource data
-#' are validated by `validate_gldp_resources()`.
-#'
-#' @param pkg A GeoLocator Data Package object
-#' @return Invisibly returns `TRUE` when the package-level profile validation passes,
-#'   `FALSE` otherwise.
-#' @noRd
-validate_gldp_profile <- function(pkg) {
-  cli_h3("Check Profile")
-  version <- gldp_version(pkg)
-
-  pkg_schema <- gldp_profile_schema(version)
-
-  required <- unlist(pkg_schema$allOf[[2]]$required)
-  properties <- pkg_schema$allOf[[2]]$properties
-
-  # The profile's rules on resource descriptors are not checked; resource data are
-  # validated by validate_gldp_resources().
-  required <- setdiff(required, "resources")
-  properties$resources <- NULL
-
-  # Ignore all additional fields not present in the schema
-  ignore_fields <- setdiff(names(pkg), names(properties))
-
-  valid <- validate_gldp_object(
-    pkg,
-    required,
-    properties,
-    defs = pkg_schema$`$defs`,
-    ignore_fields = ignore_fields
-  )
-
-  if (valid) {
-    cli_alert_success("Profile checks passed.")
-  }
-
-  invisible(valid)
-}
-
 #' Validate GeoLocator Data Package resources
 #'
 #' Internal helper that loads file-backed tables and validates each tabular
@@ -187,7 +146,7 @@ validate_gldp_resources <- function(pkg) {
 
   # Only the tables GeoLocator-DP defines must be tabular. `params` and custom
   # resources may be any file, so they have no table schema to check against.
-  tables <- setdiff(gldp_profile_resource_names(gldp_profile_schema(gldp_version(pkg))), "params")
+  tables <- gldp_profile_table_names(gldp_profile_schema(gldp_version(pkg)))
 
   for (i in seq_along(pkg$resources)) {
     resource <- pkg$resources[[i]]
@@ -214,102 +173,8 @@ validate_gldp_resources <- function(pkg) {
     }
   }
 
-  invisible(valid)
-}
-
-#' Validate a tabular resource against its schema
-#'
-#' Internal helper that checks a single resource table against its field
-#' definitions. It validates data availability, column matching through the
-#' schema `fieldsMatch` rule, and per-field constraints.
-#'
-#' @param data A data frame stored in the resource.
-#' @param schema The frictionless schema describing the resource.
-#' @param name Resource name used in messages. Custom resources have no schema name.
-#'
-#' @return Invisibly returns `TRUE` when the table is consistent with the schema,
-#'   `FALSE` otherwise.
-#' @noRd
-validate_gldp_table <- function(data, schema, name = schema$name) {
-  cli_h3("Check Resources {.field {name}}")
-
-  if (is.null(data)) {
-    cli_alert_danger("data is not available.")
-    return(FALSE)
-  }
-
-  schema_fields <- stats::setNames(
-    schema$fields,
-    sapply(schema$fields, \(x) x$name)
-  )
-
-  valid <- validate_gldp_fields_match(
-    names(schema_fields),
-    names(data),
-    schema$fieldsMatch[[1]]
-  )
-
-  # `fieldsMatch` is a rule over the whole set of fields and says nothing about
-  # which ones are required, so every mode GeoLocator-DP uses would let a table
-  # leave out a column carrying `required`. The standard has no way to say "the
-  # required columns must be present, the optional ones may be absent"
-  # (frictionlessdata/datapackage#1126), so it is checked here instead.
-  required <- names(schema_fields)[vapply(
-    schema_fields,
-    \(f) isTRUE(f$constraints$required),
-    logical(1)
-  )]
-  absent_required <- setdiff(required, names(data))
-
-  if (length(absent_required) > 0) {
-    cli_alert_danger(
-      "{.field {name}} is missing {length(absent_required)} required
-       column{?s}: {.field {absent_required}}."
-    )
-    valid <- FALSE
-  }
-
-  fields <- intersect(names(schema_fields), names(data))
-
-  for (field in fields) {
-    prop <- schema_fields[[field]]
-    if (!is.null(prop$constraints)) {
-      prop <- c(prop, prop$constraints)
-      prop$constraints <- NULL # Remove the 'constraints' field after merging
-    }
-
-    field_name <- glue::glue("{name}${field}")
-    # A Table Schema `format` (`default`, `any`, a strptime pattern) says how the
-    # reader parses a column; it is not one of the JSON-Schema formats checked for
-    # the profile. A field without `type` is `any`, so no type is inferred either.
-    prop$format <- NULL
-    # A Table Schema `pattern` is an XML Schema regular expression, which must
-    # match the whole value; the profile's JSON-Schema patterns match anywhere.
-    if (!is.null(prop$pattern)) {
-      prop$pattern <- glue::glue("^(?:{prop$pattern})$")
-    }
-
-    valid <- valid & validate_gldp_item(data[[field]], prop, field_name)
-  }
-
-  # A primary key identifies each row, e.g. one row per trajectory and stap in `paths`.
-  primary_key <- unlist(schema$primaryKey)
-  if (length(primary_key) > 0 && all(primary_key %in% names(data))) {
-    n_duplicates <- nrow(data) - nrow(dplyr::distinct(data[primary_key]))
-    if (n_duplicates > 0) {
-      cli_alert_danger(
-        "{.field {name}} has {format(n_duplicates, big.mark = ',')} duplicated \\
-        {cli::qty(n_duplicates)}row{?s} for its primary key {.field {primary_key}}."
-      )
-      valid <- FALSE
-    }
-  }
-
-  if (valid) {
-    cli_alert_success(
-      "Table {.field {name}} is consistent with the schema."
-    )
-  }
+  cli_h3("Check Foreign Keys")
+  valid <- valid & validate_gldp_foreign_keys(pkg)
 
   invisible(valid)
 }

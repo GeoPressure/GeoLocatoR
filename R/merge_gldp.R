@@ -153,7 +153,7 @@ merge_gldp <- function(x, y = NULL, ...) {
     }
     as.character(tags$datapackage_id)
   })
-  source_ids <- unique(purrr::flatten_chr(source_ids))
+  source_ids <- unique(purrr::list_c(source_ids, ptype = character()))
   source_ids <- source_ids[!is.na(source_ids) & nzchar(trimws(source_ids))]
   source_related <- purrr::map(source_ids, \(id) {
     # DataCite expects a bare DOI ("10.5281/...") with the DOI type.
@@ -167,7 +167,7 @@ merge_gldp <- function(x, y = NULL, ...) {
     )
   })
   related_identifiers <- unique(c(
-    purrr::flatten(purrr::map(pkgs, \(pkg) pkg$relatedIdentifiers %||% list())),
+    purrr::list_flatten(purrr::map(pkgs, \(pkg) pkg$relatedIdentifiers %||% list())),
     source_related
   ))
 
@@ -190,9 +190,9 @@ merge_gldp <- function(x, y = NULL, ...) {
     code_repository[!is.na(code_repository) & nzchar(trimws(code_repository))]
   )
   contributors <- merge_gldp_contributors(
-    purrr::flatten(purrr::map(pkgs, \(pkg) pkg$contributors %||% list()))
+    purrr::list_flatten(purrr::map(pkgs, \(pkg) pkg$contributors %||% list()))
   )
-  licenses <- unique(purrr::flatten(purrr::map(pkgs, \(pkg) pkg$licenses %||% list())))
+  licenses <- unique(purrr::list_flatten(purrr::map(pkgs, \(pkg) pkg$licenses %||% list())))
 
   merged[["title"]] <- if (length(title_parts) > 0) {
     glue::glue_collapse(title_parts, sep = " / ")
@@ -494,7 +494,7 @@ merge_gldp_contributors <- function(contributors) {
     # rather than split the word. `from` is needed for non-ASCII names in a C locale.
     ascii <- gsub("[\"'`^~?]", "", iconv(tolower(title), from = "UTF-8", to = "ASCII//TRANSLIT"))
     words <- strsplit(gsub("[^a-z ]", " ", ascii), " +")[[1]]
-    key <- paste(sort(words[nzchar(words)]), collapse = " ")
+    key <- glue::glue_collapse(sort(words[nzchar(words)]), " ")
     # A name with no ASCII form (e.g. in another script) is compared as written.
     if (nzchar(key)) key else trimws(tolower(title))
   }
@@ -504,14 +504,14 @@ merge_gldp_contributors <- function(contributors) {
     if (length(id) == 1) id else NA_character_
   })
   name <- purrr::map_chr(contributors, name_key)
-  key <- ifelse(is.na(orcid), paste0("name:", name), paste0("orcid:", orcid))
+  key <- ifelse(is.na(orcid), glue::glue("name:{name}"), glue::glue("orcid:{orcid}"))
   # An entry with neither ORCID nor name is never merged.
   unnamed <- which(is.na(orcid) & !nzchar(name))
   key[unnamed] <- glue::glue("entry:{unnamed}")
   # A name shared by exactly one ORCID identifies that person.
   for (k in setdiff(which(is.na(orcid)), unnamed)) {
     match <- unique(orcid[!is.na(orcid) & name == name[k]])
-    if (length(match) == 1) key[k] <- paste0("orcid:", match)
+    if (length(match) == 1) key[k] <- glue::glue("orcid:{match}")
   }
 
   split_values <- function(entries, field) {
@@ -545,7 +545,7 @@ merge_gldp_contributors <- function(contributors) {
     })
     organization <- organization[!contained]
     if (length(organization) > 0) {
-      merged$organization <- paste(organization, collapse = "; ")
+      merged$organization <- as.character(glue::glue_collapse(organization, "; "))
     }
     merged
   })

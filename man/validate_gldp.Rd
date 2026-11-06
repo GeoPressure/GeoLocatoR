@@ -37,6 +37,8 @@ Resources are checked against their schema: columns must match the
 \code{fieldsMatch} rule, and each column must satisfy its declared constraints
 such as type, requiredness, uniqueness, allowed values, patterns,
 and numeric or length limits. Rows must be unique on the schema \code{primaryKey}.
+Schema-declared foreign keys must resolve to rows of their parent resource, for
+all resources, core ones included.
 The tables GeoLocator-DP defines (\code{tags}, \code{observations}, ...) must be tabular
 resources with a table schema. The \code{params} resource and custom resources are
 checked when they carry a table schema, and are otherwise reported as not checked.
@@ -78,7 +80,6 @@ present. These include:
 \itemize{
 \item realistic ranges for \code{edges$n};
 \item duration checks for \code{staps} and \code{edges};
-\item schema-declared foreign key consistency across all resources, core ones included;
 \item warnings for unusual \code{edges} distances, durations, or wind/ground-speed magnitudes,
 for \code{pressurepaths$altitude} outside -200 to 10,000 m, for \code{staps$stap_id} of 300
 or more, for \code{paths$j} of 500 or more, and for datetime fields in \code{staps},

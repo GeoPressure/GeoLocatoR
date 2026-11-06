@@ -56,10 +56,7 @@ select_gldp <- function(pkg, tag_id) {
     data <- pkg$resources[[i]]$data
     # File-backed tables need the same filtering and schema types as loaded tables.
     if (is.null(data)) {
-      data <- cast_table(
-        gldp_read_resource(pkg, pkg$resources[[i]]$name),
-        pkg$resources[[i]]$schema
-      )
+      data <- gldp_load_table(pkg, pkg$resources[[i]]$name)$data
     }
     if (!is.data.frame(data) || !("tag_id" %in% names(data))) {
       next
@@ -70,9 +67,9 @@ select_gldp <- function(pkg, tag_id) {
     if ("ring_number" %in% names(data)) {
       keep <- keep | (is.na(data$tag_id) & data$ring_number %in% keep_rings)
     }
-    pkg$resources[[i]][["data"]] <- data[keep, , drop = FALSE]
+    pkg[["resources"]][[i]][["data"]] <- data[keep, , drop = FALSE]
     # Store the selected rows in memory; a resource cannot carry both data and path.
-    pkg$resources[[i]][["path"]] <- NULL
+    pkg[["resources"]][[i]][["path"]] <- NULL
   }
   # Drop the GeoPressureR parameters of the removed tags.
   pkg[["params"]] <- purrr::keep(

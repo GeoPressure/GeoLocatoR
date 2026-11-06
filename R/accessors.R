@@ -1,4 +1,4 @@
-.get_resource_data <- function(x, resource_name) {
+gldp_get_resource_data <- function(x, resource_name) {
   check_gldp(x)
   if (!resource_name %in% frictionless::resource_names(x)) {
     cli_abort(
@@ -14,12 +14,12 @@
   # does not depend on `force_read` (frictionless reads enums as factors).
   resource <- gldp_resource(x, resource_name)
   if (!is.null(resource$path) && is.list(resource$schema)) {
-    data <- cast_table(data, resource$schema)
+    data <- gldp_cast_table(data, resource$schema)
   }
   data
 }
 
-.set_resource_data <- function(x, value, resource_name, post = identity) {
+gldp_set_resource_data <- function(x, value, resource_name, post = identity) {
   if (!is.data.frame(value)) {
     cli_abort(
       "{.arg value} must be a data.frame, not {.type {value}}."
@@ -49,14 +49,14 @@
 #' @return [tibble::tibble()] data frame with tags
 #' @export
 tags <- function(x) {
-  .get_resource_data(x, resource_name = "tags")
+  gldp_get_resource_data(x, resource_name = "tags")
 }
 
 #' @rdname tags
 #' @param value A data frame to assign as tags. Must conform to the tags schema specification.
 #' @export
 "tags<-" <- function(x, value) {
-  .set_resource_data(
+  gldp_set_resource_data(
     x = x,
     value = value,
     resource_name = "tags",
@@ -80,7 +80,7 @@ tags <- function(x) {
 #' @return [tibble::tibble()] data frame with observations
 #' @export
 observations <- function(x) {
-  .get_resource_data(x, resource_name = "observations")
+  gldp_get_resource_data(x, resource_name = "observations")
 }
 
 #' @rdname observations
@@ -88,7 +88,7 @@ observations <- function(x) {
 #'   specification.
 #' @export
 "observations<-" <- function(x, value) {
-  .set_resource_data(
+  gldp_set_resource_data(
     x = x,
     value = value,
     resource_name = "observations"
@@ -107,7 +107,7 @@ observations <- function(x) {
 #' @return [tibble::tibble()] data frame with measurements
 #' @export
 measurements <- function(x) {
-  .get_resource_data(x, resource_name = "measurements")
+  gldp_get_resource_data(x, resource_name = "measurements")
 }
 
 #' @rdname measurements
@@ -115,7 +115,7 @@ measurements <- function(x) {
 #'   specification.
 #' @export
 "measurements<-" <- function(x, value) {
-  .set_resource_data(
+  gldp_set_resource_data(
     x = x,
     value = value,
     resource_name = "measurements",
@@ -141,14 +141,14 @@ measurements <- function(x) {
 #' @return [tibble::tibble()] data frame with staps
 #' @export
 staps <- function(x) {
-  .get_resource_data(x, resource_name = "staps")
+  gldp_get_resource_data(x, resource_name = "staps")
 }
 
 #' @rdname staps
 #' @param value A data frame to assign as staps. Must conform to the staps schema specification.
 #' @export
 "staps<-" <- function(x, value) {
-  .set_resource_data(
+  gldp_set_resource_data(
     x = x,
     value = value,
     resource_name = "staps"
@@ -167,7 +167,7 @@ staps <- function(x) {
 #' @return [tibble::tibble()] data frame with twilights
 #' @export
 twilights <- function(x) {
-  .get_resource_data(x, resource_name = "twilights")
+  gldp_get_resource_data(x, resource_name = "twilights")
 }
 
 #' @rdname twilights
@@ -175,7 +175,7 @@ twilights <- function(x) {
 #'   specification.
 #' @export
 "twilights<-" <- function(x, value) {
-  .set_resource_data(
+  gldp_set_resource_data(
     x = x,
     value = value,
     resource_name = "twilights"
@@ -194,14 +194,14 @@ twilights <- function(x) {
 #' @return [tibble::tibble()] data frame with paths
 #' @export
 paths <- function(x) {
-  .get_resource_data(x, resource_name = "paths")
+  gldp_get_resource_data(x, resource_name = "paths")
 }
 
 #' @rdname paths
 #' @param value A data frame to assign as paths. Must conform to the paths schema specification.
 #' @export
 "paths<-" <- function(x, value) {
-  .set_resource_data(
+  gldp_set_resource_data(
     x = x,
     value = value,
     resource_name = "paths",
@@ -221,14 +221,14 @@ paths <- function(x) {
 #' @return [tibble::tibble()] data frame with edges
 #' @export
 edges <- function(x) {
-  .get_resource_data(x, resource_name = "edges")
+  gldp_get_resource_data(x, resource_name = "edges")
 }
 
 #' @rdname edges
 #' @param value A data frame to assign as edges. Must conform to the edges schema specification.
 #' @export
 "edges<-" <- function(x, value) {
-  .set_resource_data(
+  gldp_set_resource_data(
     x = x,
     value = value,
     resource_name = "edges"
@@ -247,7 +247,7 @@ edges <- function(x) {
 #' @return [tibble::tibble()] data frame with pressurepaths
 #' @export
 pressurepaths <- function(x) {
-  .get_resource_data(x, resource_name = "pressurepaths")
+  gldp_get_resource_data(x, resource_name = "pressurepaths")
 }
 
 #' @rdname pressurepaths
@@ -255,7 +255,7 @@ pressurepaths <- function(x) {
 #'   specification.
 #' @export
 "pressurepaths<-" <- function(x, value) {
-  .set_resource_data(
+  gldp_set_resource_data(
     x = x,
     value = value,
     resource_name = "pressurepaths",

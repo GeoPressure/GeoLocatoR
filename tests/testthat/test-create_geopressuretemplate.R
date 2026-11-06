@@ -7,6 +7,8 @@ library(usethis)
 # shared_pkg() is defined in setup.R
 
 test_that("create_geopressuretemplate creates a project shell", {
+  skip_on_cran()
+  skip_if_offline("github.com")
   pkg <- shared_pkg()
   tag_id <- unique(tags(pkg)$tag_id)[1]
   param <- param_create(tag_id, default = TRUE)

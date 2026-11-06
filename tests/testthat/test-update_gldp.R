@@ -161,3 +161,55 @@ test_that("the granular update_gldp_*() functions are deprecated", {
     class = "lifecycle_warning_deprecated"
   )
 })
+
+test_that("contributors_to_persons accepts a contributor without a name", {
+  persons <- contributors_to_persons(list(
+    list(title = "Swiss Ornithological Institute", roles = list("rightsHolder")),
+    list(email = "anonymous@example.org")
+  ))
+
+  expect_length(persons, 2)
+  expect_identical(persons[[1]]$given, "Swiss Ornithological Institute")
+  expect_identical(persons[[2]]$email, "anonymous@example.org")
+})
+
+test_that("update_gldp reads each file-backed table once", {
+  directory <- tempfile("update-gldp-")
+  on.exit(unlink(directory, recursive = TRUE))
+  pkg <- create_gldp()
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(tag_id = c("AA", "BB"), scientific_name = c("Upupa epops", "Apus apus"))
+  )
+  pkg <- add_gldp_resource(
+    pkg,
+    "measurements",
+    data.frame(
+      tag_id = "AA",
+      sensor = "pressure",
+      datetime = as.POSIXct("2020-01-01", tz = "UTC") + 86400 * 0:1,
+      value = 1000
+    )
+  )
+  write_gldp(pkg, directory)
+  lazy <- read_gldp(directory, force_read = FALSE)
+
+  # Count reads of a file; a table in memory is read without one.
+  read <- gldp_read_resource
+  reads <- character(0)
+  local_mocked_bindings(gldp_read_resource = function(pkg, resource_name, ...) {
+    if (!is.null(gldp_resource(pkg, resource_name)$path)) {
+      reads <<- c(reads, resource_name)
+    }
+    read(pkg, resource_name, ...)
+  })
+  out <- update_gldp(lazy)
+
+  expect_identical(sort(reads), c("measurements", "tags"))
+  expect_false(is.null(gldp_resource(out, "measurements")$path))
+  eager <- update_gldp(read_gldp(directory))
+  for (field in c("temporal", "taxonomic", "numberTags")) {
+    expect_identical(out[[field]], eager[[field]])
+  }
+})

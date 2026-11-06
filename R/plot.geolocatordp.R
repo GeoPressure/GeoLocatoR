@@ -38,7 +38,7 @@ plot.geolocatordp <- function(x, type = NULL, ...) {
   )
   available <- frictionless::resource_names(x)
   if (is.null(type)) {
-    type <- names(required)[vapply(required, \(r) all(r %in% available), logical(1))][1]
+    type <- names(required)[purrr::map_lgl(required, \(r) all(r %in% available))][1]
     if (is.na(type)) {
       cli_abort(
         "This package has neither {.field measurements} nor {.field paths} and {.field staps} to plot."

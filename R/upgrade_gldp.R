@@ -33,7 +33,7 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
 
   # Legacy packages carry non-numeric IDs (e.g. `stap_id = "stap-1"`) in fields
   # that later schemas type as numbers. Coercing them to NA is the intended
-  # migration, so the cast_table() warning about lost values is muffled here.
+  # migration, so the gldp_cast_table() warning about lost values is muffled here.
   quiet_cast <- function(expr) {
     withCallingHandlers(
       expr,
@@ -65,20 +65,20 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
   }
 
   # Final normalization enforces target-version schemas/types after stepwise mutations.
-  x <- quiet_cast(normalize_upgraded_resources(x))
+  x <- quiet_cast(gldp_normalize_upgraded_resources(x))
 
   x
 }
 
 #' @noRd
-normalize_upgraded_resources <- function(x) {
+gldp_normalize_upgraded_resources <- function(x) {
   # Step upgrades modify data and bump profile version incrementally. This final pass
   # rebuilds known resources against the target schema so write/read stays stable.
   # We only touch resources already present in the package and keep custom resources unchanged.
   target_version <- gldp_version(x)
   profile <- gldp_profile_schema(target_version)
   # Only the tables have a table schema; the `params` resource has none.
-  supported_resources <- gldp_profile_resource_branches(profile)[[1]]$properties$name$enum
+  supported_resources <- gldp_profile_table_names(profile)
 
   resources <- x$resources %||% list()
   for (resource in resources) {
@@ -126,7 +126,7 @@ normalize_upgraded_resources <- function(x) {
         extra_fields
       )
       if (is.data.frame(upgraded_resource$data)) {
-        upgraded_resource[["data"]] <- cast_table(
+        upgraded_resource[["data"]] <- gldp_cast_table(
           upgraded_resource$data[, schema_field_names(upgraded_resource$schema), drop = FALSE],
           upgraded_resource$schema
         )
@@ -144,28 +144,28 @@ upgrade_gldp_v0_1_to_v0_2 <- function(x) {
   # citation -> bibliographicCitation
   # https://github.com/GeoPressure/GeoLocator-DP/commit/477f3899194edf2a31b93a1019d654714084eeb4
   if (!is.null(x$citation) && is.null(x$bibliographicCitation)) {
-    x$bibliographicCitation <- x$citation
+    x[["bibliographicCitation"]] <- x$citation
   }
 
   # reference_location -> referenceLocation
   # https://github.com/GeoPressure/GeoLocator-DP/commit/b9a1f0dc1d1788fcd5dcc3be4bf52ac3ac4c6de8
   if (!is.null(x$reference_location) && is.null(x$referenceLocation)) {
-    x$referenceLocation <- x$reference_location
+    x[["referenceLocation"]] <- x$reference_location
   }
 
   # Drop removed metadata fields.
   # https://github.com/GeoPressure/GeoLocator-DP/commit/db091f74245c1b521d3dbe2a3665452bf4f70c53
-  x$citation <- NULL
-  x$reference_location <- NULL
-  x$homepage <- NULL
-  x$image <- NULL
-  x$references <- NULL
-  x$name <- NULL
+  x[["citation"]] <- NULL
+  x[["reference_location"]] <- NULL
+  x[["homepage"]] <- NULL
+  x[["image"]] <- NULL
+  x[["references"]] <- NULL
+  x[["name"]] <- NULL
 
   # Add numberTags top-level field.
   # https://github.com/GeoPressure/GeoLocator-DP/commit/8e059382e1157fa9a97962f01a3bf05da600f7f7
   if (is.null(x$numberTags)) {
-    x$numberTags <- list()
+    x[["numberTags"]] <- list()
   }
 
   # Build spatial from referenceLocation when missing.
@@ -174,19 +174,19 @@ upgrade_gldp_v0_1_to_v0_2 <- function(x) {
     lat <- as.numeric(x$referenceLocation$latitude %||% NA_real_)
     lon <- as.numeric(x$referenceLocation$longitude %||% NA_real_)
     if (!is.na(lat) && !is.na(lon)) {
-      x$spatial <- list(type = "Point", coordinates = c(lon, lat))
+      x[["spatial"]] <- list(type = "Point", coordinates = c(lon, lat))
     }
   }
 
   # firwmare -> firmware (typo fix).
   # https://github.com/GeoPressure/GeoLocator-DP/commit/90b65c555720a006aa814e91f04dc85209be7df1
-  x <- mutate_resource(x, "tags", \(d) {
+  x <- gldp_mutate_resource(x, "tags", \(d) {
     if ("firwmare" %in% names(d) && !"firmware" %in% names(d)) {
       names(d)[names(d) == "firwmare"] <- "firmware"
     }
     d
   })
-  x <- mutate_resource(x, "observations", \(d) {
+  x <- gldp_mutate_resource(x, "observations", \(d) {
     # life_stage -> age_class
     # https://github.com/GeoPressure/GeoLocator-DP/commit/4a6d8bcae5d211822799ad4f09e341687d53d321
     if ("life_stage" %in% names(d) && !"age_class" %in% names(d)) {
@@ -219,7 +219,7 @@ upgrade_gldp_v0_3_to_v0_4 <- function(x) {
   # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v0.4
   # Add tags.datapackage_id
   # https://github.com/GeoPressure/GeoLocator-DP/commit/a85af2d8ad9f16297fb5cbb07a448d1c3aab24b2
-  x <- mutate_resource(x, "tags", \(d) {
+  x <- gldp_mutate_resource(x, "tags", \(d) {
     if (!"datapackage_id" %in% names(d)) {
       fill <- if (!is.null(x$id)) as.character(x$id) else NA_character_
       d$datapackage_id <- rep(fill, nrow(d))
@@ -236,7 +236,7 @@ upgrade_gldp_v0_4_to_v0_5 <- function(x) {
   # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v0.5
   # Add edges.type
   # https://github.com/GeoPressure/GeoLocator-DP/commit/60251cd0117856fc7302ce9d3d0abfab81ad0893
-  x <- mutate_resource(x, "edges", \(d) {
+  x <- gldp_mutate_resource(x, "edges", \(d) {
     if ("type" %in% names(d) && !any(is.na(d$type) | trimws(as.character(d$type)) == "")) {
       return(d)
     }
@@ -273,13 +273,13 @@ upgrade_gldp_v0_4_to_v0_5 <- function(x) {
         all(c("tag_id", "stap_s", "stap_t") %in% names(d))
 
       if (can_map) {
-        key <- paste(paths$tag_id, paths$stap_id)
+        key <- glue::glue("{paths$tag_id} {paths$stap_id}")
         type_map <- stats::setNames(as.character(paths$type), key)
 
-        d$type[missing] <- type_map[paste(d$tag_id[missing], d$stap_s[missing])]
+        d$type[missing] <- type_map[glue::glue("{d$tag_id[missing]} {d$stap_s[missing]}")]
         missing <- is.na(d$type) | trimws(as.character(d$type)) == ""
         if (any(missing)) {
-          d$type[missing] <- type_map[paste(d$tag_id[missing], d$stap_t[missing])]
+          d$type[missing] <- type_map[glue::glue("{d$tag_id[missing]} {d$stap_t[missing]}")]
         }
       }
     }
@@ -300,7 +300,7 @@ upgrade_gldp_v0_5_to_v0_6 <- function(x) {
   # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v0.6
   # Remove pressurepaths.ind
   # https://github.com/GeoPressure/GeoLocator-DP/commit/c278695d094ea40e13fea6458a078a7711ea0d1a
-  x <- mutate_resource(x, "pressurepaths", \(d) {
+  x <- gldp_mutate_resource(x, "pressurepaths", \(d) {
     if ("ind" %in% names(d)) {
       d$ind <- NULL
     }
@@ -318,17 +318,17 @@ upgrade_gldp_v0_6_to_v1_0 <- function(x) {
   # Remove deprecated fields from paths/staps/edges.
   # https://github.com/GeoPressure/GeoLocator-DP/commit/8ef7ad8cf9e48e82d8396f535536fb8e5b9c119f
   # https://github.com/GeoPressure/GeoLocator-DP/commit/418f7c926fdff4af0a1c5e48d57a50f8a61c95d2
-  x <- mutate_resource(x, "paths", \(d) {
+  x <- gldp_mutate_resource(x, "paths", \(d) {
     d$ind <- NULL
     d$interp <- NULL
     d$known <- NULL
     d
   })
-  x <- mutate_resource(x, "staps", \(d) {
+  x <- gldp_mutate_resource(x, "staps", \(d) {
     d$include <- NULL
     d
   })
-  x <- mutate_resource(x, "edges", \(d) {
+  x <- gldp_mutate_resource(x, "edges", \(d) {
     d$s <- NULL
     d$t <- NULL
     d
@@ -336,7 +336,7 @@ upgrade_gldp_v0_6_to_v1_0 <- function(x) {
 
   # Rename legacy SOI "pitch" sensor to "mean_acceleration_z".
   # https://github.com/GeoPressure/GeoLocator-DP/issues/24
-  x <- mutate_resource(x, "measurements", \(d) {
+  x <- gldp_mutate_resource(x, "measurements", \(d) {
     if (!"sensor" %in% names(d)) {
       return(d)
     }
@@ -357,7 +357,7 @@ upgrade_gldp_v0_6_to_v1_0 <- function(x) {
     is.na(v) | trimws(as.character(v)) == ""
   }
   dropped_ids <- character(0)
-  x <- mutate_resource(x, "tags", \(d) {
+  x <- gldp_mutate_resource(x, "tags", \(d) {
     keep <- !is_missing(d$ring_number) & !is_missing(d$scientific_name)
     if (nrow(d) > 0 && !any(keep)) {
       cli_abort(c(
@@ -379,7 +379,7 @@ upgrade_gldp_v0_6_to_v1_0 <- function(x) {
     )
     n_rows <- 0
     for (name in purrr::map_chr(tables, "name")) {
-      x <- mutate_resource(x, name, \(d) {
+      x <- gldp_mutate_resource(x, name, \(d) {
         drop <- d$tag_id %in% dropped_ids
         n_rows <<- n_rows + sum(drop)
         d[!drop, , drop = FALSE]
@@ -399,7 +399,7 @@ upgrade_gldp_v0_6_to_v1_0 <- function(x) {
 upgrade_gldp_v1_0_to_v1_1 <- function(x) {
   # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v1.1
   # The table schema moved from the resource `$schema` to its `schema`, and
-  # `type` became required. read_gldp() and `normalize_upgraded_resources()`
+  # `type` became required. read_gldp() and `gldp_normalize_upgraded_resources()`
   # handle both, so only the profile URL changes here.
   x[["$schema"]] <- gldp_schema_url("v1.1")
   x
@@ -410,10 +410,10 @@ upgrade_gldp_v1_1_to_v1_2 <- function(x) {
   # Release: https://github.com/GeoPressure/GeoLocator-DP/releases/tag/v1.2
   # `j` became required on trajectory tables, which also gained primary keys.
   # GeoPressureR <= 3.6.3 left `j` empty on pressurepaths flight rows, so fill it.
-  x <- mutate_resource(x, "pressurepaths", \(d) gldp_fill_pressurepaths_j(d, quiet = FALSE))
+  x <- gldp_mutate_resource(x, "pressurepaths", \(d) gldp_fill_pressurepaths_j(d, quiet = FALSE))
 
   # `observations$mass` must be greater than 0: a mass of 0 is a missing value.
-  x <- mutate_resource(x, "observations", \(d) {
+  x <- gldp_mutate_resource(x, "observations", \(d) {
     zero <- d$mass %in% 0
     if (any(zero)) {
       d$mass[zero] <- NA
@@ -442,12 +442,11 @@ upgrade_gldp_v1_2_to_v1_3 <- function(x) {
 }
 
 #' @noRd
-mutate_resource <- function(pkg, resource_name, fn) {
+gldp_mutate_resource <- function(pkg, resource_name, fn) {
   resource <- gldp_resource(pkg, resource_name)
   # A file-backed table is loaded: its values cannot be changed in the file.
   if (!is.null(resource$path)) {
-    resource[["data"]] <- cast_table(gldp_read_resource(pkg, resource_name), resource$schema)
-    resource[["path"]] <- NULL
+    resource <- gldp_load_table(pkg, resource_name)
   }
   if (!is.data.frame(resource$data)) {
     return(pkg)
@@ -480,7 +479,7 @@ gldp_fill_pressurepaths_j <- function(data, quiet = TRUE) {
   if (!any(missing)) {
     return(data)
   }
-  key <- paste(data$tag_id, data$type, sep = "\r")
+  key <- as.character(glue::glue("{data$tag_id}\r{data$type}"))
   # One known j per tag_id and type: it is the j of the whole trajectory.
   known <- unique(data.frame(key = key[!missing], j = data$j[!missing]))
   known <- known[!known$key %in% known$key[duplicated(known$key)], , drop = FALSE]

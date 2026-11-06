@@ -281,11 +281,6 @@ gldp_accessor_resources <- c(
   "pressurepaths"
 )
 
-# Escape cli/glue braces in free text so field values are printed literally.
-cli_escape <- function(x) {
-  gsub("}", "}}", gsub("{", "{{", as.character(x), fixed = TRUE), fixed = TRUE)
-}
-
 # Convert a description that may contain HTML (as on Zenodo) or plain text to a
 # single-line string. Plain text is never handed to xml2, which would treat it as
 # a file path, and a malformed fragment falls back to stripping tags.
@@ -296,29 +291,15 @@ html_to_text <- function(x, max_chars = 250L) {
   }
   if (grepl("<[A-Za-z/!][^>]*>", x)) {
     x <- tryCatch(
-      rvest::html_text2(rvest::read_html(paste0("<div>", x, "</div>"))),
+      rvest::html_text2(rvest::read_html(glue::glue("<div>{x}</div>"))),
       error = function(e) gsub("<[^>]+>", " ", x)
     )
   }
   x <- trimws(gsub("\\s+", " ", x))
   if (nchar(x) > max_chars) {
-    x <- paste0(substr(x, 1, max_chars), "...")
+    x <- as.character(glue::glue("{substr(x, 1, max_chars)}..."))
   }
   x
-}
-
-# Returns TRUE when a value contains at least one meaningful entry.
-has_value <- function(value) {
-  if (is.null(value) || length(value) == 0) {
-    return(FALSE)
-  }
-  if (is.character(value)) {
-    return(any(!is.na(value) & nzchar(trimws(value))))
-  }
-  if (is.atomic(value)) {
-    return(!all(is.na(value)))
-  }
-  TRUE
 }
 
 # Print formatted bullets for package fields

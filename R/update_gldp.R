@@ -23,12 +23,26 @@
 #'   selected derived properties automatically.
 #' @export
 update_gldp <- function(pkg, ...) {
-  pkg <- pkg |>
-    gldp_update_order_resources() |>
+  pkg <- gldp_update_order_resources(pkg)
+
+  # Several derived fields read tags and measurements: a copy holding the
+  # file-backed ones in memory reads each file once, and pkg keeps its paths.
+  loaded <- pkg
+  for (name in intersect(c("tags", "measurements"), frictionless::resource_names(pkg))) {
+    resource <- gldp_resource(pkg, name)
+    if (!is.null(resource$path) && is.list(resource$schema)) {
+      gldp_resource(loaded, name) <- gldp_load_table(pkg, name)
+    }
+  }
+  loaded <- loaded |>
     gldp_update_temporal() |>
     gldp_update_taxonomic() |>
-    gldp_update_number_tags() |>
-    gldp_update_bibliographic_citation(...)
+    gldp_update_number_tags()
+  for (field in c("temporal", "taxonomic", "numberTags")) {
+    pkg[[field]] <- loaded[[field]]
+  }
+
+  pkg <- gldp_update_bibliographic_citation(pkg, ...)
 
   pkg
 }
@@ -59,7 +73,7 @@ gldp_update_order_resources <- function(pkg) {
   unknown <- is.na(rank)
   rank[unknown] <- length(resource_order) + seq_len(sum(unknown))
 
-  pkg$resources <- resources[order(rank)]
+  pkg[["resources"]] <- resources[order(rank)]
   pkg
 }
 
@@ -78,17 +92,17 @@ gldp_update_temporal <- function(pkg) {
 
   m <- measurements(pkg)
   if (!"datetime" %in% names(m)) {
-    pkg$temporal <- NULL
+    pkg[["temporal"]] <- NULL
     return(pkg)
   }
 
   datetime <- stats::na.omit(m$datetime)
   if (length(datetime) == 0) {
-    pkg$temporal <- NULL
+    pkg[["temporal"]] <- NULL
     return(pkg)
   }
 
-  pkg$temporal <- list(
+  pkg[["temporal"]] <- list(
     start = format(min(datetime), "%Y-%m-%d"),
     end = format(max(datetime), "%Y-%m-%d")
   )
@@ -104,13 +118,13 @@ gldp_update_taxonomic <- function(pkg) {
   resources <- frictionless::resource_names(pkg)
 
   if (!"tags" %in% resources) {
-    pkg$taxonomic <- NULL
+    pkg[["taxonomic"]] <- NULL
     return(pkg)
   }
 
   t <- tags(pkg)
   if (!("scientific_name" %in% names(t))) {
-    pkg$taxonomic <- NULL
+    pkg[["taxonomic"]] <- NULL
     return(pkg)
   }
 
@@ -131,7 +145,7 @@ gldp_update_taxonomic <- function(pkg) {
   }
 
   species <- unique(as.character(stats::na.omit(species)))
-  pkg$taxonomic <- if (length(species) > 0) species else NULL
+  pkg[["taxonomic"]] <- if (length(species) > 0) species else NULL
 
   pkg
 }
@@ -178,7 +192,7 @@ gldp_update_number_tags <- function(pkg) {
     out$pressurepaths <- length(unique(pp$tag_id))
   }
 
-  pkg$numberTags <- if (length(out) > 0) out else NULL
+  pkg[["numberTags"]] <- if (length(out) > 0) out else NULL
 
   pkg
 }
@@ -228,19 +242,19 @@ gldp_update_bibliographic_citation <- function(pkg, ...) {
     url = url
   )
   defaults <- defaults[
-    !vapply(defaults, is.null, logical(1)) &
-      !vapply(defaults, \(v) is.character(v) && length(v) == 1 && !nzchar(v), logical(1))
+    !purrr::map_lgl(defaults, is.null) &
+      !purrr::map_lgl(defaults, \(v) is.character(v) && length(v) == 1 && !nzchar(v))
   ]
 
   bib_args <- utils::modifyList(defaults, list(...))
 
   has_payload <- any(c("author", "doi", "title", "year", "publisher") %in% names(bib_args))
   if (!has_payload) {
-    pkg$bibliographicCitation <- NULL
+    pkg[["bibliographicCitation"]] <- NULL
     return(pkg)
   }
 
-  pkg$bibliographicCitation <- tryCatch(
+  pkg[["bibliographicCitation"]] <- tryCatch(
     {
       bib <- do.call(utils::bibentry, bib_args)
       format(bib, style = "text")
@@ -251,4 +265,59 @@ gldp_update_bibliographic_citation <- function(pkg, ...) {
   )
 
   pkg
+}
+
+#' Convert contributors to person objects
+#'
+#' Internal helper function to convert a list of contributors to person objects
+#' for use in DESCRIPTION files.
+#'
+#' @param contributors A list of contributor objects from a GeoLocator Data Package
+#' @return A list of person objects
+#' @noRd
+contributors_to_persons <- function(contributors) {
+  role_mapping <- c(
+    "contactperson" = "ctr", # Contractor (assumed due to lack of clear match)
+    "contributor" = "ctb", # Contributor
+    "datacollector" = "dtc", # Data contributor
+    "datacurator" = "dtc", # Data contributor (no closer match)
+    "datamanager" = "dtc", # Data contributor (no closer match)
+    "distributor" = "ctr", # Contractor (assumed)
+    "editor" = "rev", # Reviewer
+    "hostinginstitution" = "cph", # Copyright holder (legal entity)
+    "producer" = "aut", # Author (substantial contribution)
+    "projectleader" = "cre", # Creator (project leader matches)
+    "projectmanager" = "cre", # Creator (manager of the project)
+    "projectmember" = "ctb", # Contributor (smaller contributions)
+    "registrationagency" = "ctr", # Contractor (assumed)
+    "registrationauthority" = "ctr", # Contractor (assumed)
+    "relatedperson" = "trl", # Translator (assumed)
+    "researcher" = "aut", # Author
+    "researchergroup" = "aut", # Author (group treated as authors)
+    "rightsholder" = "cph", # Copyright holder
+    "sponsor" = "fnd", # Funder
+    "supervisor" = "ths", # Thesis advisor
+    "workpackageleader" = "cre" # Creator (assumed leader role)
+  )
+
+  persons <- contributors |>
+    purrr::map(
+      ~ {
+        utils::person(
+          # An organisation has a title instead of a given name; either can be absent.
+          given = .x$givenName %||% .x$title,
+          family = .x$familyName,
+          email = .x$email,
+          role = purrr::map_vec(
+            .x$roles,
+            ~ coalesce(role_mapping[tolower(.x)], "ctb")
+          ),
+          comment = c(.x$path, .x$organization)
+        )
+      }
+    )
+
+  persons <- do.call(c, purrr::discard(persons, is.null))
+
+  persons
 }

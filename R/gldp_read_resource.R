@@ -194,9 +194,138 @@ gldp_materialize_tables <- function(pkg) {
       next
     }
     # Preserve the declared schema: validation must still detect missing columns.
-    resource[["data"]] <- cast_table(gldp_read_resource(pkg, resource$name), resource$schema)
-    resource[["path"]] <- NULL
-    pkg$resources[[i]] <- resource
+    pkg[["resources"]][[i]] <- gldp_load_table(pkg, resource$name)
   }
   pkg
+}
+
+#' Load a resource table into memory
+#'
+#' @param pkg A GeoLocator Data Package object.
+#' @param resource_name Name of the resource to load.
+#' @return The resource, with its data read and cast to its schema, and its
+#'   `path` removed.
+#' @noRd
+gldp_load_table <- function(pkg, resource_name) {
+  resource <- gldp_resource(pkg, resource_name)
+  resource[["data"]] <- gldp_cast_table(gldp_read_resource(pkg, resource_name), resource$schema)
+  # A resource carries its data or a path to it, never both.
+  resource[["path"]] <- NULL
+  resource
+}
+
+#' Field names declared by a table schema
+#'
+#' @param schema A table schema.
+#' @return Character vector of field names, in schema order.
+#' @noRd
+schema_field_names <- function(schema) {
+  purrr::map_chr(schema$fields, \(f) as.character(f$name)[1])
+}
+
+#' Cast data frame columns according to schema types
+#'
+#' Internal helper function to cast data frame columns to the appropriate types
+#' based on a table schema specification. Values that cannot be cast to a
+#' number, integer, year, date or datetime become `NA` with a warning of class
+#' `gldp_warning_cast_loss`.
+#'
+#' @param data A data frame to cast
+#' @param schema A table schema object with field definitions
+#' @return The data frame with properly cast column types
+#' @noRd
+gldp_cast_table <- function(data, schema) {
+  schema_fields <- schema_field_names(schema)
+  # A field without `type` is `any`, the Table Schema default.
+  schema_types <- vapply(schema$fields, \(x) x$type %||% "any", character(1))
+
+  for (i in seq_along(schema_fields)) {
+    field <- schema_fields[i]
+    type <- schema_types[i]
+
+    if (field %in% names(data)) {
+      # Cast factors from their labels: as.numeric() would return level codes.
+      if (is.factor(data[[field]])) {
+        data[[field]] <- as.character(data[[field]])
+      }
+      original <- data[[field]]
+      if (type == "string") {
+        data[[field]] <- as.character(data[[field]])
+      } else if (type == "number") {
+        # Lost values are reported below, so the base coercion warning is not needed.
+        data[[field]] <- suppressWarnings(as.numeric(data[[field]]))
+      } else if (type == "integer") {
+        data[[field]] <- suppressWarnings(as.integer(data[[field]]))
+      } else if (type == "boolean") {
+        data[[field]] <- as.logical(data[[field]])
+      } else if (type == "date") {
+        value <- data[[field]]
+        # Strings are read as ISO 8601 only; others become NA, reported below.
+        data[[field]] <- if (is.character(value)) {
+          value[!grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}", value)] <- NA
+          as.Date(value, format = "%Y-%m-%d")
+        } else {
+          as.Date(value)
+        }
+      } else if (type == "datetime") {
+        value <- data[[field]]
+        # Strings are read as ISO 8601 only; others become NA, reported below.
+        data[[field]] <- if (is.character(value)) {
+          value[!grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}", value)] <- NA
+          value <- sub("T", " ", value, fixed = TRUE)
+          purrr::map(
+            c("%Y-%m-%d %H:%M:%OS", "%Y-%m-%d %H:%M", "%Y-%m-%d"),
+            \(format) as.POSIXct(strptime(value, format, tz = "UTC"))
+          ) |>
+            purrr::reduce(coalesce)
+        } else {
+          as.POSIXct(value, tz = "UTC")
+        }
+      } else if (type == "time") {
+        # For time fields, convert to character if not already
+        if (!is.character(data[[field]])) {
+          data[[field]] <- as.character(data[[field]])
+        }
+      } else if (type == "year") {
+        # For year fields, convert to integer
+        data[[field]] <- suppressWarnings(as.integer(data[[field]]))
+      } else if (type == "yearmonth") {
+        # For yearmonth fields, keep as character
+        data[[field]] <- as.character(data[[field]])
+      } else if (type == "duration") {
+        # For duration fields, keep as character (ISO 8601 format)
+        data[[field]] <- as.character(data[[field]])
+      } else if (type == "geopoint") {
+        # For geopoint fields, keep as character
+        data[[field]] <- as.character(data[[field]])
+      } else if (type == "geojson") {
+        # For geojson fields, keep as character
+        data[[field]] <- as.character(data[[field]])
+      } else if (type == "list") {
+        # Data Package v2 `list` fields are read as character by frictionless
+        data[[field]] <- as.character(data[[field]])
+      } else if (type != "any") {
+        # `any` columns are left as they are.
+        cli_warn(c(
+          "!" = "No casting for {.field {field}} of type {.val {type}}."
+        ))
+      }
+
+      # Report non-missing values the cast turned into NA; empty strings count as missing.
+      if (type %in% c("number", "integer", "year", "date", "datetime")) {
+        lost <- is.na(data[[field]]) & !is.na(original)
+        n_lost <- sum(nzchar(trimws(as.character(original[lost]))))
+        if (n_lost > 0) {
+          cli_warn(
+            c(
+              "!" = "{format(n_lost, big.mark = ',')} non-missing {cli::qty(n_lost)}value{?s} of {.field {field}} \\
+              became NA when cast to {.val {type}}."
+            ),
+            class = "gldp_warning_cast_loss"
+          )
+        }
+      }
+    }
+  }
+  data
 }

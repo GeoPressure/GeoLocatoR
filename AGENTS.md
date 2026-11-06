@@ -18,7 +18,6 @@
   pull request or a release, and commit the regenerated `man/` and `NAMESPACE` with the
   change. Do not run it while iterating on unrelated edits. Run it in a UTF-8 locale:
   `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 Rscript -e 'devtools::document()'`.
-- Do not use `:::` or `::` in tests.
 
 ## Comments
 - Add minimal comments per logical code section (roughly every 1–10 lines).

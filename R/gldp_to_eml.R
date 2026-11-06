@@ -82,12 +82,10 @@ gldp_to_eml <- function(pkg, directory) {
       return(NULL)
     }
     is_html_like <- grepl("<[^>]+>|&[A-Za-z#0-9]+;", x, perl = TRUE)
-    x[is_html_like] <- vapply(
+    x[is_html_like] <- purrr::map_chr(
       x[is_html_like],
       # Wrap in a tag so that text without one is not read as a file path.
-      \(value) rvest::read_html(glue::glue("<div>{value}</div>")) |> rvest::html_text2(),
-      character(1),
-      USE.NAMES = FALSE
+      \(value) rvest::read_html(glue::glue("<div>{value}</div>")) |> rvest::html_text2()
     )
     x
   }
@@ -243,7 +241,7 @@ gldp_to_eml <- function(pkg, directory) {
   # Taxonomic
   if (!is.null(taxonomic)) {
     coverage$taxonomicCoverage <- list(
-      taxonomicClassification = lapply(taxonomic, function(sp) {
+      taxonomicClassification = purrr::map(taxonomic, function(sp) {
         list(
           taxonRankName = "Species",
           taxonRankValue = sp

@@ -131,7 +131,7 @@ tags_to_measurements <- function(tag_list, tags = lifecycle::deprecated()) {
           dplyr::bind_rows(tag_measurements)
         },
         error = function(e) {
-          value_types <- sapply(tag_measurements, function(x) class(x$value)[1])
+          value_types <- purrr::map_chr(tag_measurements, \(x) class(x$value)[1])
           cli_abort(
             c(
               "x" = glue::glue(
@@ -158,21 +158,7 @@ tags_to_measurements <- function(tag_list, tags = lifecycle::deprecated()) {
   }
 
   # Combine all tags
-  m <- tryCatch(
-    {
-      dplyr::bind_rows(all_measurements)
-    },
-    error = function(e) {
-      value_types <- sapply(all_measurements, function(x) class(x$value)[1])
-      cli_abort(
-        c(
-          "Type mismatch when combining tags in {.fun tags_to_measurements}:",
-          "i" = "value column types: {.val {value_types}}",
-          "x" = e$message
-        )
-      )
-    }
-  )
+  m <- dplyr::bind_rows(all_measurements)
   m <- dplyr::rename(m, datetime = "date")
   m <- dplyr::filter(m, !is.na(.data$value))
   m

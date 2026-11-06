@@ -38,8 +38,10 @@ write_gldp <- function(pkg, directory = ".", compress = FALSE) {
 
   # The params resource is written from `pkg$params` below, not copied from a source file.
   pkg_without_params <- pkg
-  pkg_without_params$params <- NULL
-  pkg_without_params$resources <- purrr::discard(pkg$resources, \(r) identical(r$name, "params"))
+  pkg_without_params[["params"]] <- NULL
+  pkg_without_params[["resources"]] <- purrr::discard(pkg$resources, \(r) {
+    identical(r$name, "params")
+  })
 
   frictionless::write_package(
     package = pkg_without_params,

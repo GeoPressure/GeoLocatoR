@@ -399,3 +399,39 @@ test_that("gldp_to_tag omits empty label columns", {
   expect_false("label" %in% names(tag$pressure))
   expect_false("label" %in% names(tag$acceleration))
 })
+
+test_that("gldp_to_tag reads measurements once for several tags", {
+  directory <- tempfile("gldp-to-tag-")
+  on.exit(unlink(directory, recursive = TRUE))
+  pkg <- create_gldp()
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(tag_id = c("AA", "BB"), scientific_name = "Upupa epops")
+  )
+  pkg <- add_gldp_resource(
+    pkg,
+    "measurements",
+    data.frame(
+      tag_id = rep(c("AA", "BB"), each = 2),
+      sensor = "pressure",
+      datetime = as.POSIXct("2020-01-01", tz = "UTC") + 3600 * 0:1,
+      value = c(1000, 1001, 990, 991)
+    )
+  )
+  write_gldp(pkg, directory)
+  lazy <- read_gldp(directory, force_read = FALSE)
+
+  # Count reads per resource
+  read <- gldp_read_resource
+  reads <- character(0)
+  local_mocked_bindings(gldp_read_resource = function(pkg, resource_name, ...) {
+    reads <<- c(reads, resource_name)
+    read(pkg, resource_name, ...)
+  })
+  tag_list <- gldp_to_tag(lazy)
+
+  expect_identical(sum(reads == "measurements"), 1L)
+  expect_equal(tag_list$AA$pressure$value, c(1000, 1001))
+  expect_equal(tag_list$BB$pressure$value, c(990, 991))
+})

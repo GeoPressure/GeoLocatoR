@@ -321,11 +321,7 @@ create_geopressuretemplate_licenses <- function(pkg) {
   )
 
   # 6. Identify the first matching rule
-  hit <- vapply(
-    rules,
-    function(r) grepl(r[[1]], license_name),
-    logical(1)
-  )
+  hit <- purrr::map_lgl(rules, \(r) grepl(r[[1]], license_name))
 
   # 7. Apply the corresponding usethis license function
   if (any(hit)) {
@@ -467,7 +463,7 @@ create_geopressuretemplate_config <- function(pkg) {
         # yaml writes as `!expr`; evaluating it only creates the function.
         as_function <- function(x) {
           if (is.list(x) && !is.data.frame(x)) {
-            return(lapply(x, as_function))
+            return(purrr::map(x, as_function))
           }
           if (is.character(x) && length(x) == 1) {
             expr <- tryCatch(str2lang(x), error = \(e) NULL)
@@ -629,8 +625,8 @@ create_geopressuretemplate_config <- function(pkg) {
       return(NULL)
     }
     if (is.list(x) && !is.data.frame(x)) {
-      x <- lapply(x, remove_expressions)
-      return(x[!vapply(x, is.null, logical(1))])
+      x <- purrr::map(x, remove_expressions)
+      return(purrr::discard(x, is.null))
     }
     x
   }
@@ -646,17 +642,16 @@ create_geopressuretemplate_config <- function(pkg) {
 
   inline_vectors <- function(x) {
     if (is.atomic(x) && length(x) > 1) {
-      values <- vapply(
+      values <- purrr::map_chr(
         x,
         \(value) {
           trimws(sub("^value: ", "", yaml::as.yaml(list(value = value))))
-        },
-        character(1)
+        }
       )
       return(as_inline(glue::glue("[{glue::glue_collapse(values, sep = ', ')}]")))
     }
     if (is.list(x) && !is.data.frame(x)) {
-      return(lapply(x, inline_vectors))
+      return(purrr::map(x, inline_vectors))
     }
     x
   }
@@ -667,7 +662,7 @@ create_geopressuretemplate_config <- function(pkg) {
     t_config,
     handlers = list(
       data.frame = \(k) {
-        tmp <- lapply(names(k), function(name) {
+        tmp <- purrr::map(names(k), function(name) {
           x <- k[[name]]
           if (name == "stap_id" && any(x == 0)) {
             add_text <- " # Replace each `0` with the stap_id of that observation (sorted by datetime)"

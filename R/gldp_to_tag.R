@@ -92,7 +92,8 @@ gldp_to_tag <- function(pkg, tag_id = NULL) {
   check_gldp(pkg)
 
   # Get all available tag_ids
-  all_tag_ids <- unique(tags(pkg)$tag_id)
+  tags_data <- tags(pkg)
+  all_tag_ids <- unique(tags_data$tag_id)
 
   # If tag_id is NULL, use all tags
   if (is.null(tag_id)) {
@@ -108,9 +109,26 @@ gldp_to_tag <- function(pkg, tag_id = NULL) {
     ))
   }
 
+  # Read each table once; every tag takes its rows from these.
+  resources <- frictionless::resource_names(pkg)
+  tables <- c(
+    list(tags = tags_data),
+    purrr::map(
+      purrr::set_names(intersect(c("measurements", "staps", "twilights"), resources)),
+      \(name) gldp_get_resource_data(pkg, name)
+    )
+  )
+  # Split measurements by tag once rather than filtering the whole table per tag.
+  if (!is.null(tables$measurements)) {
+    tables$measurements <- split(
+      tables$measurements,
+      factor(tables$measurements$tag_id, levels = unique(tag_id))
+    )
+  }
+
   # Process each tag
-  tag_list <- lapply(tag_id, function(tid) {
-    gldp_to_tag_single(pkg, tid)
+  tag_list <- purrr::map(tag_id, function(tid) {
+    gldp_to_tag_single(pkg, tid, tables)
   })
 
   # Name the list
@@ -126,12 +144,12 @@ gldp_to_tag <- function(pkg, tag_id = NULL) {
 
 
 #' Internal function to convert a single tag from GLDP to a GeoPressureR tag object
+#' @param tables Tables read by `gldp_to_tag()`, with measurements split by tag.
 #' @noRd
-gldp_to_tag_single <- function(pkg, tid) {
+gldp_to_tag_single <- function(pkg, tid, tables) {
   # Get measurements for this tag
-  if ("measurements" %in% frictionless::resource_names(pkg)) {
-    meas <- measurements(pkg) |>
-      dplyr::filter(.data$tag_id == tid)
+  if (!is.null(tables$measurements)) {
+    meas <- tables$measurements[[as.character(tid)]]
   } else {
     cli_abort(c(
       "x" = "No {.field measurements} resource found in the package.",
@@ -144,7 +162,7 @@ gldp_to_tag_single <- function(pkg, tid) {
   }
 
   # Get tag metadata
-  tag_meta <- tags(pkg) |>
+  tag_meta <- tables$tags |>
     dplyr::filter(.data$tag_id == tid)
 
   if (nrow(tag_meta) == 0) {
@@ -293,8 +311,8 @@ gldp_to_tag_single <- function(pkg, tid) {
   }
 
   # Add stap data if available
-  if ("staps" %in% frictionless::resource_names(pkg)) {
-    stap_data <- staps(pkg) |>
+  if (!is.null(tables$staps)) {
+    stap_data <- tables$staps |>
       dplyr::filter(.data$tag_id == tid) |>
       dplyr::select(-"tag_id")
 
@@ -312,8 +330,8 @@ gldp_to_tag_single <- function(pkg, tid) {
   }
 
   # Add twilight data if available
-  if ("twilights" %in% frictionless::resource_names(pkg)) {
-    twilight_data <- twilights(pkg) |>
+  if (!is.null(tables$twilights)) {
+    twilight_data <- tables$twilights |>
       dplyr::filter(.data$tag_id == tid) |>
       dplyr::select(-"tag_id")
 

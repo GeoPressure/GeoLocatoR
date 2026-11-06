@@ -50,9 +50,7 @@ add_gldp_resource <- function(
 
   # The profile lists the tables, whose schemas are not in `pkg` until added.
   pkg_schema <- gldp_profile_schema(version)
-  # The first branch is the one for the fixed tables.
-  possible_gldp_resources <-
-    gldp_profile_resource_branches(pkg_schema)[[1]]$properties$name$enum
+  possible_gldp_resources <- gldp_profile_table_names(pkg_schema)
 
   if (!resource_name %in% possible_gldp_resources) {
     cli_abort(c(
@@ -136,7 +134,7 @@ add_gldp_resource <- function(
   data <- data |> select(all_of(schema_field_names(schema)))
 
   if (cast_type) {
-    data <- cast_table(data, schema)
+    data <- gldp_cast_table(data, schema)
   }
 
   pkg <- frictionless::add_resource(

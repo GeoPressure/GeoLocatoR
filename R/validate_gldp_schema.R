@@ -1,248 +1,3 @@
-#' Validate object against schema properties
-#'
-#' Internal helper function to validate an object against a set of required fields
-#' and property definitions from a schema. It resolves local schema references,
-#' validates scalar fields, and recurses into object and array properties when
-#' nested schemas are available.
-#'
-#' @param obj The object to validate
-#' @param required Vector of required field names
-#' @param properties List of property definitions from schema
-#' @param name Optional name prefix for error messages
-#' @param defs Optional schema definitions used to resolve local `"$ref"`
-#'   entries.
-#' @param ignore_fields Field names to skip during validation.
-#' @return Invisibly returns `TRUE` when the object validation passes, `FALSE`
-#'   otherwise.
-#' @noRd
-validate_gldp_object <- function(
-  obj,
-  required,
-  properties,
-  name = "",
-  defs = NULL,
-  ignore_fields = c("directory")
-) {
-  name <- glue::glue("{name}{ifelse(name=='','','$')}")
-
-  valid <- TRUE
-  fields <- setdiff(names(obj), ignore_fields)
-  for (field in fields) {
-    if (field %in% names(properties)) {
-      field_name <- glue::glue("{name}{field}")
-      prop <- resolve_prop(obj[[field]], properties[[field]], defs, field_name)
-
-      valid <- valid &
-        validate_gldp_item(
-          obj[[field]],
-          prop,
-          field_name
-        )
-
-      if (isTRUE(prop$type == "object")) {
-        if (!is.null(prop$`$ref`) && !startsWith(prop$`$ref`, "#/$defs/")) {
-          # External schemas rely on anyOf, allOf etc., which are not implemented.
-          cli::cli_alert_warning(
-            "{.field {field}} cannot be validated (external schema)."
-          )
-        } else if (!is.null(prop$properties)) {
-          valid <- valid &
-            validate_gldp_object(
-              obj[[field]],
-              prop$required,
-              prop$properties,
-              field_name,
-              defs,
-              ignore_fields
-            )
-        }
-      }
-
-      if (isTRUE(prop$type == "array")) {
-        if (is.null(prop$items)) {
-          cli::cli_alert_warning(
-            "{.field {field}} array items schema is missing; skipping item validation."
-          )
-        } else {
-          for (i in seq_len(length(obj[[field]]))) {
-            item_field <- glue::glue("{name}{field}[[{i}]]")
-            item_prop <- resolve_prop(
-              obj[[field]][[i]],
-              prop$items,
-              defs,
-              item_field
-            )
-
-            valid <- valid &
-              validate_gldp_item(
-                obj[[field]][[i]],
-                item_prop,
-                item_field
-              )
-
-            if (isTRUE(item_prop$type == "object")) {
-              if (
-                !is.null(item_prop$`$ref`) &&
-                  !startsWith(item_prop$`$ref`, "#/$defs/")
-              ) {
-                cli::cli_alert_warning(
-                  "{.field {item_field}} cannot be validated (external schema)."
-                )
-              } else if (!is.null(item_prop$properties)) {
-                valid <- valid &
-                  validate_gldp_object(
-                    obj[[field]][[i]],
-                    item_prop$required,
-                    item_prop$properties,
-                    item_field,
-                    defs,
-                    ignore_fields
-                  )
-              }
-            }
-          }
-        }
-      }
-    } else {
-      cli::cli_alert_warning("{.field {field}} does not exist in schema.")
-    }
-  }
-
-  purrr::walk(required, function(r) {
-    if (is.null(obj[[r]])) {
-      cli_alert_danger("{.field {name}{r}} is required but missing.")
-      valid <<- FALSE
-    }
-  })
-  return(valid)
-}
-
-#' Resolve a local schema reference
-#'
-#' Internal helper that replaces a local `"$ref"` pointing to `#/$defs/...`
-#' with the corresponding schema definition, then merges any field-specific
-#' overrides.
-#'
-#' @param prop A schema property definition.
-#' @param defs Schema definitions used to resolve local references.
-#'
-#' @return A schema property with the local reference resolved when possible.
-#' @noRd
-resolve_local_ref <- function(prop, defs) {
-  if (is.null(prop$`$ref`) || is.null(defs)) {
-    return(prop)
-  }
-
-  ref <- prop$`$ref`
-  if (!startsWith(ref, "#/$defs/")) {
-    return(prop)
-  }
-
-  key <- sub("^#/\\$defs/", "", ref)
-  if (is.null(defs[[key]])) {
-    return(prop)
-  }
-
-  base <- defs[[key]]
-  prop_no_ref <- prop
-  prop_no_ref$`$ref` <- NULL
-
-  utils::modifyList(base, prop_no_ref)
-}
-
-#' Infer a schema property type
-#'
-#' Internal helper that fills in an implicit schema type for object and array
-#' properties when `type` is omitted but structural fields are present.
-#'
-#' @param prop A schema property definition.
-#'
-#' @return The schema property with `type` added when it can be inferred.
-#' @noRd
-infer_type <- function(prop) {
-  if (!is.null(prop$type)) {
-    return(prop)
-  }
-
-  if (!is.null(prop$properties) || !is.null(prop$required)) {
-    prop$type <- "object"
-  } else if (!is.null(prop$items)) {
-    prop$type <- "array"
-  }
-
-  prop
-}
-
-#' Resolve a `oneOf` schema branch
-#'
-#' Internal helper that selects the first `oneOf` alternative whose type matches
-#' the current value, then merges it with the shared base property definition.
-#'
-#' @param value The value being validated.
-#' @param prop A schema property definition containing `oneOf`.
-#' @param defs Schema definitions used to resolve local references.
-#' @param field Field name used in validation messages.
-#'
-#' @return A concrete schema property to use for validation.
-#' @noRd
-resolve_oneof <- function(value, prop, defs, field) {
-  if (is.null(prop$oneOf)) {
-    return(prop)
-  }
-
-  base <- prop
-  base$oneOf <- NULL
-  base <- resolve_local_ref(base, defs)
-
-  alternatives <- lapply(prop$oneOf, function(alt) {
-    alt <- resolve_local_ref(alt, defs)
-    infer_type(alt)
-  })
-
-  matches <- vapply(
-    alternatives,
-    function(alt) check_type_silent(value, alt$type),
-    logical(1)
-  )
-
-  if (!any(matches)) {
-    cli::cli_alert_warning(
-      "{.field {field}} could not be matched to a `oneOf` schema; using first option."
-    )
-    chosen <- alternatives[[1]]
-  } else {
-    chosen <- alternatives[[which(matches)[1]]]
-  }
-
-  utils::modifyList(chosen, base)
-}
-
-#' Resolve a schema property before validation
-#'
-#' Internal helper that resolves local references, selects a `oneOf` branch when
-#' needed, and infers a missing `type`.
-#'
-#' @param value The value being validated.
-#' @param prop A schema property definition.
-#' @param defs Schema definitions used to resolve local references.
-#' @param field Field name used in validation messages.
-#'
-#' @return A schema property ready to be passed to the validation helpers.
-#' @noRd
-resolve_prop <- function(value, prop, defs, field) {
-  if (is.null(prop)) {
-    return(list())
-  }
-
-  prop <- resolve_local_ref(prop, defs)
-
-  if (!is.null(prop$oneOf)) {
-    prop <- resolve_oneof(value, prop, defs, field)
-  }
-
-  infer_type(prop)
-}
-
 #' Validate a value against a schema property
 #'
 #' Internal helper that applies type checks, format checks, requiredness, and
@@ -400,10 +155,9 @@ validate_gldp_item <- function(item, prop, field) {
   # of values. GeoLocator-DP declares both, `categories` being the Data Package
   # v2 spelling that also carries a label per value, so read whichever is there.
   allowed <- if (!is.null(prop$categories)) {
-    vapply(
+    purrr::map_chr(
       prop$categories,
-      \(x) if (is.list(x)) as.character(x$value)[1] else as.character(x)[1],
-      character(1)
+      \(x) if (is.list(x)) as.character(x$value)[1] else as.character(x)[1]
     )
   } else if (!is.null(prop$enum)) {
     as.character(unlist(prop$enum))
@@ -454,72 +208,6 @@ validate_gldp_item <- function(item, prop, field) {
   valid
 }
 
-
-#' Validate schema and data field matching
-#'
-#' Internal helper that applies the frictionless `fieldsMatch` rule to compare
-#' schema field names against data column names.
-#'
-#' @param schema_fields Field names declared in the schema.
-#' @param data_fields Field names present in the data.
-#' @param fields_match Matching mode from the schema.
-#'
-#' @return Invisibly returns `TRUE` when the field match rule passes, `FALSE`
-#'   otherwise.
-#' @noRd
-validate_gldp_fields_match <- function(
-  schema_fields,
-  data_fields,
-  fields_match
-) {
-  if (is.null(fields_match)) {
-    fields_match <- "exact"
-  }
-
-  valid <- TRUE
-  # Perform the check based on the fieldsMatch value
-  if (fields_match == "exact") {
-    if (!identical(schema_fields, data_fields)) {
-      cli_alert_danger(
-        "Exact match failed. Schema fields: {schema_fields}, Data fields:
-                       {data_fields}"
-      )
-      valid <- FALSE
-    }
-  } else if (fields_match == "equal") {
-    if (!setequal(schema_fields, data_fields)) {
-      cli_alert_danger(
-        "Equal match failed. Schema fields: {schema_fields}, Data fields:
-                       {data_fields}"
-      )
-      valid <- FALSE
-    }
-  } else if (fields_match == "subset") {
-    if (!all(schema_fields %in% data_fields)) {
-      missing_fields <- schema_fields[!schema_fields %in% data_fields]
-      cli_alert_danger("Subset match failed. Missing fields: {missing_fields}")
-      valid <- FALSE
-    }
-  } else if (fields_match == "superset") {
-    if (!all(data_fields %in% schema_fields)) {
-      extra_fields <- data_fields[!data_fields %in% schema_fields]
-      cli_alert_danger("Superset match failed. Extra fields: {extra_fields}")
-      valid <- FALSE
-    }
-  } else if (fields_match == "partial") {
-    if (!any(schema_fields %in% data_fields)) {
-      cli_alert_danger("Partial match failed. No schema fields found in data.")
-      valid <- FALSE
-    }
-  } else {
-    cli_alert_danger("Unknown {.field fieldsMatch} value {.val {fields_match}}.")
-    valid <- FALSE
-  }
-
-  invisible(valid)
-}
-
-
 #' Validate a declared field format
 #'
 #' Internal helper that checks whether a value matches one of the supported
@@ -545,7 +233,7 @@ check_format <- function(value, format, field) {
     time = function(v) all(is.na(v) | grepl("^\\d{2}:\\d{2}:\\d{2}$", v)),
     `utc-millisec` = function(v) all(is.na(v) | is.numeric(v)),
     regex = function(v) {
-      all(sapply(v, function(x) {
+      all(purrr::map_lgl(v, function(x) {
         if (is.na(x)) {
           return(TRUE)
         }
@@ -705,11 +393,11 @@ get_type_map <- function() {
         # default geopoint is "lon, lat", longitude first.
         regex_matches <- regexec(pattern, valid_vals[matches])
         coords <- regmatches(valid_vals[matches], regex_matches)
-        lon <- as.numeric(sapply(coords, function(x) {
-          if (length(x) > 1) x[2] else NA
+        lon <- as.numeric(purrr::map_chr(coords, function(x) {
+          if (length(x) > 1) x[2] else NA_character_
         }))
-        lat <- as.numeric(sapply(coords, function(x) {
-          if (length(x) > 2) x[3] else NA
+        lat <- as.numeric(purrr::map_chr(coords, function(x) {
+          if (length(x) > 2) x[3] else NA_character_
         }))
         valid_coords <- all(
           lat >= -90 & lat <= 90 & lon >= -180 & lon <= 180,
@@ -725,7 +413,7 @@ get_type_map <- function() {
       }
 
       # Handle each element in the vector
-      all(sapply(v, function(x) {
+      all(purrr::map_lgl(v, function(x) {
         if (is.na(x)) {
           return(TRUE)
         } # NA values are considered valid
@@ -788,23 +476,18 @@ check_type <- function(value, type, field) {
     return(TRUE)
   }
 
-  type_map <- get_type_map()
-
-  valid <- TRUE
-  # Check if the expected type is in the type_map
-  if (type %in% names(type_map)) {
-    type_check_result <- type_map[[type]](value)
-    if (!all(type_check_result)) {
-      cli_alert_danger(
-        "Type mismatch for {.field {field}}: Expected `{type}`, but got
-                       `{typeof(value)}`."
-      )
-      valid <- FALSE
-    }
-  } else {
+  if (!(type %in% names(get_type_map()))) {
     cli_alert_danger("Unknown expected type `{type}` for {.field {field}}.")
-    valid <- FALSE
+    return(FALSE)
   }
 
-  valid
+  if (!all(check_type_silent(value, type))) {
+    cli_alert_danger(
+      "Type mismatch for {.field {field}}: Expected `{type}`, but got
+                       `{typeof(value)}`."
+    )
+    return(FALSE)
+  }
+
+  TRUE
 }

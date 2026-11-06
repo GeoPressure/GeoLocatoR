@@ -391,7 +391,7 @@ test_that("upgrade_gldp to v1.0 drops the rows of non-deployed tags from every t
 
 test_that("upgrade_gldp rejects a resource holding both path and data", {
   # The Data Package standard allows `path` or `data`, never both. Going through
-  # gldp_resource() in mutate_resource() surfaces such a descriptor instead of
+  # gldp_resource() in gldp_mutate_resource() surfaces such a descriptor instead of
   # silently carrying it into the upgraded package.
   pkg <- list(
     "$schema" = "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/v0.6/geolocator-dp-profile.json",

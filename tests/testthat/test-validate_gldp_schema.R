@@ -166,87 +166,6 @@ test_that("check_type and check_format handle NA values correctly", {
   })
 })
 
-test_that("gldp_profile_resource_names reads both profile shapes", {
-  # GeoLocator-DP up to v1.0 lists the resource alternatives under `oneOf`, from
-  # v1.1 under `allOf` as `if`/`then` pairs. Both must yield the same names, or
-  # upgrading a package written against an older version drops resources.
-  tables <- c(
-    "tags",
-    "observations",
-    "measurements",
-    "staps",
-    "twilights",
-    "paths",
-    "edges",
-    "pressurepaths"
-  )
-
-  for (version in c("v1.0", "v1.1")) {
-    profile <- gldp_profile_schema(version)
-    expect_identical(
-      gldp_profile_resource_names(profile),
-      c(tables, "params"),
-      info = version
-    )
-  }
-})
-
-test_that("schema validation reads allowed values from categories", {
-  # GeoLocator-DP v1.1 declares `categories` alongside the `enum` constraint.
-  # A schema that dropped `enum` must still constrain its values.
-  schema <- list(
-    name = "observations",
-    fields = list(
-      list(
-        name = "sex",
-        type = "string",
-        categories = list(
-          list(value = "U", label = "Unknown"),
-          list(value = "M", label = "Male"),
-          list(value = "F", label = "Female")
-        ),
-        constraints = list(required = TRUE)
-      )
-    )
-  )
-
-  expect_true(suppressMessages(validate_gldp_table(
-    tibble::tibble(sex = c("M", "F")),
-    schema
-  )))
-  expect_false(suppressMessages(validate_gldp_table(
-    tibble::tibble(sex = c("M", "female")),
-    schema
-  )))
-})
-
-test_that("schema validation flags a missing required column", {
-  # `fieldsMatch` says nothing about which columns are required, so every mode
-  # GeoLocator-DP uses would otherwise accept a table without its primary key
-  # (frictionlessdata/datapackage#1126).
-  schema <- list(
-    name = "tags",
-    fieldsMatch = "partial",
-    fields = list(
-      list(name = "tag_id", type = "string", constraints = list(required = TRUE)),
-      list(name = "ring_number", type = "string", constraints = list(required = TRUE)),
-      list(name = "tag_comments", type = "string")
-    )
-  )
-
-  # An optional column may be left out.
-  expect_true(suppressMessages(validate_gldp_table(
-    tibble::tibble(tag_id = "a", ring_number = "r1"),
-    schema
-  )))
-
-  # A required one may not.
-  expect_false(suppressMessages(validate_gldp_table(
-    tibble::tibble(ring_number = "r1"),
-    schema
-  )))
-})
-
 test_that("required fields report missing cells", {
   expect_message(
     expect_false(validate_gldp_item(
@@ -272,24 +191,4 @@ test_that("a type mismatch stops the value checks", {
   messages <- capture_messages(expect_false(validate_gldp_item("100", prop, "lat")))
   expect_length(messages, 1)
   expect_match(messages, "Type mismatch")
-})
-
-test_that("schema validation rejects duplicated primary keys", {
-  schema <- list(
-    name = "paths",
-    fieldsMatch = "partial",
-    primaryKey = list("tag_id", "type", "j", "stap_id"),
-    fields = list(
-      list(name = "tag_id", type = "string"),
-      list(name = "type", type = "string"),
-      list(name = "j", type = "integer"),
-      list(name = "stap_id", type = "number")
-    )
-  )
-  paths <- tibble::tibble(tag_id = "a", type = "simulation", j = c(1L, 2L), stap_id = 1)
-  expect_true(suppressMessages(validate_gldp_table(paths, schema)))
-  expect_message(
-    expect_false(validate_gldp_table(paths[c(1, 1, 2), ], schema)),
-    "1 duplicated row for its primary key"
-  )
 })

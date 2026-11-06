@@ -464,21 +464,13 @@ read_soi_directory <- function(gdl, directory_data) {
     filter(is.na(.data$directory))
 
   if (nrow(missing_directory) > 0) {
-    details <- paste0(
-      "GDL_ID=",
-      missing_directory$GDL_ID,
-      " | OrderName=",
-      missing_directory$OrderName,
-      " | reason=",
-      missing_directory$directory_reason
+    details <- glue::glue(
+      "GDL_ID={missing_directory$GDL_ID} | OrderName={missing_directory$OrderName} | reason={missing_directory$directory_reason}"
     )
     cli_warn(c(
-      "!" = paste0(
-        "Could not find data directory for ",
-        nrow(missing_directory),
-        " tags (out of ",
-        nrow(gdl),
-        "). Rows are kept with {.field directory} = NA."
+      "!" = glue::glue(
+        "Could not find data directory for {nrow(missing_directory)} tags (out of {nrow(gdl)}). \\
+        Rows are kept with {{.field directory}} = NA."
       ),
       stats::setNames(as.list(details), rep("x", length(details)))
     ))

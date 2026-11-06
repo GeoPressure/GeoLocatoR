@@ -1,0 +1,3 @@
+tag_id,datapackage_id,ring_number,scientific_name,manufacturer,model,firmware,weight,attachment_type,readout_method,tag_comments
+22PH,https://doi.org/10.5281/zenodo.17367319,N897867,Curruca nisoria,Swiss Ornithological Institute,HW_GDL3pam_V2.3,FW_GDL3pam_V2.3.1,1.45,leg-harness,tag-retrieval,Harness material: silicone (VMQ 60)
+22PO,https://doi.org/10.5281/zenodo.17367319,N526030,Curruca nisoria,Swiss Ornithological Institute,HW_GDL3pam_V2.3,FW_GDL3pam_V2.3.1,1.48,leg-harness,tag-retrieval,Harness material: silicone (VMQ 60)
