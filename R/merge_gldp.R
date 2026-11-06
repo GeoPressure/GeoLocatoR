@@ -153,7 +153,7 @@ merge_gldp <- function(x, y = NULL, ...) {
     }
     as.character(tags$datapackage_id)
   })
-  source_ids <- unique(purrr::flatten_chr(source_ids))
+  source_ids <- unique(purrr::list_c(source_ids, ptype = character()))
   source_ids <- source_ids[!is.na(source_ids) & nzchar(trimws(source_ids))]
   source_related <- purrr::map(source_ids, \(id) {
     # DataCite expects a bare DOI ("10.5281/...") with the DOI type.
@@ -167,7 +167,7 @@ merge_gldp <- function(x, y = NULL, ...) {
     )
   })
   related_identifiers <- unique(c(
-    purrr::flatten(purrr::map(pkgs, \(pkg) pkg$relatedIdentifiers %||% list())),
+    purrr::list_flatten(purrr::map(pkgs, \(pkg) pkg$relatedIdentifiers %||% list())),
     source_related
   ))
 
@@ -190,9 +190,9 @@ merge_gldp <- function(x, y = NULL, ...) {
     code_repository[!is.na(code_repository) & nzchar(trimws(code_repository))]
   )
   contributors <- merge_gldp_contributors(
-    purrr::flatten(purrr::map(pkgs, \(pkg) pkg$contributors %||% list()))
+    purrr::list_flatten(purrr::map(pkgs, \(pkg) pkg$contributors %||% list()))
   )
-  licenses <- unique(purrr::flatten(purrr::map(pkgs, \(pkg) pkg$licenses %||% list())))
+  licenses <- unique(purrr::list_flatten(purrr::map(pkgs, \(pkg) pkg$licenses %||% list())))
 
   merged[["title"]] <- if (length(title_parts) > 0) {
     glue::glue_collapse(title_parts, sep = " / ")

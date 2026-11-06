@@ -171,7 +171,7 @@ gldp_profile_resource_names <- function(profile) {
     purrr::map(
       ~ .x$properties$name$enum %||% .x$properties$name$const %||% character(0)
     ) |>
-    purrr::flatten_chr()
+    purrr::list_c(ptype = character())
 }
 
 #' Table names a GeoLocator-DP profile declares
