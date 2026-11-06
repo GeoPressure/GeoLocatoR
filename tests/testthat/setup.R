@@ -1,17 +1,11 @@
 # This file runs once before all tests
 # It creates shared pkg objects that can be used across all test files
 
-# Read the shared package once, keeping the error when offline
-pkg_shared <- tryCatch(
-  suppressMessages(read_zenodo("17367320")),
-  error = identity
-)
+# Trimmed local copy of Zenodo record 17367320: the first two days of
+# measurements and pressurepaths of each tag, all other rows kept.
+pkg_shared <- suppressMessages(read_gldp(test_path("fixtures", "zenodo-17367320")))
 
-# Shared package, skipped offline
+# Shared package
 shared_pkg <- function() {
-  skip_if_offline("zenodo.org")
-  if (inherits(pkg_shared, "error")) {
-    stop(pkg_shared)
-  }
   pkg_shared
 }

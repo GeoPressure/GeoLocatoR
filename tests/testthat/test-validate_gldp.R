@@ -11,6 +11,13 @@ test_that("validate_gldp validates a strict geolocatordp", {
   expect_true(valid)
 })
 
+test_that("validate_gldp validates the Zenodo record behind the shared package", {
+  skip_on_cran()
+  skip_if_offline("zenodo.org")
+  pkg <- suppressMessages(read_zenodo("17367320"))
+  expect_true(suppressMessages(validate_gldp(pkg)))
+})
+
 test_that("validate_gldp_resources accepts v1 and v2 tabular resources", {
   # frictionless < 2.0 marks tabular resources with `profile`, >= 2.0 with
   # `type`. Both must validate.
