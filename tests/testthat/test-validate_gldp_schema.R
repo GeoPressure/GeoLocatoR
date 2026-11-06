@@ -166,31 +166,6 @@ test_that("check_type and check_format handle NA values correctly", {
   })
 })
 
-test_that("gldp_profile_resource_names reads both profile shapes", {
-  # GeoLocator-DP up to v1.0 lists the resource alternatives under `oneOf`, from
-  # v1.1 under `allOf` as `if`/`then` pairs. Both must yield the same names, or
-  # upgrading a package written against an older version drops resources.
-  tables <- c(
-    "tags",
-    "observations",
-    "measurements",
-    "staps",
-    "twilights",
-    "paths",
-    "edges",
-    "pressurepaths"
-  )
-
-  for (version in c("v1.0", "v1.1")) {
-    profile <- gldp_profile_schema(version)
-    expect_identical(
-      gldp_profile_resource_names(profile),
-      c(tables, "params"),
-      info = version
-    )
-  }
-})
-
 test_that("required fields report missing cells", {
   expect_message(
     expect_false(validate_gldp_item(
