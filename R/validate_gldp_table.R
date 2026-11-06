@@ -262,5 +262,9 @@ validate_gldp_foreign_keys <- function(pkg) {
     }
   }
 
+  if (valid) {
+    cli_alert_success("Foreign key checks passed.")
+  }
+
   invisible(valid)
 }
