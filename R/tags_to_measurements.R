@@ -131,7 +131,7 @@ tags_to_measurements <- function(tag_list, tags = lifecycle::deprecated()) {
           dplyr::bind_rows(tag_measurements)
         },
         error = function(e) {
-          value_types <- sapply(tag_measurements, function(x) class(x$value)[1])
+          value_types <- purrr::map_chr(tag_measurements, \(x) class(x$value)[1])
           cli_abort(
             c(
               "x" = glue::glue(
