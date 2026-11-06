@@ -146,7 +146,7 @@ validate_gldp_resources <- function(pkg) {
 
   # Only the tables GeoLocator-DP defines must be tabular. `params` and custom
   # resources may be any file, so they have no table schema to check against.
-  tables <- setdiff(gldp_profile_resource_names(gldp_profile_schema(gldp_version(pkg))), "params")
+  tables <- gldp_profile_table_names(gldp_profile_schema(gldp_version(pkg)))
 
   for (i in seq_along(pkg$resources)) {
     resource <- pkg$resources[[i]]
