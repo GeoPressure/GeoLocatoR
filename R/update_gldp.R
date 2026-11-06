@@ -73,7 +73,7 @@ gldp_update_order_resources <- function(pkg) {
   unknown <- is.na(rank)
   rank[unknown] <- length(resource_order) + seq_len(sum(unknown))
 
-  pkg$resources <- resources[order(rank)]
+  pkg[["resources"]] <- resources[order(rank)]
   pkg
 }
 
@@ -92,17 +92,17 @@ gldp_update_temporal <- function(pkg) {
 
   m <- measurements(pkg)
   if (!"datetime" %in% names(m)) {
-    pkg$temporal <- NULL
+    pkg[["temporal"]] <- NULL
     return(pkg)
   }
 
   datetime <- stats::na.omit(m$datetime)
   if (length(datetime) == 0) {
-    pkg$temporal <- NULL
+    pkg[["temporal"]] <- NULL
     return(pkg)
   }
 
-  pkg$temporal <- list(
+  pkg[["temporal"]] <- list(
     start = format(min(datetime), "%Y-%m-%d"),
     end = format(max(datetime), "%Y-%m-%d")
   )
@@ -118,13 +118,13 @@ gldp_update_taxonomic <- function(pkg) {
   resources <- frictionless::resource_names(pkg)
 
   if (!"tags" %in% resources) {
-    pkg$taxonomic <- NULL
+    pkg[["taxonomic"]] <- NULL
     return(pkg)
   }
 
   t <- tags(pkg)
   if (!("scientific_name" %in% names(t))) {
-    pkg$taxonomic <- NULL
+    pkg[["taxonomic"]] <- NULL
     return(pkg)
   }
 
@@ -145,7 +145,7 @@ gldp_update_taxonomic <- function(pkg) {
   }
 
   species <- unique(as.character(stats::na.omit(species)))
-  pkg$taxonomic <- if (length(species) > 0) species else NULL
+  pkg[["taxonomic"]] <- if (length(species) > 0) species else NULL
 
   pkg
 }
@@ -192,7 +192,7 @@ gldp_update_number_tags <- function(pkg) {
     out$pressurepaths <- length(unique(pp$tag_id))
   }
 
-  pkg$numberTags <- if (length(out) > 0) out else NULL
+  pkg[["numberTags"]] <- if (length(out) > 0) out else NULL
 
   pkg
 }
@@ -250,11 +250,11 @@ gldp_update_bibliographic_citation <- function(pkg, ...) {
 
   has_payload <- any(c("author", "doi", "title", "year", "publisher") %in% names(bib_args))
   if (!has_payload) {
-    pkg$bibliographicCitation <- NULL
+    pkg[["bibliographicCitation"]] <- NULL
     return(pkg)
   }
 
-  pkg$bibliographicCitation <- tryCatch(
+  pkg[["bibliographicCitation"]] <- tryCatch(
     {
       bib <- do.call(utils::bibentry, bib_args)
       format(bib, style = "text")

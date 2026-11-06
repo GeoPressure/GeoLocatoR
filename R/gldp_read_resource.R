@@ -194,7 +194,7 @@ gldp_materialize_tables <- function(pkg) {
       next
     }
     # Preserve the declared schema: validation must still detect missing columns.
-    pkg$resources[[i]] <- gldp_load_table(pkg, resource$name)
+    pkg[["resources"]][[i]] <- gldp_load_table(pkg, resource$name)
   }
   pkg
 }

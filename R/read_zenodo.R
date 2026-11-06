@@ -378,7 +378,7 @@ read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
   m <- z$metadata %||% list()
   doi <- z$doi %||% purrr::pluck(z, "pids", "doi", "identifier", .default = NULL)
   doi <- sub("^https?://(dx\\.)?doi\\.org/", "", as.character(doi)[1], ignore.case = TRUE)
-  pkg$id <- if (!is.na(doi) && nzchar(doi)) {
+  pkg[["id"]] <- if (!is.na(doi) && nzchar(doi)) {
     as.character(glue::glue("https://doi.org/{doi}"))
   } else {
     NULL
@@ -389,17 +389,17 @@ read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
   } else {
     NA_character_
   }
-  pkg$conceptid <- if (!is.na(concept_doi) && nzchar(concept_doi)) {
+  pkg[["conceptid"]] <- if (!is.na(concept_doi) && nzchar(concept_doi)) {
     as.character(glue::glue("https://doi.org/{concept_doi}"))
   } else {
     NULL
   }
-  pkg$name <- z$id
-  pkg$title <- m$title
-  pkg$description <- m$description
-  pkg$version <- m$version
-  pkg$created <- z$created
-  pkg$homepage <- z$links$self_html %||% NULL
+  pkg[["name"]] <- z$id
+  pkg[["title"]] <- m$title
+  pkg[["description"]] <- m$description
+  pkg[["version"]] <- m$version
+  pkg[["created"]] <- z$created
+  pkg[["homepage"]] <- z$links$self_html %||% NULL
   # Absent values are dropped rather than written as JSON null or empty arrays
   licenses <- purrr::map(m$rights %||% list(), \(x) {
     purrr::compact(list(
@@ -409,7 +409,7 @@ read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
     ))
   })
   pkg[["licenses"]] <- if (length(licenses) > 0) licenses
-  pkg$contributors <- purrr::map(m$creators %||% list(), \(creator) {
+  pkg[["contributors"]] <- purrr::map(m$creators %||% list(), \(creator) {
     orcid <- creator$person_or_org$identifiers |>
       purrr::keep(~ .x$scheme == "orcid") |>
       purrr::pluck(1, "identifier", .default = NULL)
@@ -430,7 +430,7 @@ read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
       }
     ))
   })
-  pkg$relatedIdentifiers <- purrr::map(m$related_identifiers %||% list(), \(x) {
+  pkg[["relatedIdentifiers"]] <- purrr::map(m$related_identifiers %||% list(), \(x) {
     list(
       relationType = x$relation_type$id %||% NULL,
       relatedIdentifier = x$identifier,
@@ -441,8 +441,10 @@ read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
   access_status <- tolower(
     as.character(z$access$status %||% z$access$record %||% "")[1]
   )
-  pkg$access_status <- if (nzchar(access_status)) access_status else NULL
-  pkg$embargo <- if (identical(pkg$access_status, "embargoed") || isTRUE(z$access$embargo$active)) {
+  pkg[["access_status"]] <- if (nzchar(access_status)) access_status else NULL
+  pkg[["embargo"]] <- if (
+    identical(pkg$access_status, "embargoed") || isTRUE(z$access$embargo$active)
+  ) {
     z$access$embargo$until %||% NULL
   } else {
     NULL
@@ -452,13 +454,13 @@ read_zenodo_attach_metadata <- function(pkg, zenodo_record) {
   pkg[["grants"]] <- if (length(grants) > 0) grants
   keywords <- purrr::compact(purrr::map(m$subjects %||% list(), \(x) x$subject))
   pkg[["keywords"]] <- if (length(keywords) > 0) keywords
-  pkg$codeRepository <- z$custom_fields$`code:codeRepository` %||% NULL
-  pkg$status <- z$status
-  pkg$record_type <- m$resource_type$id %||% NULL
-  pkg$publisher <- m$publisher
-  pkg$communities <- z$parent$communities$ids %||%
+  pkg[["codeRepository"]] <- z$custom_fields$`code:codeRepository` %||% NULL
+  pkg[["status"]] <- z$status
+  pkg[["record_type"]] <- m$resource_type$id %||% NULL
+  pkg[["publisher"]] <- m$publisher
+  pkg[["communities"]] <- z$parent$communities$ids %||%
     purrr::pluck(z, "parent", "review", "receiver", "community", .default = NULL)
-  pkg$is_published <- z$is_published
-  pkg$is_draft <- z$is_draft
+  pkg[["is_published"]] <- z$is_published
+  pkg[["is_draft"]] <- z$is_draft
   pkg
 }

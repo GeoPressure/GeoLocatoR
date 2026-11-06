@@ -67,9 +67,9 @@ select_gldp <- function(pkg, tag_id) {
     if ("ring_number" %in% names(data)) {
       keep <- keep | (is.na(data$tag_id) & data$ring_number %in% keep_rings)
     }
-    pkg$resources[[i]][["data"]] <- data[keep, , drop = FALSE]
+    pkg[["resources"]][[i]][["data"]] <- data[keep, , drop = FALSE]
     # Store the selected rows in memory; a resource cannot carry both data and path.
-    pkg$resources[[i]][["path"]] <- NULL
+    pkg[["resources"]][[i]][["path"]] <- NULL
   }
   # Drop the GeoPressureR parameters of the removed tags.
   pkg[["params"]] <- purrr::keep(

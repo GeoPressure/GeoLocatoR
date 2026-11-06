@@ -144,28 +144,28 @@ upgrade_gldp_v0_1_to_v0_2 <- function(x) {
   # citation -> bibliographicCitation
   # https://github.com/GeoPressure/GeoLocator-DP/commit/477f3899194edf2a31b93a1019d654714084eeb4
   if (!is.null(x$citation) && is.null(x$bibliographicCitation)) {
-    x$bibliographicCitation <- x$citation
+    x[["bibliographicCitation"]] <- x$citation
   }
 
   # reference_location -> referenceLocation
   # https://github.com/GeoPressure/GeoLocator-DP/commit/b9a1f0dc1d1788fcd5dcc3be4bf52ac3ac4c6de8
   if (!is.null(x$reference_location) && is.null(x$referenceLocation)) {
-    x$referenceLocation <- x$reference_location
+    x[["referenceLocation"]] <- x$reference_location
   }
 
   # Drop removed metadata fields.
   # https://github.com/GeoPressure/GeoLocator-DP/commit/db091f74245c1b521d3dbe2a3665452bf4f70c53
-  x$citation <- NULL
-  x$reference_location <- NULL
-  x$homepage <- NULL
-  x$image <- NULL
-  x$references <- NULL
-  x$name <- NULL
+  x[["citation"]] <- NULL
+  x[["reference_location"]] <- NULL
+  x[["homepage"]] <- NULL
+  x[["image"]] <- NULL
+  x[["references"]] <- NULL
+  x[["name"]] <- NULL
 
   # Add numberTags top-level field.
   # https://github.com/GeoPressure/GeoLocator-DP/commit/8e059382e1157fa9a97962f01a3bf05da600f7f7
   if (is.null(x$numberTags)) {
-    x$numberTags <- list()
+    x[["numberTags"]] <- list()
   }
 
   # Build spatial from referenceLocation when missing.
@@ -174,7 +174,7 @@ upgrade_gldp_v0_1_to_v0_2 <- function(x) {
     lat <- as.numeric(x$referenceLocation$latitude %||% NA_real_)
     lon <- as.numeric(x$referenceLocation$longitude %||% NA_real_)
     if (!is.na(lat) && !is.na(lon)) {
-      x$spatial <- list(type = "Point", coordinates = c(lon, lat))
+      x[["spatial"]] <- list(type = "Point", coordinates = c(lon, lat))
     }
   }
 

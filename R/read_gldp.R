@@ -130,7 +130,7 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
 
   # Drop measurements
   if (isTRUE(drop_measurements)) {
-    pkg$resources <- purrr::keep(pkg$resources, \(r) !identical(r$name, "measurements"))
+    pkg[["resources"]] <- purrr::keep(pkg$resources, \(r) !identical(r$name, "measurements"))
   }
 
   # Optionally load each resource table immediately into memory.
@@ -187,9 +187,9 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
   if (!grepl("^https?://", params_path)) {
     params_path <- file.path(base_dir, params_path)
   }
-  pkg$resources <- purrr::discard(pkg$resources, \(r) identical(r$name, "params"))
+  pkg[["resources"]] <- purrr::discard(pkg$resources, \(r) identical(r$name, "params"))
 
-  pkg$params <- list()
+  pkg[["params"]] <- list()
   # A remote package may have no params.json: one that cannot be opened is absent.
   params_json <- if (grepl("^https?://", params_path)) {
     tryCatch(readLines(params_path, warn = FALSE), error = \(e) NULL, warning = \(w) NULL)
@@ -198,7 +198,7 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
   }
   if (!is.null(params_json)) {
     params_json <- paste(params_json, collapse = "\n")
-    pkg$params <- tryCatch(
+    pkg[["params"]] <- tryCatch(
       {
         json <- jsonlite::parse_json(params_json)
         if (identical(json$type, "list") && "value" %in% names(json)) {
