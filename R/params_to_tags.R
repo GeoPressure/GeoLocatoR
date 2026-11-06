@@ -89,25 +89,6 @@ params_to_tags <- function(params) {
     tag_list[[i]] <- t
   }
 
-  # Combine all tags, with error reporting for type mismatches
-  tags_df <- tryCatch(
-    {
-      dplyr::bind_rows(tag_list)
-    },
-    error = function(e) {
-      col_types <- sapply(tag_list, function(x) {
-        paste(sapply(x, class), collapse = ", ")
-      })
-      cli_abort(
-        c(
-          "Type mismatch when combining tags in {.code params_to_tags}:",
-          "i" = glue::glue(
-            "Column types: {glue::glue_collapse(col_types, sep = ' | ')}"
-          ),
-          "x" = e$message
-        )
-      )
-    }
-  )
-  tags_df
+  # Combine all tags
+  dplyr::bind_rows(tag_list)
 }
