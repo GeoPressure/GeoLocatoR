@@ -283,7 +283,15 @@ upgrade_gldp_v0_4_to_v0_5 <- function(x) {
     }
 
     missing <- is.na(d$type) | trimws(as.character(d$type)) == ""
-    # v0.5 requires `type`; unresolved rows keep the historical default.
+    # v0.5 requires `type`; unresolved rows keep the historical default, with a warning
+    # because nothing in the package says which type they are.
+    if (any(missing)) {
+      cli_warn(c(
+        "!" = "Set {.field type} to {.val most_likely} for {sum(missing)} {.field edges}
+               row{?s} of {.val {unique(as.character(d$tag_id[missing]))}} whose type could
+               not be inferred."
+      ))
+    }
     d$type[missing] <- "most_likely"
     d$type <- as.character(d$type)
     d
