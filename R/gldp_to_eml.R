@@ -13,7 +13,7 @@
 #'   be useful for adapting it before writing with [EML::write_eml()].
 #'
 #' @return `eml.xml` file written to disk, unless `directory` is `NULL`.
-#'   Invisibly, an [EML::eml] object.
+#'   Invisibly, the EML document as a list, as accepted by [EML::write_eml()].
 #'
 #' @section Transformation details:
 #' Metadata are derived from the GeoLocator Data Package and transformed to EML.

@@ -15,7 +15,7 @@ be useful for adapting it before writing with \code{\link[EML:write_eml]{EML::wr
 }
 \value{
 \code{eml.xml} file written to disk, unless \code{directory} is \code{NULL}.
-Invisibly, an \link[EML:eml]{EML::eml} object.
+Invisibly, the EML document as a list, as accepted by \code{\link[EML:write_eml]{EML::write_eml()}}.
 }
 \description{
 Transforms a \href{https://geopressure.org/GeoLocator-DP/}{GeoLocator Data Package (GLDP)}
