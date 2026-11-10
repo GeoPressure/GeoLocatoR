@@ -196,3 +196,26 @@ test_that("gldp_cast_table makes non-integer values NA with a warning", {
   expect_identical(out$count, c(NA, 2L, NA))
   expect_identical(out$year, c(NA, 2021L, NA))
 })
+
+test_that("gldp_cast_table casts booleans with trueValues and falseValues", {
+  schema <- list(
+    fields = list(
+      list(name = "a", type = "boolean"),
+      list(name = "b", type = "boolean", trueValues = "yes", falseValues = "no"),
+      list(name = "c", type = "boolean", trueValues = "yes")
+    )
+  )
+  data <- data.frame(
+    a = c("1", "0", "true", "FALSE", "yes", NA),
+    b = c("yes", "no", "yes", "no", "1", NA),
+    c = c(TRUE, FALSE, TRUE, FALSE, TRUE, NA)
+  )
+
+  warnings <- capture_warnings(gldp_cast_table(data, schema))
+  expect_length(warnings, 2)
+  expect_match(warnings, "became NA when cast to \"boolean\"")
+  out <- suppressWarnings(gldp_cast_table(data, schema))
+  expect_identical(out$a, c(TRUE, FALSE, TRUE, FALSE, NA, NA))
+  expect_identical(out$b, c(TRUE, FALSE, TRUE, FALSE, NA, NA))
+  expect_identical(out$c, data$c)
+})

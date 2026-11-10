@@ -227,8 +227,8 @@ schema_field_names <- function(schema) {
 #'
 #' Internal helper function to cast data frame columns to the appropriate types
 #' based on a table schema specification. Values that cannot be cast to a
-#' number, integer, year, date or datetime become `NA` with a warning of class
-#' `gldp_warning_cast_loss`.
+#' number, integer, boolean, year, date or datetime become `NA` with a warning of
+#' class `gldp_warning_cast_loss`.
 #'
 #' @param data A data frame to cast
 #' @param schema A table schema object with field definitions
@@ -261,7 +261,17 @@ gldp_cast_table <- function(data, schema) {
         value[which(value != trunc(value))] <- NA
         data[[field]] <- suppressWarnings(as.integer(value))
       } else if (type == "boolean") {
-        data[[field]] <- as.logical(data[[field]])
+        # Match the field's trueValues and falseValues, or the Table Schema defaults;
+        # other values become NA, reported below. Logical columns are already cast.
+        if (!is.logical(data[[field]])) {
+          f <- schema$fields[[i]]
+          value <- as.character(data[[field]])
+          data[[field]] <- case_when(
+            value %in% (f$trueValues %||% c("true", "True", "TRUE", "1")) ~ TRUE,
+            value %in% (f$falseValues %||% c("false", "False", "FALSE", "0")) ~ FALSE,
+            .default = NA
+          )
+        }
       } else if (type == "date") {
         value <- data[[field]]
         # Strings are read as ISO 8601 only; others become NA, reported below.
@@ -324,7 +334,7 @@ gldp_cast_table <- function(data, schema) {
       }
 
       # Report non-missing values the cast turned into NA; empty strings count as missing.
-      if (type %in% c("number", "integer", "year", "date", "datetime")) {
+      if (type %in% c("number", "integer", "boolean", "year", "date", "datetime")) {
         lost <- is.na(data[[field]]) & !is.na(original)
         n_lost <- sum(nzchar(trimws(as.character(original[lost]))))
         if (n_lost > 0) {
