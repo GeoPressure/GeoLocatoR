@@ -87,14 +87,15 @@ validate_gldp_geopressure_coherence <- function(pkg) {
     }
   }
 
-  # Validate durations between paired date columns.
+  # Validate durations between paired date columns; `min_duration` and `max_duration`
+  # are in seconds.
   check_duration_window <- function(
     data,
     resource_name,
     start_field,
     end_field,
-    min_seconds,
-    max_seconds,
+    min_duration,
+    max_duration,
     warn_unusual = FALSE
   ) {
     if (
@@ -109,7 +110,7 @@ validate_gldp_geopressure_coherence <- function(pkg) {
     duration <- as.numeric(difftime(end, start, units = "secs"))
 
     invalid <- !is.na(duration) &
-      (duration <= min_seconds | duration >= max_seconds)
+      (duration <= min_duration | duration >= max_duration)
     if (any(invalid)) {
       format_duration <- function(seconds) {
         if (abs(seconds) >= 24 * 60 * 60) {
@@ -121,9 +122,9 @@ validate_gldp_geopressure_coherence <- function(pkg) {
         glue::glue("{round(seconds / 60, 1)} min")
       }
       invalid_duration <- duration[invalid]
-      expected_range_label <- purrr::map_chr(c(min_seconds, max_seconds), format_duration)
-      invalid_high <- invalid_duration[invalid_duration >= max_seconds]
-      invalid_low <- invalid_duration[invalid_duration <= min_seconds]
+      expected_range_label <- purrr::map_chr(c(min_duration, max_duration), format_duration)
+      invalid_high <- invalid_duration[invalid_duration >= max_duration]
+      invalid_low <- invalid_duration[invalid_duration <= min_duration]
 
       if (length(invalid_high) > 0) {
         extreme_label <- format_duration(max(invalid_high))
@@ -157,8 +158,8 @@ validate_gldp_geopressure_coherence <- function(pkg) {
       "staps",
       "start",
       "end",
-      min_seconds = 5 * 60,
-      max_seconds = 360 * 24 * 60 * 60
+      min_duration = 5 * 60,
+      max_duration = 360 * 24 * 60 * 60
     )
   }
 
@@ -217,8 +218,8 @@ validate_gldp_geopressure_coherence <- function(pkg) {
       "edges",
       "start",
       "end",
-      min_seconds = 5 * 60,
-      max_seconds = 50 * 60 * 60,
+      min_duration = 5 * 60,
+      max_duration = 50 * 60 * 60,
       warn_unusual = TRUE
     )
     check_lt(edges_data, "edges", "n", 10)
