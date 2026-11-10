@@ -213,3 +213,12 @@ test_that("update_gldp reads each file-backed table once", {
     expect_identical(out[[field]], eager[[field]])
   }
 })
+
+test_that("gldp_update_bibliographic_citation warns when the citation cannot be built", {
+  pkg <- shared_pkg()
+  expect_warning(
+    out <- gldp_update_bibliographic_citation(pkg, bibtype = "Article"),
+    "could not be built"
+  )
+  expect_null(out$bibliographicCitation)
+})

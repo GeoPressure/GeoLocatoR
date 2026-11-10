@@ -260,6 +260,10 @@ gldp_update_bibliographic_citation <- function(pkg, ...) {
       format(bib, style = "text")
     },
     error = function(e) {
+      cli_warn(c(
+        "!" = "{.field bibliographicCitation} could not be built and is removed.",
+        "x" = "{conditionMessage(e)}"
+      ))
       NULL
     }
   )
