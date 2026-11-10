@@ -143,7 +143,7 @@ read_soi_gld <- function(
     gdl <- select(gdl, all_of(filter_col))
   }
 
-  return(gdl)
+  gdl
 }
 
 #' @noRd

@@ -65,7 +65,7 @@ validate_gldp_object <- function(
   defs = NULL,
   ignore_fields = c("directory")
 ) {
-  name <- glue::glue("{name}{ifelse(name=='','','$')}")
+  name <- glue::glue("{name}{if (name == '') '' else '$'}")
 
   valid <- TRUE
   fields <- setdiff(names(obj), ignore_fields)
@@ -156,7 +156,7 @@ validate_gldp_object <- function(
       valid <<- FALSE
     }
   })
-  return(valid)
+  valid
 }
 
 #' Resolve a local schema reference

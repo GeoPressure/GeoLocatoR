@@ -147,7 +147,7 @@ add_gldp_resource <- function(
 
   gldp_resource(pkg, resource_name) <- gldp_mark_table_resource(gldp_resource(pkg, resource_name))
 
-  return(pkg)
+  pkg
 }
 
 #' Mark a resource descriptor as a GeoLocator-DP table

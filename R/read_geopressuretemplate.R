@@ -614,10 +614,10 @@ read_geopressuretemplate <- function(
       cli_inform("No tag/observation/measurement data found to add.")
     }
 
-    return(pkg)
+    pkg
   })
 
-  return(pkg)
+  pkg
 }
 
 #' Convert raw tag ID to tag object
@@ -698,7 +698,7 @@ raw_tag_id_to_tag <- function(id) {
 
   tag$param$bird_create <- config$bird_create
 
-  return(tag)
+  tag
 }
 
 
