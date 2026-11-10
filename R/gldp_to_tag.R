@@ -166,10 +166,6 @@ gldp_to_tag_single <- function(pkg, tid, tables) {
   tag_meta <- tables$tags |>
     dplyr::filter(.data$tag_id == tid)
 
-  if (nrow(tag_meta) == 0) {
-    cli_abort("Tag ID {.val {tid}} not found in tags table.")
-  }
-
   # Reuse saved GeoPressureR parameters when available.
   param_saved <- purrr::detect(pkg$params, \(x) identical(x$id, tid))
   param <- GeoPressureR::param_create(id = tid)
