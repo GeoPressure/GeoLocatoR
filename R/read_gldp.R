@@ -182,6 +182,7 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
 
   # GeoLocatoR < 1.5.0 wrote params.json without declaring the `params` resource.
   # Params are kept in `pkg$params`, and write_gldp() declares the resource again.
+  params_declared <- !is.null(gldp_resource(pkg, "params"))
   params_path <- gldp_resource(pkg, "params")$path %||% "params.json"
   if (!grepl("^https?://", params_path)) {
     params_path <- file.path(base_dir, params_path)
@@ -189,10 +190,11 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
   pkg[["resources"]] <- purrr::discard(pkg$resources, \(r) identical(r$name, "params"))
 
   pkg[["params"]] <- list()
-  # A remote package may have no params.json: one that cannot be opened is absent.
-  params_json <- if (grepl("^https?://", params_path)) {
+  # A remote package that does not declare params may have no params.json: one that
+  # cannot be opened is absent. A declared params.json that cannot be read is an error.
+  params_json <- if (grepl("^https?://", params_path) && !params_declared) {
     tryCatch(readLines(params_path, warn = FALSE), error = \(e) NULL, warning = \(w) NULL)
-  } else if (file.exists(params_path)) {
+  } else if (params_declared || file.exists(params_path)) {
     readLines(params_path, warn = FALSE)
   }
   if (!is.null(params_json)) {

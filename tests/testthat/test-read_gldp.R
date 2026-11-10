@@ -343,6 +343,16 @@ test_that("write_gldp/read_gldp roundtrip keeps pkg$params via params.json", {
   expect_equal(pkg_back$params[[1]]$id, "TEST-PARAM")
 })
 
+test_that("read_gldp fails when a declared params.json cannot be read", {
+  pkg <- shared_pkg()
+  pkg[["params"]] <- list(GeoPressureR::param_create("TEST-PARAM", default = TRUE))
+  out_dir <- withr::local_tempdir()
+  write_gldp(pkg, directory = out_dir)
+  unlink(file.path(out_dir, "params.json"))
+
+  expect_error(suppressWarnings(read_gldp(file.path(out_dir, "datapackage.json"))))
+})
+
 test_that("write_gldp does not write an empty params.json", {
   directory <- tempfile("write-no-params-")
   on.exit(unlink(directory, recursive = TRUE), add = TRUE)
