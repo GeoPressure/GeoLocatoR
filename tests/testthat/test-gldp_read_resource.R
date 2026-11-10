@@ -184,3 +184,15 @@ test_that("gldp_cast_table converts a datetime with a UTC offset to UTC", {
     as.POSIXct(c("2020-01-01 10:00:00", "2020-01-01 17:30:00", "2020-01-01 12:00:00"), tz = "UTC")
   )
 })
+
+test_that("gldp_cast_table makes non-integer values NA with a warning", {
+  schema <- list(
+    fields = list(list(name = "count", type = "integer"), list(name = "year", type = "year"))
+  )
+  data <- data.frame(count = c("1.7", "2", NA), year = c(2020.5, 2021, NA))
+
+  expect_length(capture_warnings(gldp_cast_table(data, schema)), 2)
+  out <- suppressWarnings(gldp_cast_table(data, schema))
+  expect_identical(out$count, c(NA, 2L, NA))
+  expect_identical(out$year, c(NA, 2021L, NA))
+})

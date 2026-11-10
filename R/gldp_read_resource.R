@@ -254,8 +254,12 @@ gldp_cast_table <- function(data, schema) {
       } else if (type == "number") {
         # Lost values are reported below, so the base coercion warning is not needed.
         data[[field]] <- suppressWarnings(as.numeric(data[[field]]))
-      } else if (type == "integer") {
-        data[[field]] <- suppressWarnings(as.integer(data[[field]]))
+      } else if (type %in% c("integer", "year")) {
+        # A value with a fractional part is not an integer: make it NA, reported below,
+        # rather than truncate it.
+        value <- suppressWarnings(as.numeric(data[[field]]))
+        value[which(value != trunc(value))] <- NA
+        data[[field]] <- suppressWarnings(as.integer(value))
       } else if (type == "boolean") {
         data[[field]] <- as.logical(data[[field]])
       } else if (type == "date") {
@@ -297,9 +301,6 @@ gldp_cast_table <- function(data, schema) {
         if (!is.character(data[[field]])) {
           data[[field]] <- as.character(data[[field]])
         }
-      } else if (type == "year") {
-        # For year fields, convert to integer
-        data[[field]] <- suppressWarnings(as.integer(data[[field]]))
       } else if (type == "yearmonth") {
         # For yearmonth fields, keep as character
         data[[field]] <- as.character(data[[field]])
