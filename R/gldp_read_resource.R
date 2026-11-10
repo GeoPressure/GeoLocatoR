@@ -273,11 +273,22 @@ gldp_cast_table <- function(data, schema) {
         data[[field]] <- if (is.character(value)) {
           value[!grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}", value)] <- NA
           value <- sub("T", " ", value, fixed = TRUE)
+          # Strip a trailing `Z` or UTC offset (`+02:00`, `-0530`) after the time and
+          # shift the parsed time by it, so that the value is stored in UTC.
+          zone <- "^(.*[0-9]:[0-9]{2}(:[0-9]{2}(\\.[0-9]*)?)?) ?(Z|([+-])([0-9]{2}):?([0-9]{2}))$"
+          zoned <- grepl(zone, value)
+          offset <- numeric(length(value))
+          offset[zoned] <- as.numeric(sub(zone, "\\51", value[zoned])) *
+            (as.numeric(sub(zone, "0\\6", value[zoned])) *
+              3600 +
+              as.numeric(sub(zone, "0\\7", value[zoned])) * 60)
+          value[zoned] <- sub(zone, "\\1", value[zoned])
           purrr::map(
             c("%Y-%m-%d %H:%M:%OS", "%Y-%m-%d %H:%M", "%Y-%m-%d"),
             \(format) as.POSIXct(strptime(value, format, tz = "UTC"))
           ) |>
-            purrr::reduce(coalesce)
+            purrr::reduce(coalesce) -
+            offset
         } else {
           as.POSIXct(value, tz = "UTC")
         }

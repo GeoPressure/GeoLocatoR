@@ -171,3 +171,16 @@ test_that("gldp_cast_table turns an unparsable first date or datetime into NA", 
     as.POSIXct(c(NA, "2020-01-02 03:04:05", "2020-01-02 03:04:00"), tz = "UTC")
   )
 })
+
+test_that("gldp_cast_table converts a datetime with a UTC offset to UTC", {
+  schema <- list(fields = list(list(name = "time", type = "datetime")))
+  data <- data.frame(
+    time = c("2020-01-01T12:00:00+02:00", "2020-01-01T12:00:00-0530", "2020-01-01T12:00Z")
+  )
+
+  expect_no_warning(out <- gldp_cast_table(data, schema))
+  expect_identical(
+    out$time,
+    as.POSIXct(c("2020-01-01 10:00:00", "2020-01-01 17:30:00", "2020-01-01 12:00:00"), tz = "UTC")
+  )
+})
