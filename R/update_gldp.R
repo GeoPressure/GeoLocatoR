@@ -23,6 +23,7 @@
 #'   selected derived properties automatically.
 #' @export
 update_gldp <- function(pkg, ...) {
+  check_gldp(pkg)
   pkg <- gldp_update_order_resources(pkg)
 
   # Several derived fields read tags and measurements: a copy holding the
@@ -51,7 +52,6 @@ update_gldp <- function(pkg, ...) {
 #'
 #' @noRd
 gldp_update_order_resources <- function(pkg) {
-  check_gldp(pkg)
   version <- gldp_version(pkg)
 
   pkg_schema <- gldp_profile_schema(version)
@@ -82,7 +82,6 @@ gldp_update_order_resources <- function(pkg) {
 #'
 #' @noRd
 gldp_update_temporal <- function(pkg) {
-  check_gldp(pkg)
   resources <- frictionless::resource_names(pkg)
 
   # Without measurements (e.g. `read_gldp(drop_measurements = TRUE)`), keep the recorded coverage.
@@ -114,7 +113,6 @@ gldp_update_temporal <- function(pkg) {
 #'
 #' @noRd
 gldp_update_taxonomic <- function(pkg) {
-  check_gldp(pkg)
   resources <- frictionless::resource_names(pkg)
 
   if (!"tags" %in% resources) {
@@ -154,7 +152,6 @@ gldp_update_taxonomic <- function(pkg) {
 #'
 #' @noRd
 gldp_update_number_tags <- function(pkg) {
-  check_gldp(pkg)
   resources <- frictionless::resource_names(pkg)
 
   out <- list()
@@ -201,8 +198,6 @@ gldp_update_number_tags <- function(pkg) {
 #'
 #' @noRd
 gldp_update_bibliographic_citation <- function(pkg, ...) {
-  check_gldp(pkg)
-
   # First DOI among the concept id (citing all versions) and the version id.
   doi_candidates <- sub(
     "^https?://(dx\\.)?doi\\.org/",
