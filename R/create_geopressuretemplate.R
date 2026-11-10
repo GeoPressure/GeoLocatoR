@@ -337,8 +337,6 @@ create_geopressuretemplate_licenses <- function(pkg) {
 
 #' @noRd
 create_geopressuretemplate_data <- function(pkg) {
-  check_gldp(pkg)
-
   # Tags and observations
   readr::write_csv(tags(pkg), "./data/tags.csv")
   readr::write_csv(observations(pkg), "./data/observations.csv")
@@ -427,8 +425,6 @@ create_geopressuretemplate_data <- function(pkg) {
 
 #' @noRd
 create_geopressuretemplate_config <- function(pkg) {
-  check_gldp(pkg)
-
   t <- tags(pkg)
   o <- observations(pkg)
   m <- measurements(pkg)

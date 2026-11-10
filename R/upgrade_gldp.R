@@ -1,7 +1,5 @@
 #' @noRd
 upgrade_gldp <- function(x, to_version = .gldp_default_version) {
-  check_gldp(x)
-
   from_version <- gldp_version(x)
 
   if (!to_version %in% .gldp_supported_versions) {
