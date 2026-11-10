@@ -98,6 +98,24 @@ test_that("upgrade_gldp coerces legacy non-numeric IDs without a cast warning", 
   expect_true(is.na(paths(upgraded)$stap_id))
 })
 
+test_that("upgrade_gldp warns when a non-ID value is lost", {
+  pkg <- create_gldp(version = "v0.6")
+  pkg[["resources"]] <- list(list(
+    name = "paths",
+    data = data.frame(
+      tag_id = "tag-1",
+      stap_id = "stap-1",
+      type = "most_likely",
+      lat = "north",
+      j = "j-1"
+    )
+  ))
+
+  warnings <- suppressMessages(capture_warnings(upgrade_gldp(pkg)))
+  expect_true(length(warnings) > 0)
+  expect_true(all(grepl("lat", warnings)))
+})
+
 test_that("upgrade_gldp starts a main package at v0.1", {
   main <- "https://raw.githubusercontent.com/GeoPressure/GeoLocator-DP/main/geolocator-dp-profile.json"
   make_pkg <- function(schema, tags, observations) {

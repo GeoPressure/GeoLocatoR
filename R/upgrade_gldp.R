@@ -29,13 +29,16 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
 
   cli_alert_success("Upgrading GeoLocator-DP from {.val {from_version}} to {.val {to_version}}.")
 
-  # Legacy packages carry non-numeric IDs (e.g. `stap_id = "stap-1"`) in fields
-  # that later schemas type as numbers. Coercing them to NA is the intended
-  # migration, so the gldp_cast_table() warning about lost values is muffled here.
+  # Legacy packages carry non-numeric IDs (e.g. `stap_id = "stap-1"`) in the stationary
+  # period and trajectory fields, which the schemas type as numbers. Coercing them to NA
+  # is the intended migration, so the gldp_cast_table() warning about lost values is
+  # muffled for these fields only; any other lost value still warns.
   quiet_cast <- function(expr) {
     withCallingHandlers(
       expr,
-      gldp_warning_cast_loss = \(w) invokeRestart("muffleWarning")
+      gldp_warning_cast_loss = \(w) {
+        if (w$field %in% c("stap_id", "stap_s", "stap_t", "j")) invokeRestart("muffleWarning")
+      }
     )
   }
 

@@ -224,7 +224,7 @@ schema_field_names <- function(schema) {
 #' Internal helper function to cast data frame columns to the appropriate types
 #' based on a table schema specification. Values that cannot be cast to a
 #' number, integer, boolean, year, date or datetime become `NA` with a warning of
-#' class `gldp_warning_cast_loss`.
+#' class `gldp_warning_cast_loss`, whose `field` element names the field.
 #'
 #' @param data A data frame to cast
 #' @param schema A table schema object with field definitions
@@ -339,7 +339,8 @@ gldp_cast_table <- function(data, schema) {
               "!" = "{format(n_lost, big.mark = ',')} non-missing {cli::qty(n_lost)}value{?s} of {.field {field}} \\
               became NA when cast to {.val {type}}."
             ),
-            class = "gldp_warning_cast_loss"
+            class = "gldp_warning_cast_loss",
+            field = field
           )
         }
       }
