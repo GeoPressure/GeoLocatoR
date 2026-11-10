@@ -14,8 +14,8 @@ NULL
 #'
 #' @param pkg A GeoLocator Data Package object.
 #' @param resource A resource descriptor.
-#' @return Character vector of column names, or `NULL` when the file cannot be
-#'   read or the resource has no file.
+#' @return Character vector of column names, or `NULL` when the resource has no
+#'   path or its local file does not exist.
 #' @noRd
 gldp_resource_header <- function(pkg, resource) {
   path <- as.character(resource$path %||% character(0))[1]
@@ -34,20 +34,16 @@ gldp_resource_header <- function(pkg, resource) {
   }
 
   # Only the header is needed, so the rest of the file is never parsed.
-  tryCatch(
-    names(readr::read_delim(
-      path,
-      delim = as.character(resource$dialect$delimiter %||% ",")[1],
-      n_max = 0,
-      show_col_types = FALSE,
-      progress = FALSE,
-      locale = readr::locale(
-        encoding = as.character(resource$encoding %||% "UTF-8")[1]
-      )
-    )),
-    error = \(e) NULL,
-    warning = \(w) NULL
-  )
+  names(readr::read_delim(
+    path,
+    delim = as.character(resource$dialect$delimiter %||% ",")[1],
+    n_max = 0,
+    show_col_types = FALSE,
+    progress = FALSE,
+    locale = readr::locale(
+      encoding = as.character(resource$encoding %||% "UTF-8")[1]
+    )
+  ))
 }
 
 #' Match a resource schema to the columns its file actually has

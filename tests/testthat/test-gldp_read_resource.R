@@ -100,6 +100,16 @@ test_that("a remote package reads the header of a relative path from its URL", {
   expect_identical(header, "tag_id")
 })
 
+test_that("gldp_resource_header lets an unreadable file fail", {
+  # Returning NULL would skip the alignment and fall back to positional matching.
+  directory <- withr::local_tempdir()
+  dir.create(file.path(directory, "tags.csv"))
+  pkg <- create_gldp()
+  attr(pkg, "directory") <- directory
+
+  expect_error(suppressWarnings(gldp_resource_header(pkg, list(path = "tags.csv"))))
+})
+
 test_that("file-backed and loaded reads report one named parsing warning", {
   # The example measurements use `acceleration`, which is not a v1.2 sensor.
   directory <- test_path("fixtures", "geolocator-dp-example")
