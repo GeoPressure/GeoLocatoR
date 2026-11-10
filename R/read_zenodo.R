@@ -28,6 +28,9 @@
 #' schema, which is not loaded into memory, keeps a `path` into that deleted
 #' folder.
 #'
+#' A published record is read without authentication unless `token` is given,
+#' so its restricted or embargoed files are only read with `token =`.
+#'
 #' To read a draft:
 #' 1. Create or identify the Zenodo deposition and note its record id.
 #' 2. Obtain a Zenodo access token with permission to view that draft.
@@ -37,7 +40,7 @@
 #' 4. Call `read_zenodo(id, draft = TRUE)`, and set `sandbox = TRUE` when the
 #'    draft is hosted on Zenodo Sandbox.
 #'
-#' If `token = NULL`, token lookup is attempted in this order:
+#' If `draft = TRUE` and `token = NULL`, token lookup is attempted in this order:
 #' - for main Zenodo: `ZENODO_TOKEN`, then keyring service `ZENODO_TOKEN`;
 #' - for Zenodo Sandbox: `ZENODO_TOKEN_SANDBOX`, `ZENODO_TOKEN`, then keyring
 #'   services `ZENODO_TOKEN_SANDBOX` and `ZENODO_TOKEN`.
@@ -48,16 +51,18 @@
 #'   and `"https://zenodo.org/records/18467383"`. A Zenodo Sandbox record URL
 #'   or DOI (prefix `10.5072`) is read from Zenodo Sandbox; for a bare Sandbox
 #'   record id, set `sandbox = TRUE`.
-#' @param token Optional Zenodo access token for authenticated requests. Supply
-#'   it explicitly, or leave `NULL` to resolve it from environment variables or
-#'   the system keyring. Draft access usually requires a token.
+#' @param token Optional Zenodo access token for authenticated requests. A
+#'   token given here is always used. If `NULL`, a draft is read with a token
+#'   resolved from environment variables or the system keyring, and a published
+#'   record is read without authentication.
 #' @param draft Logical. If `TRUE`, read the draft version of the record instead
 #'   of the public record. This queries the draft endpoint
 #'   (`/api/records/{id}/draft`), which requires a token and permission
 #'   to access the deposition. Use this for unpublished records or when draft
 #'   files or metadata differ from the published record.
 #' @param sandbox Logical. If `TRUE`, query Zenodo Sandbox instead of the main
-#'   Zenodo service. This also switches token lookup to sandbox-first sources.
+#'   Zenodo service. This also switches draft token lookup to sandbox-first
+#'   sources.
 #' @param quiet Logical. If `TRUE`, suppress progress messages from
 #'   `read_zenodo()`.
 #' @param timeout Maximum time in seconds allowed to download each file.
@@ -98,7 +103,10 @@ read_zenodo <- function(
 ) {
   # A Sandbox record URL or DOI names a Sandbox record whatever `sandbox` says
   sandbox <- sandbox || grepl("sandbox\\.zenodo\\.org|10\\.5072/", id)
-  token <- resolve_zenodo_token(token = token, sandbox = sandbox)
+  # A stored token is used only for drafts, so published records are read as the public sees them
+  if (draft) {
+    token <- resolve_zenodo_token(token = token, sandbox = sandbox)
+  }
 
   # 1) Fetch Zenodo record
   if (!quiet) {
@@ -118,7 +126,6 @@ read_zenodo <- function(
   download_dir <- read_zenodo_download_files(
     zenodo_record = zenodo_record,
     token = token,
-    sandbox = sandbox,
     timeout = timeout
   )
 
@@ -255,7 +262,6 @@ parse_zenodo_id <- function(id) {
 read_zenodo_download_files <- function(
   zenodo_record,
   token = NULL,
-  sandbox = FALSE,
   timeout = 600
 ) {
   rec_url <- zenodo_record$links$self_html %||% ""
@@ -268,14 +274,9 @@ read_zenodo_download_files <- function(
     } else {
       "has no files you can access: they are restricted or embargoed."
     }
-    auth_hint <- if (isTRUE(sandbox)) {
-      "If you have access, pass {.arg token} or set {.envvar ZENODO_TOKEN_SANDBOX} (or {.envvar ZENODO_TOKEN})."
-    } else {
-      "If you have access, pass {.arg token} or set {.envvar ZENODO_TOKEN}."
-    }
     cli_warn(c(
       "!" = "Zenodo record {.url {rec_url}} {reason}",
-      "i" = if (!isFALSE(zenodo_record$files$enabled)) auth_hint,
+      "i" = if (!isFALSE(zenodo_record$files$enabled)) "If you have access, pass {.arg token}.",
       ">" = "A geolocator-dp object with only metadata is returned."
     ))
     return(NULL)

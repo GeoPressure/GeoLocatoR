@@ -107,24 +107,24 @@ test_that("resolve_zenodo_token falls back to default token in sandbox mode", {
   )
 })
 
-test_that("read_zenodo reuses sandbox-resolved token for fetch and download", {
+test_that("read_zenodo uses a stored token only for drafts", {
   withr::local_envvar(c(
     ZENODO_TOKEN_SANDBOX = "sandbox-token",
-    ZENODO_TOKEN = ""
+    ZENODO_TOKEN = "default-token"
   ))
 
-  fetch_token <- NULL
-  download_token <- NULL
+  fetch_token <- list()
+  download_token <- list()
   download_timeout <- NULL
 
   local_mocked_bindings(
     read_zenodo_fetch_record = function(id, token, draft, sandbox) {
-      fetch_token <<- token
+      fetch_token <<- c(fetch_token, list(token))
       list()
     },
-    read_zenodo_download_files = function(zenodo_record, token, sandbox, timeout) {
-      download_token <<- token
-      download_timeout <<- timeout
+    read_zenodo_download_files = function(zenodo_record, token, timeout) {
+      download_token <<- c(download_token, list(token))
+      download_timeout <<- c(download_timeout, timeout)
       NULL
     },
     create_gldp = function(...) {
@@ -135,12 +135,17 @@ test_that("read_zenodo reuses sandbox-resolved token for fetch and download", {
     .package = "GeoLocatoR"
   )
 
-  suppressMessages({
-    expect_no_error(read_zenodo("470406", sandbox = TRUE, timeout = 1200))
-  })
-  expect_equal(fetch_token, "sandbox-token")
-  expect_equal(download_token, "sandbox-token")
-  expect_equal(download_timeout, 1200)
+  # Draft: stored sandbox token for fetch and download
+  read_zenodo("470406", sandbox = TRUE, draft = TRUE, timeout = 1200, quiet = TRUE)
+  # Published: no token unless given explicitly
+  read_zenodo("470406", sandbox = TRUE, quiet = TRUE)
+  read_zenodo("470406", quiet = TRUE)
+  read_zenodo("470406", token = "explicit-token", quiet = TRUE)
+
+  expected <- list("sandbox-token", NULL, NULL, "explicit-token")
+  expect_identical(fetch_token, expected)
+  expect_identical(download_token, expected)
+  expect_equal(download_timeout[1], 1200)
 })
 
 test_that("read_zenodo reads a Sandbox URL or DOI from Zenodo Sandbox", {
@@ -151,7 +156,7 @@ test_that("read_zenodo reads a Sandbox URL or DOI from Zenodo Sandbox", {
       fetch_sandbox <<- c(fetch_sandbox, sandbox)
       list()
     },
-    read_zenodo_download_files = function(zenodo_record, token, sandbox, timeout) NULL,
+    read_zenodo_download_files = function(zenodo_record, token, timeout) NULL,
     read_zenodo_attach_metadata = function(pkg, zenodo_record) pkg,
     update_gldp = function(pkg) pkg,
     .package = "GeoLocatoR"
@@ -313,7 +318,7 @@ test_that("read_zenodo deletes the downloaded files after reading", {
   local_mocked_bindings(
     resolve_zenodo_token = function(token = NULL, sandbox = FALSE) NULL,
     read_zenodo_fetch_record = function(id, token, draft, sandbox) list(),
-    read_zenodo_download_files = function(zenodo_record, token, sandbox, timeout) download_dir,
+    read_zenodo_download_files = function(zenodo_record, token, timeout) download_dir,
     read_gldp = function(x, force_read) {
       read_args <<- list(x = x, force_read = force_read)
       create_gldp()
