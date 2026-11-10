@@ -70,6 +70,17 @@ read_soi <- function(
 
   # Retrieve directory of all data and display warning message if absent
   if (!("directory" %in% names(gdl))) {
+    # Check if the required columns are present
+    if (!all(c("OrderName", "GDL_ID") %in% colnames(gdl))) {
+      cli_abort(c(
+        "x" = "{.arg gdl} must contain {.field OrderName} and {.field GDL_ID} columns."
+      ))
+    }
+    if (!dir.exists(directory_data)) {
+      cli_abort(c(
+        "x" = "{.arg directory_data} must be an existing directory."
+      ))
+    }
     cli_progress_step("Retrieving data directories for SOI tags")
     gdl <- read_soi_directory(gdl, directory_data)
   }
@@ -387,18 +398,6 @@ read_soi <- function(
 #' @return Updated GDL object with directory information
 #' @noRd
 read_soi_directory <- function(gdl, directory_data) {
-  # Check if the required columns are present
-  if (!all(c("OrderName", "GDL_ID") %in% colnames(gdl))) {
-    cli_abort(c(
-      "x" = "{.arg gdl} must contain {.field OrderName} and {.field GDL_ID} columns."
-    ))
-  }
-  if (!dir.exists(directory_data)) {
-    cli_abort(c(
-      "x" = "{.arg directory_data} must be an existing directory."
-    ))
-  }
-
   # Function to retrieve data directory path and an optional issue description
   check_folder_exists <- function(order_name, gdl_id, base_dir) {
     if (length(order_name) != 1 || is.na(order_name) || order_name == "") {
