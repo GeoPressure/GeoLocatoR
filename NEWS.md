@@ -1,5 +1,13 @@
 # GeoLocatoR (development version)
 
+- Resource setters, `add_gldp_resource()`, `merge_gldp()` and upgrades cast values by the Table Schema rules: [a datetime with a UTC offset is converted to UTC](https://github.com/GeoPressure/GeoLocatoR/commit/157b7fc), [a non-integer value of an `integer` or `year` field becomes `NA` with a warning instead of being truncated](https://github.com/GeoPressure/GeoLocatoR/commit/8c4aa24), and [`boolean` fields use `trueValues` and `falseValues` (default `true`/`false`, `1`/`0`), with a warning for other values](https://github.com/GeoPressure/GeoLocatoR/commit/fc171ac).
+- `read_geopressuretemplate()` [warns when a label file cannot be applied to a raw tag](https://github.com/GeoPressure/GeoLocatoR/commit/16a0d81).
+- `read_gldp()` [fails when a declared `params.json` cannot be read](https://github.com/GeoPressure/GeoLocatoR/commit/bf062fe) and [when the header of a resource file cannot be read](https://github.com/GeoPressure/GeoLocatoR/commit/61eb878), instead of dropping params or matching columns by position.
+- `update_gldp()` [warns when `bibliographicCitation` cannot be built](https://github.com/GeoPressure/GeoLocatoR/commit/a2512c2).
+- Upgrading a v0.4 package [warns when an `edges` `type` cannot be inferred and is set to `most_likely`](https://github.com/GeoPressure/GeoLocatoR/commit/64ae74f).
+- `tags_to_measurements()` [fails on a tag that is not a list](https://github.com/GeoPressure/GeoLocatoR/commit/b9f2b56).
+- [`gldp_to_eml()` documents that it returns the EML document as a list](https://github.com/GeoPressure/GeoLocatoR/commit/707679c).
+- Internal: validation only at entry points ([1](https://github.com/GeoPressure/GeoLocatoR/commit/4b15b05)) ([2](https://github.com/GeoPressure/GeoLocatoR/commit/364ece7)) ([3](https://github.com/GeoPressure/GeoLocatoR/commit/a2fd8ef)) ([4](https://github.com/GeoPressure/GeoLocatoR/commit/4918a24)), and [style](https://github.com/GeoPressure/GeoLocatoR/commit/cd3c6af) ([2](https://github.com/GeoPressure/GeoLocatoR/commit/afc8dc6)).
 - `gldp_to_tag()` [documents that it needs the `measurements` resource and aborts early without it](https://github.com/GeoPressure/GeoLocatoR/commit/c2e12b9).
 - `merge_gldp()` [says how to resolve a duplicate `tag_id`](https://github.com/GeoPressure/GeoLocatoR/commit/c25f997).
 - [The README points to the Manual chapters on reusing published data and to the Master GeoLocator Data Package](https://github.com/GeoPressure/GeoLocatoR/commit/dcef316).
