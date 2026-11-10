@@ -20,3 +20,7 @@ test_that("tags_to_measurements reads the temperature of older GeoPressureR tags
   expect_identical(unique(m$sensor), "temperature_external")
   expect_identical(m$value, c(20, 21))
 })
+
+test_that("tags_to_measurements fails on a tag that is not a list", {
+  expect_error(tags_to_measurements(list("not-a-tag")))
+})
