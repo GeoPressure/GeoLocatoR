@@ -659,33 +659,42 @@ raw_tag_id_to_tag <- function(id) {
     )
   )
 
-  tag <- tryCatch(
-    {
-      # do.call() evaluates the default label path, which GeoPressureR stores as an
-      # unevaluated glue call referring to `tag`.
-      tag <- do.call(
-        GeoPressureR::tag_label_read,
-        list(tag = tag, file = config$tag_label$file)
-      )
+  # The default label path is an unevaluated glue call referring to `tag`.
+  label_file <- eval(config$tag_label$file, list(tag = tag))
 
-      tag <- GeoPressureR::tag_label_stap(tag, quiet = TRUE)
+  # A tag without a label file is imported unlabelled. A label file that cannot be
+  # applied leaves the tag without the steps that failed, with a warning naming it.
+  if (file.exists(label_file)) {
+    tag <- tryCatch(
+      {
+        tag <- GeoPressureR::tag_label_read(tag, file = label_file)
 
-      tag <- do.call(
-        GeoPressureR::tag_set_map,
-        c(
-          list(tag = tag),
-          config$tag_set_map
+        tag <- GeoPressureR::tag_label_stap(tag, quiet = TRUE)
+
+        tag <- do.call(
+          GeoPressureR::tag_set_map,
+          c(
+            list(tag = tag),
+            config$tag_set_map
+          )
         )
-      )
 
-      tag # return the value
-    },
-    error = function(e) {
-      # Cheat to still keep tag_set_map information even without label and tag_set_map
-      tag$param$tag_set_map <- config$tag_set_map
-      tag # return the value
-    }
-  )
+        tag # return the value
+      },
+      error = function(e) {
+        cli_warn(c(
+          "!" = "Labelling {.field {id}} with {.file {label_file}} failed: the tag is imported
+                 without the steps that did not complete.",
+          "x" = "{conditionMessage(e)}"
+        ))
+        # Cheat to still keep tag_set_map information even without label and tag_set_map
+        tag$param$tag_set_map <- config$tag_set_map
+        tag # return the value
+      }
+    )
+  } else {
+    tag$param$tag_set_map <- config$tag_set_map
+  }
 
   tag$param$bird_create <- config$bird_create
 
