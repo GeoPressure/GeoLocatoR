@@ -5,6 +5,10 @@
 #' `tag` objects. A GLDP can contain data for multiple tags, while each
 #' GeoPressureR `tag` object represents a single tag's sensor data.
 #'
+#' It needs the `measurements` resource, so it does not work on a package without it, such as the
+#' Master GeoLocator Data Package or a package read with `drop_measurements = TRUE`: use the source
+#' package instead.
+#'
 #' @param pkg A GeoLocator Data Package object (class `"geolocatordp"`), typically created with
 #'   [`read_gldp()`] or [`create_gldp()`].
 #' @param tag_id Character vector specifying which tag(s) to extract. If `NULL` (default), all
@@ -90,6 +94,13 @@
 gldp_to_tag <- function(pkg, tag_id = NULL) {
   # Check that pkg is a GLDP
   check_gldp(pkg)
+  resources <- frictionless::resource_names(pkg)
+  if (!"measurements" %in% resources) {
+    cli_abort(c(
+      "x" = "{.arg pkg} has no {.field measurements} resource, which {.fn gldp_to_tag} needs.",
+      "i" = "Read the source package with its measurements (without {.code drop_measurements = TRUE})."
+    ))
+  }
 
   # Get all available tag_ids
   tags_data <- tags(pkg)
@@ -110,7 +121,6 @@ gldp_to_tag <- function(pkg, tag_id = NULL) {
   }
 
   # Read each table once; every tag takes its rows from these.
-  resources <- frictionless::resource_names(pkg)
   tables <- c(
     list(tags = tags_data),
     purrr::map(
@@ -119,12 +129,10 @@ gldp_to_tag <- function(pkg, tag_id = NULL) {
     )
   )
   # Split measurements by tag once rather than filtering the whole table per tag.
-  if (!is.null(tables$measurements)) {
-    tables$measurements <- split(
-      tables$measurements,
-      factor(tables$measurements$tag_id, levels = unique(tag_id))
-    )
-  }
+  tables$measurements <- split(
+    tables$measurements,
+    factor(tables$measurements$tag_id, levels = unique(tag_id))
+  )
 
   # Process each tag
   tag_list <- purrr::map(tag_id, function(tid) {
@@ -148,14 +156,7 @@ gldp_to_tag <- function(pkg, tag_id = NULL) {
 #' @noRd
 gldp_to_tag_single <- function(pkg, tid, tables) {
   # Get measurements for this tag
-  if (!is.null(tables$measurements)) {
-    meas <- tables$measurements[[as.character(tid)]]
-  } else {
-    cli_abort(c(
-      "x" = "No {.field measurements} resource found in the package.",
-      "i" = "The package must contain a measurements table to convert to tag objects."
-    ))
-  }
+  meas <- tables$measurements[[as.character(tid)]]
   # `label` is an optional measurements column.
   if (!"label" %in% names(meas)) {
     meas$label <- NA_character_
