@@ -1,3 +1,9 @@
+# GeoLocatoR (development version)
+
+- `gldp_to_tag()` [documents that it needs the `measurements` resource and aborts early without it](https://github.com/GeoPressure/GeoLocatoR/commit/c2e12b9).
+- `merge_gldp()` [says how to resolve a duplicate `tag_id`](https://github.com/GeoPressure/GeoLocatoR/commit/c25f997).
+- [The README points to the Manual chapters on reusing published data and to the Master GeoLocator Data Package](https://github.com/GeoPressure/GeoLocatoR/commit/dcef316).
+
 # GeoLocatoR v1.5.1
 
 ## Main
