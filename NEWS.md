@@ -1,5 +1,8 @@
 # GeoLocatoR (development version)
 
+- `validate_gldp()` [still runs the `tags`/`observations` coherence checks when `measurements` is missing](https://github.com/GeoPressure/GeoLocatoR/commit/60bd32e), and skips only those that need `measurements`. The package remains invalid.
+- `status_geopressuretemplate()` [no longer errors on an empty `config.yml`](https://github.com/GeoPressure/GeoLocatoR/commit/46c05ce).
+- Resource setters and `add_gldp_resource()` [hint at the CSV delimiter when a dropped column name contains `;`](https://github.com/GeoPressure/GeoLocatoR/commit/4898297).
 - `read_zenodo()` [uses a token from `ZENODO_TOKEN` or the keyring only when `draft = TRUE`](https://github.com/GeoPressure/GeoLocatoR/commit/3c26668). Behaviour change: a published record is now read without authentication unless `token` is given, so its embargoed or restricted files are returned as metadata only.
 - `upgrade_gldp()` [warns when a value other than a legacy `stap_id`, `stap_s`, `stap_t` or `j` becomes `NA`](https://github.com/GeoPressure/GeoLocatoR/commit/02a0f6f) instead of silencing every cast loss.
 - Resource setters, `add_gldp_resource()`, `merge_gldp()` and upgrades cast values by the Table Schema rules: [a datetime with a UTC offset is converted to UTC](https://github.com/GeoPressure/GeoLocatoR/commit/157b7fc), [a non-integer value of an `integer` or `year` field becomes `NA` with a warning instead of being truncated](https://github.com/GeoPressure/GeoLocatoR/commit/8c4aa24), and [`boolean` fields use `trueValues` and `falseValues` (default `true`/`false`, `1`/`0`), with a warning for other values](https://github.com/GeoPressure/GeoLocatoR/commit/fc171ac).
