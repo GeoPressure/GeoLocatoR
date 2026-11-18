@@ -115,7 +115,8 @@ geopressuretemplate_config_ids <- function(file = "config.yml") {
     return(character())
   }
 
-  ids <- names(yaml::yaml.load_file(file, eval.expr = FALSE))
+  # An empty config.yml loads as NULL, with no names.
+  ids <- names(yaml::yaml.load_file(file, eval.expr = FALSE)) |> as.character()
   ids <- setdiff(ids, "default")
   ids[!startsWith(ids, "_")]
 }

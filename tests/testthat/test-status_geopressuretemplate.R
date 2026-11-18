@@ -20,3 +20,10 @@ test_that("status_geopressuretemplate reports interim objects and tag status", {
   expect_true(status$interim_pressurepath_most_likely)
   expect_identical(status$tag_status, "tag, read, pressure, light")
 })
+
+test_that("an empty config.yml gives no config ids", {
+  file <- tempfile(fileext = ".yml")
+  on.exit(unlink(file))
+  file.create(file)
+  expect_identical(geopressuretemplate_config_ids(file), character())
+})
