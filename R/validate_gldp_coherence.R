@@ -307,7 +307,8 @@ validate_gldp_geopressure_coherence <- function(pkg) {
 #' Internal helper that checks consistency across the required `tags`,
 #' `observations`, and `measurements` resources. It verifies key identifier
 #' relationships, species consistency, and the presence of expected equipment
-#' and retrieval events.
+#' and retrieval events. Without `measurements`, only the checks between `tags`
+#' and `observations` run.
 #'
 #' @param pkg A GeoLocator Data Package object.
 #'
@@ -318,20 +319,28 @@ validate_gldp_core_coherence <- function(pkg) {
   valid <- TRUE
 
   min_res_required <- c("tags", "observations", "measurements")
-  res_missing <- min_res_required[
-    !(min_res_required %in% sapply(pkg$resources, \(x) x$name))
-  ]
-  if (length(res_missing) > 0) {
+  res_missing <- setdiff(min_res_required, frictionless::resource_names(pkg))
+  if (any(c("tags", "observations") %in% res_missing)) {
     cli_alert_danger(
       "{.arg pkg} is missing {.val {res_missing}}. We could not check package coherence."
     )
+    return(FALSE)
+  }
+
+  # Without measurements (e.g. field tables before logger retrieval), check
+  # tags against observations and skip the measurement checks.
+  if ("measurements" %in% res_missing) {
+    cli_alert_danger(
+      "{.arg pkg} is missing {.val measurements}. Checks that need {.field measurements} are skipped."
+    )
     valid <- FALSE
-    return(valid)
+    m <- NULL
+  } else {
+    m <- measurements(pkg)
   }
 
   tags_data <- tags(pkg)
   o <- observations(pkg)
-  m <- measurements(pkg)
 
   # `tag_id` and `device_status` are optional columns: an absent one is empty.
   o[setdiff(c("tag_id", "device_status"), names(o))] <- NA_character_
