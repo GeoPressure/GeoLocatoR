@@ -100,7 +100,11 @@ add_gldp_resource <- function(
         "!" = "Dropped {length(undeclared)} column{?s} from {.val {resource_name}}
                not defined by its schema: {.field {undeclared}}.",
         "i" = "{.val {resource_name}} declares {.code fieldsMatch: superset}, which
-               allows only the columns its schema defines."
+               allows only the columns its schema defines.",
+        # A column name holding `;` is usually a CSV read with the wrong delimiter.
+        "i" = if (any(grepl(";", undeclared, fixed = TRUE))) {
+          "A column name contains {.val ;}: was the CSV read with the wrong delimiter?"
+        }
       ),
       class = "gldp_warning_undeclared_columns_dropped"
     )
