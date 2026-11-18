@@ -229,3 +229,19 @@ test_that("gldp_cast_table casts booleans with trueValues and falseValues", {
   expect_identical(out$b, c(TRUE, FALSE, TRUE, FALSE, NA, NA))
   expect_identical(out$c, data$c)
 })
+
+test_that("a Latin-1 file declared as utf-8 is read with a warning instead of crashing R", {
+  directory <- tempfile("latin1-")
+  on.exit(unlink(directory, recursive = TRUE))
+  pkg <- create_gldp()
+  tags(pkg) <- data.frame(tag_id = "A", ring_number = "R", scientific_name = "Upupa epops")
+  suppressMessages(write_gldp(pkg, directory))
+  file <- file.path(directory, "tags.csv")
+  # "Upupa epops" followed by the Latin-1 byte of "ö".
+  lines <- readLines(file)
+  lines[2] <- sub("Upupa epops", "Upupa epops \xf6", lines[2], useBytes = TRUE)
+  writeLines(lines, file, useBytes = TRUE)
+
+  expect_match(capture_warnings(read_gldp(directory)), "not valid UTF-8", all = FALSE)
+  expect_identical(nrow(suppressWarnings(tags(read_gldp(directory)))), 1L)
+})
