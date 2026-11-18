@@ -1,3 +1,5 @@
+# GeoLocatoR (development version)
+
 # GeoLocatoR v1.5.2
 
 ## Main
