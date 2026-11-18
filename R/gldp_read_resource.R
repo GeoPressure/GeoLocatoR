@@ -14,8 +14,8 @@ NULL
 #'
 #' @param pkg A GeoLocator Data Package object.
 #' @param resource A resource descriptor.
-#' @return Character vector of column names, or `NULL` when the file cannot be
-#'   read or the resource has no file.
+#' @return Character vector of column names, or `NULL` when the resource has no
+#'   path or its local file does not exist.
 #' @noRd
 gldp_resource_header <- function(pkg, resource) {
   path <- as.character(resource$path %||% character(0))[1]
@@ -34,20 +34,16 @@ gldp_resource_header <- function(pkg, resource) {
   }
 
   # Only the header is needed, so the rest of the file is never parsed.
-  tryCatch(
-    names(readr::read_delim(
-      path,
-      delim = as.character(resource$dialect$delimiter %||% ",")[1],
-      n_max = 0,
-      show_col_types = FALSE,
-      progress = FALSE,
-      locale = readr::locale(
-        encoding = as.character(resource$encoding %||% "UTF-8")[1]
-      )
-    )),
-    error = \(e) NULL,
-    warning = \(w) NULL
-  )
+  names(readr::read_delim(
+    path,
+    delim = as.character(resource$dialect$delimiter %||% ",")[1],
+    n_max = 0,
+    show_col_types = FALSE,
+    progress = FALSE,
+    locale = readr::locale(
+      encoding = as.character(resource$encoding %||% "UTF-8")[1]
+    )
+  ))
 }
 
 #' Match a resource schema to the columns its file actually has
@@ -96,6 +92,12 @@ gldp_align_schema_to_header <- function(pkg, resource_name) {
   fields_match <- as.character(schema$fieldsMatch %||% "exact")[1]
   undeclared <- setdiff(header, declared)
 
+  if (length(header) == 0) {
+    cli_abort(
+      "{.val {resource_name}} has no header: its file is empty.",
+      class = "gldp_error_header_empty"
+    )
+  }
   if (length(intersect(header, declared)) == 0) {
     cli_abort(
       c(
@@ -227,8 +229,8 @@ schema_field_names <- function(schema) {
 #'
 #' Internal helper function to cast data frame columns to the appropriate types
 #' based on a table schema specification. Values that cannot be cast to a
-#' number, integer, year, date or datetime become `NA` with a warning of class
-#' `gldp_warning_cast_loss`.
+#' number, integer, boolean, year, date or datetime become `NA` with a warning of
+#' class `gldp_warning_cast_loss`, whose `field` element names the field.
 #'
 #' @param data A data frame to cast
 #' @param schema A table schema object with field definitions
@@ -254,10 +256,24 @@ gldp_cast_table <- function(data, schema) {
       } else if (type == "number") {
         # Lost values are reported below, so the base coercion warning is not needed.
         data[[field]] <- suppressWarnings(as.numeric(data[[field]]))
-      } else if (type == "integer") {
-        data[[field]] <- suppressWarnings(as.integer(data[[field]]))
+      } else if (type %in% c("integer", "year")) {
+        # A value with a fractional part is not an integer: make it NA, reported below,
+        # rather than truncate it.
+        value <- suppressWarnings(as.numeric(data[[field]]))
+        value[which(value != trunc(value))] <- NA
+        data[[field]] <- suppressWarnings(as.integer(value))
       } else if (type == "boolean") {
-        data[[field]] <- as.logical(data[[field]])
+        # Match the field's trueValues and falseValues, or the Table Schema defaults;
+        # other values become NA, reported below. Logical columns are already cast.
+        if (!is.logical(data[[field]])) {
+          f <- schema$fields[[i]]
+          value <- as.character(data[[field]])
+          data[[field]] <- case_when(
+            value %in% (f$trueValues %||% c("true", "True", "TRUE", "1")) ~ TRUE,
+            value %in% (f$falseValues %||% c("false", "False", "FALSE", "0")) ~ FALSE,
+            .default = NA
+          )
+        }
       } else if (type == "date") {
         value <- data[[field]]
         # Strings are read as ISO 8601 only; others become NA, reported below.
@@ -273,11 +289,22 @@ gldp_cast_table <- function(data, schema) {
         data[[field]] <- if (is.character(value)) {
           value[!grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}", value)] <- NA
           value <- sub("T", " ", value, fixed = TRUE)
+          # Strip a trailing `Z` or UTC offset (`+02:00`, `-0530`) after the time and
+          # shift the parsed time by it, so that the value is stored in UTC.
+          zone <- "^(.*[0-9]:[0-9]{2}(:[0-9]{2}(\\.[0-9]*)?)?) ?(Z|([+-])([0-9]{2}):?([0-9]{2}))$"
+          zoned <- grepl(zone, value)
+          offset <- numeric(length(value))
+          offset[zoned] <- as.numeric(sub(zone, "\\51", value[zoned])) *
+            (as.numeric(sub(zone, "0\\6", value[zoned])) *
+              3600 +
+              as.numeric(sub(zone, "0\\7", value[zoned])) * 60)
+          value[zoned] <- sub(zone, "\\1", value[zoned])
           purrr::map(
             c("%Y-%m-%d %H:%M:%OS", "%Y-%m-%d %H:%M", "%Y-%m-%d"),
             \(format) as.POSIXct(strptime(value, format, tz = "UTC"))
           ) |>
-            purrr::reduce(coalesce)
+            purrr::reduce(coalesce) -
+            offset
         } else {
           as.POSIXct(value, tz = "UTC")
         }
@@ -286,9 +313,6 @@ gldp_cast_table <- function(data, schema) {
         if (!is.character(data[[field]])) {
           data[[field]] <- as.character(data[[field]])
         }
-      } else if (type == "year") {
-        # For year fields, convert to integer
-        data[[field]] <- suppressWarnings(as.integer(data[[field]]))
       } else if (type == "yearmonth") {
         # For yearmonth fields, keep as character
         data[[field]] <- as.character(data[[field]])
@@ -312,7 +336,7 @@ gldp_cast_table <- function(data, schema) {
       }
 
       # Report non-missing values the cast turned into NA; empty strings count as missing.
-      if (type %in% c("number", "integer", "year", "date", "datetime")) {
+      if (type %in% c("number", "integer", "boolean", "year", "date", "datetime")) {
         lost <- is.na(data[[field]]) & !is.na(original)
         n_lost <- sum(nzchar(trimws(as.character(original[lost]))))
         if (n_lost > 0) {
@@ -321,7 +345,8 @@ gldp_cast_table <- function(data, schema) {
               "!" = "{format(n_lost, big.mark = ',')} non-missing {cli::qty(n_lost)}value{?s} of {.field {field}} \\
               became NA when cast to {.val {type}}."
             ),
-            class = "gldp_warning_cast_loss"
+            class = "gldp_warning_cast_loss",
+            field = field
           )
         }
       }

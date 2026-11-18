@@ -74,12 +74,7 @@ tags_to_measurements <- function(tag_list, tags = lifecycle::deprecated()) {
 
   for (i in seq_along(tag_list)) {
     tag <- tag_list[[i]]
-    tag_id <- tryCatch(
-      {
-        tag$param$id
-      },
-      error = function(e) NA
-    )
+    tag_id <- tag$param$id
     tag_measurements <- list()
     tag_sensors <- names(tag)[names(tag) %in% sensor_types]
     for (sensor in tag_sensors) {

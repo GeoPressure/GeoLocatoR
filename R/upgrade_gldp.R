@@ -1,7 +1,5 @@
 #' @noRd
 upgrade_gldp <- function(x, to_version = .gldp_default_version) {
-  check_gldp(x)
-
   from_version <- gldp_version(x)
 
   if (!to_version %in% .gldp_supported_versions) {
@@ -31,13 +29,16 @@ upgrade_gldp <- function(x, to_version = .gldp_default_version) {
 
   cli_alert_success("Upgrading GeoLocator-DP from {.val {from_version}} to {.val {to_version}}.")
 
-  # Legacy packages carry non-numeric IDs (e.g. `stap_id = "stap-1"`) in fields
-  # that later schemas type as numbers. Coercing them to NA is the intended
-  # migration, so the gldp_cast_table() warning about lost values is muffled here.
+  # Legacy packages carry non-numeric IDs (e.g. `stap_id = "stap-1"`) in the stationary
+  # period and trajectory fields, which the schemas type as numbers. Coercing them to NA
+  # is the intended migration, so the gldp_cast_table() warning about lost values is
+  # muffled for these fields only; any other lost value still warns.
   quiet_cast <- function(expr) {
     withCallingHandlers(
       expr,
-      gldp_warning_cast_loss = \(w) invokeRestart("muffleWarning")
+      gldp_warning_cast_loss = \(w) {
+        if (w$field %in% c("stap_id", "stap_s", "stap_t", "j")) invokeRestart("muffleWarning")
+      }
     )
   }
 
@@ -285,7 +286,15 @@ upgrade_gldp_v0_4_to_v0_5 <- function(x) {
     }
 
     missing <- is.na(d$type) | trimws(as.character(d$type)) == ""
-    # v0.5 requires `type`; unresolved rows keep the historical default.
+    # v0.5 requires `type`; unresolved rows keep the historical default, with a warning
+    # because nothing in the package says which type they are.
+    if (any(missing)) {
+      cli_warn(c(
+        "!" = "Set {.field type} to {.val most_likely} for {sum(missing)} {.field edges}
+               row{?s} of {.val {unique(as.character(d$tag_id[missing]))}} whose type could
+               not be inferred."
+      ))
+    }
     d$type[missing] <- "most_likely"
     d$type <- as.character(d$type)
     d

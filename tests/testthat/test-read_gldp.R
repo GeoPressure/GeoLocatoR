@@ -343,6 +343,16 @@ test_that("write_gldp/read_gldp roundtrip keeps pkg$params via params.json", {
   expect_equal(pkg_back$params[[1]]$id, "TEST-PARAM")
 })
 
+test_that("read_gldp fails when a declared params.json cannot be read", {
+  pkg <- shared_pkg()
+  pkg[["params"]] <- list(GeoPressureR::param_create("TEST-PARAM", default = TRUE))
+  out_dir <- withr::local_tempdir()
+  write_gldp(pkg, directory = out_dir)
+  unlink(file.path(out_dir, "params.json"))
+
+  expect_error(suppressWarnings(read_gldp(file.path(out_dir, "datapackage.json"))))
+})
+
 test_that("write_gldp does not write an empty params.json", {
   directory <- tempfile("write-no-params-")
   on.exit(unlink(directory, recursive = TRUE), add = TRUE)
@@ -422,4 +432,18 @@ test_that("file-backed metadata, merging and writing match loaded packages", {
   expect_equal(tags(reopened), tags(loaded[["AA"]]))
   expect_equal(measurements(reopened), measurements(loaded[["AA"]]))
   expect_true(all(vapply(lazy[["AA"]]$resources, function(r) !is.null(r$path), logical(1))))
+})
+
+test_that("read_gldp reports an empty descriptor and an empty resource file", {
+  directory <- tempfile("empty-files-")
+  dir.create(directory)
+  on.exit(unlink(directory, recursive = TRUE))
+  file.create(file.path(directory, "datapackage.json"))
+  expect_error(read_gldp(directory), "is empty")
+
+  pkg <- create_gldp()
+  tags(pkg) <- data.frame(tag_id = "A", ring_number = "R", scientific_name = "Upupa epops")
+  suppressMessages(write_gldp(pkg, directory))
+  file.create(file.path(directory, "tags.csv"))
+  expect_error(read_gldp(directory), "no header: its file is empty")
 })

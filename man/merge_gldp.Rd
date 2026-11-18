@@ -39,7 +39,8 @@ package, with a message naming them.
 
 \strong{Check for unique tag_id:}
 \itemize{
-\item The merge aborts if any \code{tag_id} is present in both packages.
+\item The merge aborts if any \code{tag_id} is present in both packages. Drop it from one package
+with \code{\link[=select_gldp]{select_gldp()}}, or rename it in every table and in \code{params} of one package.
 }
 
 \strong{datapackage_id in tags:}

@@ -60,6 +60,11 @@ Learn how to use GeoLocatoR with the dedicated part of the [GeoPressureManual](h
 <a href="https://geopressure.org/GeoPressureManual/"><img src="https://github.com/GeoPressure/GeoPressureManual/raw/main/assets/cover.png" style="margin: 0 1rem 0 1rem;box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);" align="center" width="250" height="328"></a>
 </p>
 
+## 🔁 Reuse published data
+
+- Read and re-analyse one published study: [Reuse a study](https://geopressure.org/GeoPressureManual/geolocator-read.html).
+- Compare studies with the Master GeoLocator Data Package ([10.5281/zenodo.18187092](https://doi.org/10.5281/zenodo.18187092)), which compiles the open packages of the [geolocator-dp Zenodo community](https://zenodo.org/communities/geolocator-dp): [Compare studies with the Master](https://geopressure.org/GeoPressureManual/geolocator-master.html).
+
 ## 🔧 Development note
 
 GeoLocatoR uses bundled local GeoLocator-DP schemas (`inst/schemas`) for reading, validation, and upgrade. This keeps runtime fast and independent from online schema downloads. When GeoLocator-DP schemas change, refresh local files manually:

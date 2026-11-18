@@ -278,6 +278,40 @@ test_that("coherence checks accept observations without optional columns", {
   expect_true(suppressMessages(validate_gldp_foreign_keys(pkg)))
 })
 
+test_that("core coherence checks tags against observations without measurements", {
+  pkg <- create_gldp()
+  pkg <- add_gldp_resource(
+    pkg,
+    "tags",
+    data.frame(
+      tag_id = c("AA", "BB"),
+      ring_number = "R1",
+      scientific_name = c("Upupa epops", "Turdus merula"),
+      manufacturer = "test",
+      model = "test"
+    )
+  )
+  pkg <- add_gldp_resource(
+    pkg,
+    "observations",
+    data.frame(
+      tag_id = c("AA", "CC"),
+      ring_number = c("R1", "R2"),
+      observation_type = "equipment",
+      device_status = "present",
+      datetime = as.POSIXct(c("2020-01-01", "2020-01-02"), tz = "UTC"),
+      latitude = 47,
+      longitude = 8
+    )
+  )
+  msgs <- capture_messages(expect_false(validate_gldp_core_coherence(pkg)))
+  expect_match(msgs, "missing.*measurements.*skipped", all = FALSE)
+  expect_match(msgs, "Multiple scientific names", all = FALSE)
+  expect_match(msgs, "CC/R2", all = FALSE)
+  expect_match(msgs, "No observations found for.*BB", all = FALSE)
+  expect_no_match(msgs, "No equipment found|No retrieval found")
+})
+
 test_that("coherence checks report a missing observations resource without erroring", {
   pkg <- create_gldp()
   pkg <- add_gldp_resource(

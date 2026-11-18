@@ -100,6 +100,16 @@ test_that("a remote package reads the header of a relative path from its URL", {
   expect_identical(header, "tag_id")
 })
 
+test_that("gldp_resource_header lets an unreadable file fail", {
+  # Returning NULL would skip the alignment and fall back to positional matching.
+  directory <- withr::local_tempdir()
+  dir.create(file.path(directory, "tags.csv"))
+  pkg <- create_gldp()
+  attr(pkg, "directory") <- directory
+
+  expect_error(suppressWarnings(gldp_resource_header(pkg, list(path = "tags.csv"))))
+})
+
 test_that("file-backed and loaded reads report one named parsing warning", {
   # The example measurements use `acceleration`, which is not a v1.2 sensor.
   directory <- test_path("fixtures", "geolocator-dp-example")
@@ -170,4 +180,52 @@ test_that("gldp_cast_table turns an unparsable first date or datetime into NA", 
     out$time,
     as.POSIXct(c(NA, "2020-01-02 03:04:05", "2020-01-02 03:04:00"), tz = "UTC")
   )
+})
+
+test_that("gldp_cast_table converts a datetime with a UTC offset to UTC", {
+  schema <- list(fields = list(list(name = "time", type = "datetime")))
+  data <- data.frame(
+    time = c("2020-01-01T12:00:00+02:00", "2020-01-01T12:00:00-0530", "2020-01-01T12:00Z")
+  )
+
+  expect_no_warning(out <- gldp_cast_table(data, schema))
+  expect_identical(
+    out$time,
+    as.POSIXct(c("2020-01-01 10:00:00", "2020-01-01 17:30:00", "2020-01-01 12:00:00"), tz = "UTC")
+  )
+})
+
+test_that("gldp_cast_table makes non-integer values NA with a warning", {
+  schema <- list(
+    fields = list(list(name = "count", type = "integer"), list(name = "year", type = "year"))
+  )
+  data <- data.frame(count = c("1.7", "2", NA), year = c(2020.5, 2021, NA))
+
+  expect_length(capture_warnings(gldp_cast_table(data, schema)), 2)
+  out <- suppressWarnings(gldp_cast_table(data, schema))
+  expect_identical(out$count, c(NA, 2L, NA))
+  expect_identical(out$year, c(NA, 2021L, NA))
+})
+
+test_that("gldp_cast_table casts booleans with trueValues and falseValues", {
+  schema <- list(
+    fields = list(
+      list(name = "a", type = "boolean"),
+      list(name = "b", type = "boolean", trueValues = "yes", falseValues = "no"),
+      list(name = "c", type = "boolean", trueValues = "yes")
+    )
+  )
+  data <- data.frame(
+    a = c("1", "0", "true", "FALSE", "yes", NA),
+    b = c("yes", "no", "yes", "no", "1", NA),
+    c = c(TRUE, FALSE, TRUE, FALSE, TRUE, NA)
+  )
+
+  warnings <- capture_warnings(gldp_cast_table(data, schema))
+  expect_length(warnings, 2)
+  expect_match(warnings, "became NA when cast to \"boolean\"")
+  out <- suppressWarnings(gldp_cast_table(data, schema))
+  expect_identical(out$a, c(TRUE, FALSE, TRUE, FALSE, NA, NA))
+  expect_identical(out$b, c(TRUE, FALSE, TRUE, FALSE, NA, NA))
+  expect_identical(out$c, data$c)
 })

@@ -411,7 +411,13 @@ read_geopressuretemplate <- function(
       yaml::write_yaml(raw_config, config_file)
       tag_config <- unique(t$tag_id) |>
         purrr::set_names() |>
-        purrr::map(\(id) config::get(config = id, file = config_file, use_parent = FALSE))
+        purrr::map(\(id) {
+          # config::get() fails on a tag with no entry when `default` is empty too.
+          if (length(raw_config[[id]]) + length(raw_config$default) == 0) {
+            return(list())
+          }
+          config::get(config = id, file = config_file, use_parent = FALSE)
+        })
 
       # Interim tag params do not carry these config fields, so read them from
       # config.yml, keyed by their path in each tag entry.
@@ -441,7 +447,7 @@ read_geopressuretemplate <- function(
     }
 
     # STEP 3: Overwrite tags and observations if csv/xlsx files present
-    if (file.exists("data/tags.xlsx")) {
+    if (geopressuretemplate_non_empty("data/tags.xlsx")) {
       if (!requireNamespace("readxl", quietly = TRUE)) {
         cli_abort("The {.pkg readxl} package is required to read {.file data/tags.xlsx}.")
       }
@@ -465,7 +471,7 @@ read_geopressuretemplate <- function(
       cli_alert_success(
         "Reading tags from {.file {file.path(directory, file)}}."
       )
-    } else if (file.exists("data/tags.csv")) {
+    } else if (geopressuretemplate_non_empty("data/tags.csv")) {
       file <- "data/tags.csv"
       col_types <- readr::cols(
         tag_id = "c",
@@ -518,7 +524,7 @@ read_geopressuretemplate <- function(
         select(-"tag_ring_number")
     }
 
-    if (file.exists("./data/observations.xlsx")) {
+    if (geopressuretemplate_non_empty("./data/observations.xlsx")) {
       if (!requireNamespace("readxl", quietly = TRUE)) {
         cli_abort(
           "The {.pkg readxl} package is required to read {.file data/observations.xlsx}."
@@ -552,7 +558,7 @@ read_geopressuretemplate <- function(
       cli_alert_success(
         "Reading observations from {.file {file.path(directory, 'data/observations.xlsx')}}."
       )
-    } else if (file.exists("./data/observations.csv")) {
+    } else if (geopressuretemplate_non_empty("./data/observations.csv")) {
       col_types <- readr::cols(
         ring_number = "c",
         tag_id = "c",
@@ -614,10 +620,10 @@ read_geopressuretemplate <- function(
       cli_inform("No tag/observation/measurement data found to add.")
     }
 
-    return(pkg)
+    pkg
   })
 
-  return(pkg)
+  pkg
 }
 
 #' Convert raw tag ID to tag object
@@ -659,37 +665,46 @@ raw_tag_id_to_tag <- function(id) {
     )
   )
 
-  tag <- tryCatch(
-    {
-      # do.call() evaluates the default label path, which GeoPressureR stores as an
-      # unevaluated glue call referring to `tag`.
-      tag <- do.call(
-        GeoPressureR::tag_label_read,
-        list(tag = tag, file = config$tag_label$file)
-      )
+  # The default label path is an unevaluated glue call referring to `tag`.
+  label_file <- eval(config$tag_label$file, list(tag = tag))
 
-      tag <- GeoPressureR::tag_label_stap(tag, quiet = TRUE)
+  # A tag without a label file is imported unlabelled. A label file that cannot be
+  # applied leaves the tag without the steps that failed, with a warning naming it.
+  if (file.exists(label_file)) {
+    tag <- tryCatch(
+      {
+        tag <- GeoPressureR::tag_label_read(tag, file = label_file)
 
-      tag <- do.call(
-        GeoPressureR::tag_set_map,
-        c(
-          list(tag = tag),
-          config$tag_set_map
+        tag <- GeoPressureR::tag_label_stap(tag, quiet = TRUE)
+
+        tag <- do.call(
+          GeoPressureR::tag_set_map,
+          c(
+            list(tag = tag),
+            config$tag_set_map
+          )
         )
-      )
 
-      tag # return the value
-    },
-    error = function(e) {
-      # Cheat to still keep tag_set_map information even without label and tag_set_map
-      tag$param$tag_set_map <- config$tag_set_map
-      tag # return the value
-    }
-  )
+        tag # return the value
+      },
+      error = function(e) {
+        cli_warn(c(
+          "!" = "Labelling {.field {id}} with {.file {label_file}} failed: the tag is imported
+                 without the steps that did not complete.",
+          "x" = "{conditionMessage(e)}"
+        ))
+        # Cheat to still keep tag_set_map information even without label and tag_set_map
+        tag$param$tag_set_map <- config$tag_set_map
+        tag # return the value
+      }
+    )
+  } else {
+    tag$param$tag_set_map <- config$tag_set_map
+  }
 
   tag$param$bird_create <- config$bird_create
 
-  return(tag)
+  tag
 }
 
 

@@ -44,6 +44,10 @@ available (if magnetic or raw acceleration data available)
 This function converts a GeoLocator Data Package (GLDP) object to one or more GeoPressureR
 \code{tag} objects. A GLDP can contain data for multiple tags, while each
 GeoPressureR \code{tag} object represents a single tag's sensor data.
+
+It needs the \code{measurements} resource, so it does not work on a package without it, such as the
+Master GeoLocator Data Package or a package read with \code{drop_measurements = TRUE}: use the source
+package instead.
 }
 \details{
 The function extracts sensor data from the GLDP \code{measurements} resource and converts it

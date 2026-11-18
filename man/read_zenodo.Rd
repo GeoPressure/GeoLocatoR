@@ -21,9 +21,10 @@ and \code{"https://zenodo.org/records/18467383"}. A Zenodo Sandbox record URL
 or DOI (prefix \code{10.5072}) is read from Zenodo Sandbox; for a bare Sandbox
 record id, set \code{sandbox = TRUE}.}
 
-\item{token}{Optional Zenodo access token for authenticated requests. Supply
-it explicitly, or leave \code{NULL} to resolve it from environment variables or
-the system keyring. Draft access usually requires a token.}
+\item{token}{Optional Zenodo access token for authenticated requests. A
+token given here is always used. If \code{NULL}, a draft is read with a token
+resolved from environment variables or the system keyring, and a published
+record is read without authentication.}
 
 \item{draft}{Logical. If \code{TRUE}, read the draft version of the record instead
 of the public record. This queries the draft endpoint
@@ -32,7 +33,8 @@ to access the deposition. Use this for unpublished records or when draft
 files or metadata differ from the published record.}
 
 \item{sandbox}{Logical. If \code{TRUE}, query Zenodo Sandbox instead of the main
-Zenodo service. This also switches token lookup to sandbox-first sources.}
+Zenodo service. This also switches draft token lookup to sandbox-first
+sources.}
 
 \item{quiet}{Logical. If \code{TRUE}, suppress progress messages from
 \code{read_zenodo()}.}
@@ -72,6 +74,9 @@ which is deleted once the package is read. A resource without a table
 schema, which is not loaded into memory, keeps a \code{path} into that deleted
 folder.
 
+A published record is read without authentication unless \code{token} is given,
+so its restricted or embargoed files are only read with \verb{token =}.
+
 To read a draft:
 \enumerate{
 \item Create or identify the Zenodo deposition and note its record id.
@@ -83,7 +88,7 @@ The same names are also checked in the system keyring.
 draft is hosted on Zenodo Sandbox.
 }
 
-If \code{token = NULL}, token lookup is attempted in this order:
+If \code{draft = TRUE} and \code{token = NULL}, token lookup is attempted in this order:
 \itemize{
 \item for main Zenodo: \code{ZENODO_TOKEN}, then keyring service \code{ZENODO_TOKEN};
 \item for Zenodo Sandbox: \code{ZENODO_TOKEN_SANDBOX}, \code{ZENODO_TOKEN}, then keyring

@@ -83,6 +83,7 @@ NULL
 #' @export
 update_gldp_order_resources <- function(pkg) {
   lifecycle::deprecate_soft("1.4.0", "update_gldp_order_resources()", "update_gldp()")
+  check_gldp(pkg)
   gldp_update_order_resources(pkg)
 }
 
@@ -90,6 +91,7 @@ update_gldp_order_resources <- function(pkg) {
 #' @export
 update_gldp_temporal <- function(pkg) {
   lifecycle::deprecate_soft("1.4.0", "update_gldp_temporal()", "update_gldp()")
+  check_gldp(pkg)
   gldp_update_temporal(pkg)
 }
 
@@ -97,6 +99,7 @@ update_gldp_temporal <- function(pkg) {
 #' @export
 update_gldp_taxonomic <- function(pkg) {
   lifecycle::deprecate_soft("1.4.0", "update_gldp_taxonomic()", "update_gldp()")
+  check_gldp(pkg)
   gldp_update_taxonomic(pkg)
 }
 
@@ -104,6 +107,7 @@ update_gldp_taxonomic <- function(pkg) {
 #' @export
 update_gldp_number_tags <- function(pkg) {
   lifecycle::deprecate_soft("1.4.0", "update_gldp_number_tags()", "update_gldp()")
+  check_gldp(pkg)
   gldp_update_number_tags(pkg)
 }
 
@@ -111,6 +115,7 @@ update_gldp_number_tags <- function(pkg) {
 #' @export
 update_gldp_bibliographic_citation <- function(pkg, ...) {
   lifecycle::deprecate_soft("1.4.0", "update_gldp_bibliographic_citation()", "update_gldp()")
+  check_gldp(pkg)
   gldp_update_bibliographic_citation(pkg, ...)
 }
 

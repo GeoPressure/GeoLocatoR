@@ -17,7 +17,8 @@
 #'   package, with a message naming them.
 #'
 #' **Check for unique tag_id:**
-#' - The merge aborts if any `tag_id` is present in both packages.
+#' - The merge aborts if any `tag_id` is present in both packages. Drop it from one package
+#'   with [select_gldp()], or rename it in every table and in `params` of one package.
 #'
 #' **datapackage_id in tags:**
 #' - For the `tags` resource, each row must have a `datapackage_id`.
@@ -127,7 +128,7 @@ merge_gldp <- function(x, y = NULL, ...) {
       cli_abort(c(
         "Cannot merge: duplicate {.field tag_id} across input packages: {col_red(glue::glue_collapse(duplicate_tag_ids, sep = ', '))}.",
         "x" = "Each {.field tag_id} must be globally unique across all merged packages.",
-        "i" = "Rename conflicting tag IDs or remove duplicate tag rows before merging."
+        "i" = "Drop them from one package with {.fn select_gldp} (e.g. {.code select_gldp(pkg, -\"{duplicate_tag_ids[1]}\")}), or rename them in every table and {.field params} of one package."
       ))
     }
 
