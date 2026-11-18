@@ -433,3 +433,17 @@ test_that("file-backed metadata, merging and writing match loaded packages", {
   expect_equal(measurements(reopened), measurements(loaded[["AA"]]))
   expect_true(all(vapply(lazy[["AA"]]$resources, function(r) !is.null(r$path), logical(1))))
 })
+
+test_that("read_gldp reports an empty descriptor and an empty resource file", {
+  directory <- tempfile("empty-files-")
+  dir.create(directory)
+  on.exit(unlink(directory, recursive = TRUE))
+  file.create(file.path(directory, "datapackage.json"))
+  expect_error(read_gldp(directory), "is empty")
+
+  pkg <- create_gldp()
+  tags(pkg) <- data.frame(tag_id = "A", ring_number = "R", scientific_name = "Upupa epops")
+  suppressMessages(write_gldp(pkg, directory))
+  file.create(file.path(directory, "tags.csv"))
+  expect_error(read_gldp(directory), "no header: its file is empty")
+})

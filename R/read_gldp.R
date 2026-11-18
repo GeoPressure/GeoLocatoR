@@ -78,6 +78,9 @@ read_gldp <- function(x = "datapackage.json", force_read = TRUE, drop_measuremen
     }
   }
 
+  if (isTRUE(file.size(x) == 0)) {
+    cli_abort("{.file {x}} is empty.")
+  }
   pkg <- frictionless::read_package(x)
   base_dir <- dirname(x)
 
