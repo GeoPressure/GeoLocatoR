@@ -8,10 +8,7 @@ message: 'To cite package "GeoLocatoR" in publications use:'
 type: software
 license: GPL-3.0-or-later
 title: 'GeoLocatoR: R package for GeoLocator Data Package'
-version: 1.5.1
-identifiers:
-- type: url
-  value: https://geopressure.org/GeoLocatoR/
+version: 1.5.2
 abstract: An R package to help you create and read geolocator data using the GeoLocator
   Data Package standard.
 authors:
