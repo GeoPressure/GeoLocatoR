@@ -1,5 +1,7 @@
 # GeoLocatoR (development version)
 
+- Reading a resource [no longer crashes R on a file declared as UTF-8 that is not, and warns about its invalid values](https://github.com/GeoPressure/GeoLocatoR/commit/4c9ca46).
+
 # GeoLocatoR v1.5.2
 
 ## Main

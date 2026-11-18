@@ -143,6 +143,13 @@ gldp_align_schema_to_header <- function(pkg, resource_name) {
 #' @return The resource data.
 #' @noRd
 gldp_read_resource <- function(pkg, resource_name, ...) {
+  # readr re-encodes any encoding but "UTF-8" and crashes R on a byte invalid in it,
+  # so a declared `utf-8` (as frictionless writes it) is read without conversion.
+  resource <- gldp_resource(pkg, resource_name)
+  if (tolower(resource$encoding %||% "") %in% c("utf-8", "utf8")) {
+    resource$encoding <- "UTF-8"
+    gldp_resource(pkg, resource_name) <- resource
+  }
   pkg <- gldp_align_schema_to_header(pkg, resource_name)
 
   # Replace readr's parsing warning with one naming the resource and the column.
@@ -179,6 +186,22 @@ gldp_read_resource <- function(pkg, resource_name, ...) {
       ),
       class = "gldp_warning_parsing_issues"
     )
+  }
+
+  # Report text that is not valid UTF-8, e.g. a Latin-1 file declared as UTF-8.
+  if (identical(gldp_resource(pkg, resource_name)$encoding, "UTF-8")) {
+    invalid <- purrr::keep(data, is.character) |> purrr::map_int(\(x) sum(!validUTF8(x)))
+    invalid <- invalid[invalid > 0]
+    if (length(invalid) > 0) {
+      cli_warn(
+        c(
+          "!" = "{.field {resource_name}} declares UTF-8 but has values that are not
+                 valid UTF-8 in {.field {names(invalid)}} ({sum(invalid)} value{?s}).",
+          "i" = "Re-encode the file to UTF-8, or declare its actual encoding."
+        ),
+        class = "gldp_warning_invalid_utf8"
+      )
+    }
   }
 
   data
