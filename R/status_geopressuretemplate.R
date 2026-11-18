@@ -111,7 +111,7 @@ status_geopressuretemplate <- function(directory = ".", read_interim = TRUE) {
 #' @noRd
 geopressuretemplate_config_ids <- function(file = "config.yml") {
   # Config IDs are top-level YAML keys except defaults and private keys.
-  if (!file.exists(file)) {
+  if (!geopressuretemplate_non_empty(file)) {
     return(character())
   }
 
@@ -131,6 +131,7 @@ geopressuretemplate_project_files <- function() {
     interim_files <- list.files("./data/interim", pattern = "\\.[Rr][Dd]ata$", full.names = TRUE)
     interim_files <- interim_files[!startsWith(basename(interim_files), "_")]
     names(interim_files) <- tools::file_path_sans_ext(basename(interim_files))
+    interim_files <- interim_files[geopressuretemplate_non_empty(interim_files)]
   }
 
   raw_tag_ids <- character()
@@ -166,4 +167,16 @@ geopressuretemplate_project_files <- function() {
       names(raw_tag_files)
     )))
   )
+}
+
+#' @noRd
+geopressuretemplate_non_empty <- function(files) {
+  # Cloud-sync placeholders (e.g. OneDrive) can read as zero-byte files: treat
+  # them as absent, with a warning.
+  exists <- file.exists(files)
+  empty <- exists & file.size(files) == 0
+  if (any(empty)) {
+    cli_warn(c("!" = "Ignoring empty file{?s}: {.file {files[empty]}}."))
+  }
+  exists & !empty
 }

@@ -411,7 +411,13 @@ read_geopressuretemplate <- function(
       yaml::write_yaml(raw_config, config_file)
       tag_config <- unique(t$tag_id) |>
         purrr::set_names() |>
-        purrr::map(\(id) config::get(config = id, file = config_file, use_parent = FALSE))
+        purrr::map(\(id) {
+          # config::get() fails on a tag with no entry when `default` is empty too.
+          if (length(raw_config[[id]]) + length(raw_config$default) == 0) {
+            return(list())
+          }
+          config::get(config = id, file = config_file, use_parent = FALSE)
+        })
 
       # Interim tag params do not carry these config fields, so read them from
       # config.yml, keyed by their path in each tag entry.
@@ -441,7 +447,7 @@ read_geopressuretemplate <- function(
     }
 
     # STEP 3: Overwrite tags and observations if csv/xlsx files present
-    if (file.exists("data/tags.xlsx")) {
+    if (geopressuretemplate_non_empty("data/tags.xlsx")) {
       if (!requireNamespace("readxl", quietly = TRUE)) {
         cli_abort("The {.pkg readxl} package is required to read {.file data/tags.xlsx}.")
       }
@@ -465,7 +471,7 @@ read_geopressuretemplate <- function(
       cli_alert_success(
         "Reading tags from {.file {file.path(directory, file)}}."
       )
-    } else if (file.exists("data/tags.csv")) {
+    } else if (geopressuretemplate_non_empty("data/tags.csv")) {
       file <- "data/tags.csv"
       col_types <- readr::cols(
         tag_id = "c",
@@ -518,7 +524,7 @@ read_geopressuretemplate <- function(
         select(-"tag_ring_number")
     }
 
-    if (file.exists("./data/observations.xlsx")) {
+    if (geopressuretemplate_non_empty("./data/observations.xlsx")) {
       if (!requireNamespace("readxl", quietly = TRUE)) {
         cli_abort(
           "The {.pkg readxl} package is required to read {.file data/observations.xlsx}."
@@ -552,7 +558,7 @@ read_geopressuretemplate <- function(
       cli_alert_success(
         "Reading observations from {.file {file.path(directory, 'data/observations.xlsx')}}."
       )
-    } else if (file.exists("./data/observations.csv")) {
+    } else if (geopressuretemplate_non_empty("./data/observations.csv")) {
       col_types <- readr::cols(
         ring_number = "c",
         tag_id = "c",

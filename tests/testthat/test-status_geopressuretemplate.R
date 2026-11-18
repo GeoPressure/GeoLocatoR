@@ -25,5 +25,17 @@ test_that("an empty config.yml gives no config ids", {
   file <- tempfile(fileext = ".yml")
   on.exit(unlink(file))
   file.create(file)
+  expect_warning(ids <- geopressuretemplate_config_ids(file), "Ignoring empty file")
+  expect_identical(ids, character())
+  writeLines("# comment", file)
   expect_identical(geopressuretemplate_config_ids(file), character())
+})
+
+test_that("a zero-byte interim file is ignored with a warning", {
+  directory <- tempfile("template-status-")
+  dir.create(file.path(directory, "data", "interim"), recursive = TRUE)
+  on.exit(unlink(directory, recursive = TRUE))
+  file.create(file.path(directory, "data", "interim", "AA.RData"))
+  expect_warning(status <- status_geopressuretemplate(directory), "Ignoring empty file")
+  expect_identical(nrow(status), 0L)
 })
