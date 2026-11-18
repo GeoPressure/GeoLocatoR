@@ -2,6 +2,8 @@
 
 - `validate_gldp()` [still runs the `tags`/`observations` coherence checks when `measurements` is missing](https://github.com/GeoPressure/GeoLocatoR/commit/60bd32e), and skips only those that need `measurements`. The package remains invalid.
 - `status_geopressuretemplate()` [no longer errors on an empty `config.yml`](https://github.com/GeoPressure/GeoLocatoR/commit/46c05ce).
+- `status_geopressuretemplate()` and `read_geopressuretemplate()` [ignore a zero-byte `config.yml`, interim `.RData`, `tags` or `observations` file, with a warning](https://github.com/GeoPressure/GeoLocatoR/commit/917fc47). `read_geopressuretemplate()` no longer errors on a tag absent from `config.yml` when `config.yml` has no `default` entry.
+- `read_gldp()` [says when `datapackage.json` or a resource file is empty](https://github.com/GeoPressure/GeoLocatoR/commit/77413ac).
 - Resource setters and `add_gldp_resource()` [hint at the CSV delimiter when a dropped column name contains `;`](https://github.com/GeoPressure/GeoLocatoR/commit/4898297).
 - `read_zenodo()` [uses a token from `ZENODO_TOKEN` or the keyring only when `draft = TRUE`](https://github.com/GeoPressure/GeoLocatoR/commit/3c26668). Behaviour change: a published record is now read without authentication unless `token` is given, so its embargoed or restricted files are returned as metadata only.
 - `upgrade_gldp()` [warns when a value other than a legacy `stap_id`, `stap_s`, `stap_t` or `j` becomes `NA`](https://github.com/GeoPressure/GeoLocatoR/commit/02a0f6f) instead of silencing every cast loss.
