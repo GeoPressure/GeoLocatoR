@@ -34,7 +34,8 @@
 #'    Cross-resource consistency checks are then applied.
 #'
 #'    Core package coherence checks require the resources `tags`, `observations`, and
-#'    `measurements`, and verify that:
+#'    `measurements`. A missing `measurements` fails validation, but the checks that do
+#'    not need it still run. They verify that:
 #'    - one `ring_number` is not associated with multiple `scientific_name` values in `tags`;
 #'    - every `measurements$tag_id` exists in `tags$tag_id`;
 #'    - every `tags$ring_number` appears in `observations$ring_number`;

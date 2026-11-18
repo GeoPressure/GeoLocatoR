@@ -92,6 +92,12 @@ gldp_align_schema_to_header <- function(pkg, resource_name) {
   fields_match <- as.character(schema$fieldsMatch %||% "exact")[1]
   undeclared <- setdiff(header, declared)
 
+  if (length(header) == 0) {
+    cli_abort(
+      "{.val {resource_name}} has no header: its file is empty.",
+      class = "gldp_error_header_empty"
+    )
+  }
   if (length(intersect(header, declared)) == 0) {
     cli_abort(
       c(

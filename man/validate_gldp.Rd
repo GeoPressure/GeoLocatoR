@@ -46,7 +46,8 @@ checked when they carry a table schema, and are otherwise reported as not checke
 Cross-resource consistency checks are then applied.
 
 Core package coherence checks require the resources \code{tags}, \code{observations}, and
-\code{measurements}, and verify that:
+\code{measurements}. A missing \code{measurements} fails validation, but the checks that do
+not need it still run. They verify that:
 \itemize{
 \item one \code{ring_number} is not associated with multiple \code{scientific_name} values in \code{tags};
 \item every \code{measurements$tag_id} exists in \code{tags$tag_id};

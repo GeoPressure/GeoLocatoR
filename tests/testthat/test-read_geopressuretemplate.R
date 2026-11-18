@@ -431,3 +431,36 @@ test_that("raw-tag read failures are reported with their error message", {
     "ZZ.*manufacturer"
   )
 })
+
+test_that("a tag absent from config.yml without a default entry is read", {
+  directory <- template_interim(c("BB:", "  ring_number: 1"))
+  on.exit(unlink(directory, recursive = TRUE))
+  pkg <- suppressMessages(read_geopressuretemplate(directory, from = "interim"))
+  expect_identical(tags(pkg)$tag_id, "AA")
+
+  # A config.yml that is empty or holds only comments is ignored.
+  writeLines("# comment", file.path(directory, "config.yml"))
+  expect_no_error(suppressMessages(read_geopressuretemplate(directory, from = "interim")))
+  file.create(file.path(directory, "config.yml"))
+  expect_warning(
+    suppressMessages(read_geopressuretemplate(directory, from = "interim")),
+    "Ignoring empty file"
+  )
+})
+
+test_that("zero-byte interim and metadata files are ignored with a warning", {
+  directory <- template_interim()
+  on.exit(unlink(directory, recursive = TRUE))
+  file.create(file.path(directory, "data", c("interim/BB.RData", "tags.csv", "observations.csv")))
+  msgs <- character()
+  pkg <- withCallingHandlers(
+    suppressMessages(read_geopressuretemplate(directory, from = "interim")),
+    warning = function(w) {
+      msgs <<- c(msgs, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_length(grep("Ignoring empty file", msgs), 3)
+  expect_identical(tags(pkg)$tag_id, "AA")
+  expect_identical(unique(observations(pkg)$tag_id), "AA")
+})

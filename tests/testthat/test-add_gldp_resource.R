@@ -17,6 +17,15 @@ test_that("add_gldp_resource warns when a superset resource drops columns", {
   expect_false("my_custom_note" %in% names(pkg$resources[[1]]$data))
 })
 
+test_that("add_gldp_resource hints at the delimiter of a merged CSV column", {
+  data <- data.frame(`ring_number;datetime` = "R1;2020-01-01", check.names = FALSE)
+  expect_warning(
+    add_gldp_resource(create_gldp(), "observations", data),
+    "wrong delimiter",
+    class = "gldp_warning_undeclared_columns_dropped"
+  )
+})
+
 test_that("add_gldp_resource keeps undeclared columns on tags", {
   # `tags` declares `fieldsMatch: partial`, so extra attributes a user carries
   # alongside the standard columns are kept and described in the schema.
