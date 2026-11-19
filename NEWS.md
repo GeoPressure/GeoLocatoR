@@ -1,5 +1,9 @@
 # GeoLocatoR (development version)
 
+## Main
+
+- `update_gldp()` [writes `bibliographicCitation` as an APA data citation](https://github.com/GeoPressure/GeoLocatoR/commit/2d727a3), the format DataCite recommends: `Family, G., & Family, G. (Year). Title (Version x) [Data set]. Publisher. https://doi.org/...`. Behaviour change: it replaces the `utils::bibentry()` text format, which added `doi:` and a second record URL.
+
 # GeoLocatoR v1.5.3
 
 ## Main
