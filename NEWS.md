@@ -1,4 +1,4 @@
-# GeoLocatoR (development version)
+# GeoLocatoR v1.5.4
 
 ## Main
 
@@ -7,6 +7,8 @@
 ## Minor
 
 - `config_to_tibble(file)` [no longer warns that each tag has no entry in `config.yml`](https://github.com/GeoPressure/GeoLocatoR/commit/c7380a6) with GeoPressureR 3.9.0 when run in a folder with another `config.yml`.
+
+**Full Changelog**: <https://github.com/GeoPressure/GeoLocatoR/compare/v1.5.3...v1.5.4>
 
 # GeoLocatoR v1.5.3
 
