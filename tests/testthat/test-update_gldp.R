@@ -30,8 +30,10 @@ test_that("gldp_update_bibliographic_citation prefers conceptid", {
 
   pkg <- gldp_update_bibliographic_citation(pkg)
 
-  expect_true(grepl("doi:10\\.5281/zenodo\\.15259676", pkg$bibliographicCitation))
-  expect_false(grepl("doi:https://", pkg$bibliographicCitation, fixed = TRUE))
+  expect_identical(
+    pkg$bibliographicCitation,
+    "Doe, Jane. (2025). GeoLocator Data Package: Example [Data set]. Zenodo. https://doi.org/10.5281/zenodo.15259676"
+  )
 })
 
 test_that("gldp_update_order_resources enforces schema resource order", {
@@ -130,7 +132,7 @@ test_that("gldp_update_bibliographic_citation uses the id DOI when conceptid is 
     id = "https://doi.org/10.5281/zenodo.15259676"
   )
   pkg <- gldp_update_bibliographic_citation(pkg)
-  expect_match(pkg$bibliographicCitation, "doi:10.5281/zenodo.15259676", fixed = TRUE)
+  expect_match(pkg$bibliographicCitation, "https://doi.org/10.5281/zenodo.15259676", fixed = TRUE)
 })
 
 test_that("gldp_update_temporal keeps the coverage of a package without measurements", {

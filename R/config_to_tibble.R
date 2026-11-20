@@ -129,6 +129,7 @@ config_to_tibble <- function(
     "graph_add_wind.rounding_interval" = as.numeric,
     "graph_add_wind.interp_spatial_linear" = as.logical,
     "graph_add_wind.thr_as" = as.numeric,
+    "graph_add_wind.constant_speed" = as.character,
     "graph_simulation.nj" = as.numeric,
     "pressurepath_create.solar_dep" = as.numeric,
     "pressurepath_create.era5_dataset" = as.character,
@@ -139,6 +140,9 @@ config_to_tibble <- function(
     "geopressuretemplate.pressurepath" = \(x) paste(x, collapse = ", "),
     "tag_comments" = as.character
   )
+
+  # geopressuretemplate_config() looks for each id in R_CONFIG_FILE, so point it to `file`.
+  withr::local_envvar(R_CONFIG_FILE = file)
 
   cfg <- purrr::map_df(config_ids, \(id) {
     # GeoPressureR keeps top-level tag fields such as ring_number in the parsed config.

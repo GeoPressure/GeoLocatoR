@@ -25,7 +25,8 @@ the package has no \code{measurements}.
 \item \code{taxonomic}: species vector from \code{tags}, restricted to tags present in
 \code{measurements} when the package has measurements.
 \item \code{numberTags}: counts by resource and sensor.
-\item \code{bibliographicCitation}: formatted citation from package metadata.
+\item \code{bibliographicCitation}: data citation from package metadata, in the
+APA style recommended by DataCite: \verb{Family, G., & Family, G. (Year). Title (Version x) [Data set]. Publisher. https://doi.org/...}.
 }
 }
 \seealso{

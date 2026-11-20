@@ -1,3 +1,15 @@
+# GeoLocatoR v1.5.4
+
+## Main
+
+- `update_gldp()` [writes `bibliographicCitation` as an APA data citation](https://github.com/GeoPressure/GeoLocatoR/commit/2d727a3), the format DataCite recommends: `Family, G., & Family, G. (Year). Title (Version x) [Data set]. Publisher. https://doi.org/...`. Behaviour change: it replaces the `utils::bibentry()` text format, which added `doi:` and a second record URL.
+
+## Minor
+
+- `config_to_tibble(file)` [no longer warns that each tag has no entry in `config.yml`](https://github.com/GeoPressure/GeoLocatoR/commit/c7380a6) with GeoPressureR 3.9.0 when run in a folder with another `config.yml`.
+
+**Full Changelog**: <https://github.com/GeoPressure/GeoLocatoR/compare/v1.5.3...v1.5.4>
+
 # GeoLocatoR v1.5.3
 
 ## Main

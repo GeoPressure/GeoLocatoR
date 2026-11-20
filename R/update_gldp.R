@@ -9,7 +9,9 @@
 #' - `taxonomic`: species vector from `tags`, restricted to tags present in
 #'   `measurements` when the package has measurements.
 #' - `numberTags`: counts by resource and sensor.
-#' - `bibliographicCitation`: formatted citation from package metadata.
+#' - `bibliographicCitation`: data citation from package metadata, in the
+#'   APA style recommended by DataCite: `Family, G., & Family, G. (Year).
+#'   Title (Version x) [Data set]. Publisher. https://doi.org/...`.
 #'
 #' @param pkg A GeoLocator Data Package object.
 #' @param ... Overrides passed to [utils::bibentry()] when computing
@@ -226,6 +228,7 @@ gldp_update_bibliographic_citation <- function(pkg, ...) {
     publisher <- "Zenodo"
   }
   url <- first_non_empty_string(pkg$homepage)
+  version <- sub("^v", "", first_non_empty_string(pkg$version) %||% "", ignore.case = TRUE)
 
   defaults <- list(
     bibtype = "Misc", # "dataset" is not available in utils::bibentry
@@ -234,6 +237,7 @@ gldp_update_bibliographic_citation <- function(pkg, ...) {
     publisher = publisher,
     title = title,
     year = year,
+    version = version,
     url = url
   )
   defaults <- defaults[
@@ -251,8 +255,45 @@ gldp_update_bibliographic_citation <- function(pkg, ...) {
 
   pkg[["bibliographicCitation"]] <- tryCatch(
     {
+      # bibentry() checks the fields and applies the overrides in `...`.
       bib <- do.call(utils::bibentry, bib_args)
-      format(bib, style = "text")
+
+      # Authors as "Family, G. G." (initials of each given name, hyphenated ones
+      # kept: "J.-P."); an organisation has no family name and is kept whole.
+      authors <- purrr::map_chr(unclass(bib$author), \(p) {
+        if (is.null(p$family)) {
+          return(glue::glue_collapse(p$given, " "))
+        }
+        initials <- unlist(strsplit(p$given, "\\s+")) |>
+          purrr::map_chr(\(g) {
+            glue::glue_collapse(glue::glue("{substr(strsplit(g, '-')[[1]], 1, 1)}."), "-")
+          })
+        glue::glue("{glue::glue_collapse(p$family, ' ')}, {glue::glue_collapse(initials, ' ')}")
+      })
+      n <- length(authors)
+      authors <- if (n > 1) {
+        glue::glue("{glue::glue_collapse(authors[-n], ', ')}, & {authors[n]}")
+      } else {
+        authors
+      }
+      # The author element ends with a period, as after an organisation name.
+      authors <- sub("([^.])$", "\\1.", authors)
+
+      # Title (Version x) [Data set].
+      title <- if (!is.null(bib$title)) {
+        version <- if (!is.null(bib$version)) glue::glue(" (Version {bib$version})") else ""
+        glue::glue("{bib$title}{version} [Data set].")
+      }
+      date <- glue::glue("({bib$year %||% 'n.d.'}).")
+
+      # The DOI link replaces the URL, which would point to the same record.
+      link <- if (!is.null(bib$doi)) glue::glue("https://doi.org/{bib$doi}") else bib$url
+
+      # Without authors, the title takes their place before the date (APA).
+      parts <- if (n > 0) c(glue::glue("{authors} {date}"), title) else c(title, date)
+      c(parts, if (!is.null(bib$publisher)) glue::glue("{bib$publisher}."), link) |>
+        glue::glue_collapse(" ") |>
+        as.character()
     },
     error = function(e) {
       cli_warn(c(
