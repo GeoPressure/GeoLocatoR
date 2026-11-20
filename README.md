@@ -109,3 +109,11 @@ If you use GeoLocatoR in your research, please cite it as follows:
 > GeoLocator Data Package. Zenodo.
 > <https://doi.org/10.5281/zenodo.14670776>. Available at:
 > <https://github.com/GeoPressure/GeoLocatoR>
+
+The GeoLocator Data Package standard and the [Master GeoLocator Data
+Package](https://doi.org/10.5281/zenodo.18187092), which compiles all
+open packages, are described in:
+
+> Nussbaumer, R., Adamík, P., Bell, F., et al. (2026). Standardised
+> multi-sensor geolocator data for bird migration ecology. *Scientific
+> Data*. <https://doi.org/10.1038/s41597-026-08873-x>
